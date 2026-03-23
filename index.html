@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Script UI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Custom Title Bar -->
+  <div class="titlebar" id="titlebar">
+    <div class="titlebar-drag-region"></div>
+    <div class="titlebar-left">
+      <div class="app-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="app-title">Script UI</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="tb-btn theme-toggle" id="themeToggle" title="Toggle theme">
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" style="display:none">
+          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="tb-btn" id="btnMin" title="Minimize">
+        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+      </button>
+      <button class="tb-btn" id="btnMax" title="Maximize">
+        <svg width="10" height="10" viewBox="0 0 10 10"><rect width="9" height="9" x=".5" y=".5" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+      </button>
+      <button class="tb-btn close-btn" id="btnClose" title="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+        <div class="nav-label">Tools</div>
+        <button class="nav-item active" data-tab="livestream">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>Live Archiver</span>
+          <div class="nav-indicator"></div>
+        </button>
+        <button class="nav-item" data-tab="ytdlp">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>yt-dlp</span>
+          <div class="nav-indicator"></div>
+        </button>
+        <button class="nav-item" data-tab="batch">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Batch Download</span>
+          <div class="nav-indicator"></div>
+        </button>
+        <button class="nav-item" data-tab="m3u8">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <polygon points="23 7 16 12 23 17 23 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>M3U8 Downloader</span>
+          <div class="nav-indicator"></div>
+        </button>
+        <button class="nav-item" data-tab="gallery">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+            <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>gallery-dl</span>
+          <div class="nav-indicator"></div>
+        </button>
+        <div class="nav-divider"></div>
+        <button class="nav-item" data-tab="settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>Settings</span>
+          <div class="nav-indicator"></div>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">Idle</span>
+      </div>
+    </nav>
+
+    <!-- Content Area -->
+    <main class="content">
+      <!-- ── Tab: Live Stream Archiver ──────────────────────────── -->
+      <section class="tab-panel active" id="tab-livestream">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Live Stream Archiver</h1>
+            <p class="panel-subtitle">Download active YouTube live streams as they broadcast</p>
+          </div>
+          <div class="badge badge-live">
+            <span class="pulse-dot"></span>
+            Live
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">Stream URL</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <input type="text" id="ls-url" class="form-input" placeholder="https://www.youtube.com/watch?v=..." />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="ls-output" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="ls-output">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group" id="ls-quality-group">
+            <label class="form-label">Quality / Format</label>
+            <select id="ls-quality" class="form-select">
+              <option value="bestvideo*+bestaudio/best">Best Available</option>
+              <option value="bestvideo[height&lt;=1080]*+bestaudio/best[height&lt;=1080]">1080p Max</option>
+              <option value="bestvideo[height&lt;=720]*+bestaudio/best[height&lt;=720]">720p Max</option>
+              <option value="bestvideo[height&lt;=480]*+bestaudio/best[height&lt;=480]">480p Max</option>
+              <option value="bestvideo[height&lt;=360]*+bestaudio/best[height&lt;=360]">360p Max</option>
+              <option value="bestaudio/best">Audio Only</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width" id="ls-cookies-group">
+            <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
+            <div class="input-folder-group">
+              <input type="text" id="ls-cookies" class="form-input" placeholder="Path to cookies.txt (optional)" />
+              <button class="btn-folder" data-target="ls-cookies" data-pick-type="file">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="ls-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Start Archiving
+          </button>
+          <button class="btn btn-pause hidden" id="ls-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="ls-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="ls-clear">Clear Log</button>
+        </div>
+
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="ls-log"></div>
+        </div>
+      </section>
+
+      <!-- ── Tab: yt-dlp Single ─────────────────────────────────── -->
+      <section class="tab-panel" id="tab-ytdlp">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">yt-dlp Downloader</h1>
+            <p class="panel-subtitle">Download from YouTube, Twitch, Twitter, and 1000+ sites</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">URL</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <input type="text" id="yd-url" class="form-input" placeholder="https://..." />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="yd-output" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="yd-output">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group" id="yd-format-group">
+            <label class="form-label">Format</label>
+            <select id="yd-format" class="form-select">
+              <option value="bestvideo+bestaudio/best">Best Available</option>
+              <option value="bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]">Best MP4</option>
+              <option value="bestvideo[height&lt;=1080]+bestaudio/best[height&lt;=1080]">1080p Max</option>
+              <option value="bestvideo[height&lt;=720]+bestaudio/best[height&lt;=720]">720p Max</option>
+              <option value="bestvideo[height&lt;=480]+bestaudio/best[height&lt;=480]">480p Max</option>
+              <option value="bestvideo[height&lt;=360]+bestaudio/best[height&lt;=360]">360p Max</option>
+              <option value="bestaudio/best">Audio Only (best)</option>
+              <option value="bestaudio[ext=m4a]">Audio Only (M4A)</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width" id="yd-cookies-group">
+            <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
+            <div class="input-folder-group">
+              <input type="text" id="yd-cookies" class="form-input" placeholder="Path to cookies.txt (optional)" />
+              <button class="btn-folder" data-target="yd-cookies" data-pick-type="file">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="yd-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Download
+          </button>
+          <button class="btn btn-pause hidden" id="yd-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="yd-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="yd-clear">Clear Log</button>
+        </div>
+
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="yd-log"></div>
+        </div>
+      </section>
+
+      <!-- ── Tab: Batch Download ────────────────────────────────── -->
+      <section class="tab-panel" id="tab-batch">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Batch Downloader</h1>
+            <p class="panel-subtitle">Paste multiple links and download them all at once</p>
+          </div>
+          <div class="url-counter" id="batch-counter">0 URLs</div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">URLs <span class="label-optional">(one per line)</span></label>
+            <textarea id="batch-urls" class="form-textarea" placeholder="https://www.youtube.com/watch?v=...&#10;https://twitter.com/...&#10;https://..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="batch-output" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="batch-output">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group" id="batch-format-group">
+            <label class="form-label">Format</label>
+            <select id="batch-format" class="form-select">
+              <option value="bv+ba/bestvideo+bestaudio/best">Best Available</option>
+              <option value="bestvideo[height&lt;=1080]+bestaudio/best[height&lt;=1080]">1080p Max</option>
+              <option value="bestvideo[height&lt;=720]+bestaudio/best[height&lt;=720]">720p Max</option>
+              <option value="bestvideo[height&lt;=480]+bestaudio/best[height&lt;=480]">480p Max</option>
+              <option value="bestvideo[height&lt;=360]+bestaudio/best[height&lt;=360]">360p Max</option>
+              <option value="bestaudio/best">Audio Only</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="batch-rest-group">
+            <div class="toggle-card" id="batch-rest-toggle">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Rest between downloads</div>
+                <div class="toggle-desc">Pause ~5 minutes between each download</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="batch-rest" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group full-width" id="batch-cookies-group">
+            <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
+            <div class="input-folder-group">
+              <input type="text" id="batch-cookies" class="form-input" placeholder="Path to cookies.txt (optional)" />
+              <button class="btn-folder" data-target="batch-cookies" data-pick-type="file">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="batch-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Start Batch
+          </button>
+          <button class="btn btn-pause hidden" id="batch-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="batch-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="batch-clear">Clear Log</button>
+        </div>
+
+        <div class="progress-bar-container hidden" id="batch-progress-wrap">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="batch-progress-bar"></div>
+          </div>
+          <span class="progress-label" id="batch-progress-label">0 / 0</span>
+        </div>
+
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="batch-log"></div>
+        </div>
+      </section>
+
+      <!-- ── Tab: M3U8 Downloader ───────────────────────────────── -->
+      <section class="tab-panel" id="tab-m3u8">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">M3U8 Downloader</h1>
+            <p class="panel-subtitle">Downloads HLS streams and saves to your chosen container. Optionally re-encode with custom settings.</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">M3U8 URL</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <input type="text" id="m3-url" class="form-input" placeholder="https://example.com/stream/playlist.m3u8" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="m3-output" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="m3-output">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Container</label>
+            <select id="m3-container" class="form-select">
+              <option value="mp4">MP4 — default</option>
+              <option value="mkv">MKV (Matroska)</option>
+              <option value="mov">MOV (QuickTime)</option>
+              <option value="ts">MPEG-TS (.ts)</option>
+              <option value="avi">AVI</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width" id="m3-encode-group">
+            <div class="toggle-card" id="m3-encode-toggle">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Re-encode</div>
+                <div class="toggle-desc">Re-encode the downloaded MP4 with custom codec and quality settings (slower)</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="m3-encode" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group encode-options hidden" id="m3-encode-opts">
+            <label class="form-label">Video Codec</label>
+            <select id="m3-codec" class="form-select">
+              <option value="h264_nvenc">H.264 NVENC (NVIDIA GPU) — default</option>
+              <option value="h265_nvenc">H.265 NVENC (NVIDIA GPU)</option>
+              <option value="libx264">H.264 x264 (CPU)</option>
+              <option value="libx265">H.265 x265 (CPU)</option>
+            </select>
+          </div>
+
+          <div class="form-group encode-options hidden">
+            <label class="form-label">Video Bitrate</label>
+            <select id="m3-bitrate" class="form-select">
+              <option value="6M">6 Mbps — default</option>
+              <option value="8M">8 Mbps</option>
+              <option value="10M">10 Mbps</option>
+              <option value="15M">15 Mbps</option>
+              <option value="20M">20 Mbps</option>
+            </select>
+          </div>
+
+          <div class="form-group encode-options hidden">
+            <label class="form-label">Resolution</label>
+            <select id="m3-resolution" class="form-select">
+              <option value="1920x1080">1920×1080 — default</option>
+              <option value="1280x720">1280×720</option>
+              <option value="2560x1440">2560×1440</option>
+              <option value="3840x2160">3840×2160 (4K)</option>
+              <option value="source">Source (no scaling)</option>
+            </select>
+          </div>
+
+          <div class="form-group encode-options hidden">
+            <label class="form-label">Frame Rate</label>
+            <select id="m3-fps" class="form-select">
+              <option value="60">60 fps — default</option>
+              <option value="30">30 fps</option>
+              <option value="24">24 fps</option>
+              <option value="source">Source (no override)</option>
+            </select>
+          </div>
+
+          <div class="form-group encode-options hidden">
+            <label class="form-label">Audio Bitrate</label>
+            <select id="m3-audio-bitrate" class="form-select">
+              <option value="192k">192k — default</option>
+              <option value="128k">128k</option>
+              <option value="256k">256k</option>
+              <option value="320k">320k</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width" id="m3-cookies-group">
+            <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
+            <div class="input-folder-group">
+              <input type="text" id="m3-cookies" class="form-input" placeholder="Path to cookies.txt (optional)" />
+              <button class="btn-folder" data-target="m3-cookies" data-pick-type="file">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="m3-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Download
+          </button>
+          <button class="btn btn-pause hidden" id="m3-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="m3-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="m3-clear">Clear Log</button>
+        </div>
+
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="m3-log"></div>
+        </div>
+      </section>
+
+      <!-- ── Tab: gallery-dl ──────────────────────────────────── -->
+      <section class="tab-panel" id="tab-gallery">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">gallery-dl</h1>
+            <p class="panel-subtitle">Download image galleries and media from hundreds of supported sites</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">URL</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <input type="text" id="gdl-url" class="form-input" placeholder="https://twitter.com/user  or  https://www.pixiv.net/..." />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="gdl-output" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="gdl-output">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group" id="gdl-filetypes-group">
+            <label class="form-label">File Types</label>
+            <select id="gdl-filetypes" class="form-select">
+              <option value="all">All Files (default)</option>
+              <option value="no-gif">All Files (no GIFs)</option>
+              <option value="jpg,jpeg,png,gif,webp,avif">Images only (jpg/png/gif/webp/avif)</option>
+              <option value="mp4,webm,mov">Videos only (mp4/webm/mov)</option>
+              <option value="gif,mp4,webm">Animated only (gif/mp4/webm)</option>
+              <option value="jpg,jpeg,png,webp,avif">Still images only (no gif)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="gdl-meta-group">
+            <div class="toggle-card" id="gdl-meta-toggle">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Write Metadata</div>
+                <div class="toggle-desc">Save a JSON metadata file alongside each download</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="gdl-meta" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group full-width" id="gdl-cookies-group">
+            <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
+            <div class="input-folder-group">
+              <input type="text" id="gdl-cookies" class="form-input" placeholder="Path to cookies.txt (optional)" />
+              <button class="btn-folder" data-target="gdl-cookies" data-pick-type="file">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="gdl-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Download
+          </button>
+          <button class="btn btn-pause hidden" id="gdl-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="gdl-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="gdl-clear">Clear Log</button>
+        </div>
+
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="gdl-log"></div>
+        </div>
+      </section>
+
+      <!-- ── Tab: Settings ─────────────────────────────────── -->
+      <section class="tab-panel" id="tab-settings">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Settings</h1>
+            <p class="panel-subtitle">Customize which tools and UI elements are visible</p>
+          </div>
+        </div>
+
+        <div class="settings-layout">
+
+          <div class="settings-section">
+            <div class="settings-section-title">Visible Tools</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Live Stream Archiver</div>
+                <div class="toggle-desc">Show the Live Stream Archiver tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-livestream" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">yt-dlp Downloader</div>
+                <div class="toggle-desc">Show the yt-dlp single download tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-ytdlp" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Batch Downloader</div>
+                <div class="toggle-desc">Show the Batch Download tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-batch" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">M3U8 Downloader</div>
+                <div class="toggle-desc">Show the M3U8 Downloader tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-m3u8" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">gallery-dl</div>
+                <div class="toggle-desc">Show the gallery-dl tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-gallery" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Live Archiver</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Quality / Format selector</div>
+                <div class="toggle-desc">Show the quality dropdown</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-ls-quality" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Cookies file path</div>
+                <div class="toggle-desc">Show the cookies.txt file picker</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-ls-cookies" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Batch Downloader</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Format selector</div>
+                <div class="toggle-desc">Show the format/quality dropdown</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-batch-format" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Rest between downloads</div>
+                <div class="toggle-desc">Show the rest-between-downloads toggle</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-batch-rest" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Cookies file path</div>
+                <div class="toggle-desc">Show the cookies.txt file picker</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-batch-cookies" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <button class="ytdlp-advanced-toggle" id="batch-advanced-toggle" aria-expanded="false">
+              <span>Advanced Options</span>
+              <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="ytdlp-advanced-body" id="batch-advanced-body">
+              <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to Batch Downloader runs only</p>
+              <div class="ytdlp-opts-search-wrap">
+                <input type="text" id="batch-opts-search" class="form-input" placeholder="Search options…" />
+              </div>
+              <div class="ytdlp-opts-container" id="batch-opts-container"></div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">M3U8 Downloader</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Re-encode section</div>
+                <div class="toggle-desc">Show the re-encode toggle and codec options</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-m3-encode" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Cookies file path</div>
+                <div class="toggle-desc">Show the cookies.txt file picker</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-m3-cookies" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">gallery-dl</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">File Types selector</div>
+                <div class="toggle-desc">Show the file type filter dropdown</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-gdl-filetypes" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Write Metadata toggle</div>
+                <div class="toggle-desc">Show the metadata saving toggle</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-gdl-meta" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Cookies file path</div>
+                <div class="toggle-desc">Show the cookies.txt file picker</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-gdl-cookies" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">yt-dlp Downloader</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Format selector</div>
+                <div class="toggle-desc">Show the format/quality dropdown</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-yd-format" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Cookies file path</div>
+                <div class="toggle-desc">Show the cookies.txt file picker</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-yd-cookies" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <button class="ytdlp-advanced-toggle" id="ytdlp-advanced-toggle" aria-expanded="false">
+              <span>Advanced Options</span>
+              <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="ytdlp-advanced-body" id="ytdlp-advanced-body">
+              <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to yt-dlp Downloader runs only</p>
+              <div class="ytdlp-opts-search-wrap">
+                <input type="text" id="ytdlp-opts-search" class="form-input" placeholder="Search options…" />
+              </div>
+              <div class="ytdlp-opts-container" id="ytdlp-opts-container"></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

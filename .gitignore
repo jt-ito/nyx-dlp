@@ -1,0 +1,6 @@
+node_modules/
+dist/
+scripts/__pycache__/
+scripts/*.pyc
+_ipc_debug.txt
+scripts/_gallery_dl_debug.txt
