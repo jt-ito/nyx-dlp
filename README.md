@@ -23,7 +23,7 @@ A modern Electron desktop app providing a clean dark/light-theme GUI for media d
 
 | Tab | Script | Description |
 |-----|--------|-------------|
-| **Live Archiver** | `ytarchive.py` | Record active YouTube live streams with ytarchive |
+| **Live Archiver** | `yt-archiver.py` | Record active YouTube live streams with ytarchive |
 | **yt-dlp Downloader** | `yt-dlp.py` | Download from 1 000 + sites by URL with full yt-dlp option support |
 | **Batch Downloader** | `yt-dlp_multi.py` | Paste in multiple URLs and queue them in one run |
 | **M3U8 Downloader** | `Download_and_convert_a_m3u8_url.py` | Stream HLS playlists directly via ffmpeg; optional GPU/CPU re-encode; outputs to MP4, MKV, MOV, MPEG-TS or AVI |
@@ -82,7 +82,7 @@ nyx-dlp/
 └── scripts/
     ├── yt-dlp.py                        # Single-URL yt-dlp wrapper
     ├── yt-dlp_multi.py                  # Batch yt-dlp downloader
-    ├── ytarchive.py                     # YouTube live stream recorder
+    ├── yt-archiver.py                   # YouTube live stream recorder
     ├── Download_and_convert_a_m3u8_url.py  # HLS stream downloader/encoder
     └── gallery-dl.py                    # gallery-dl wrapper
 ```
