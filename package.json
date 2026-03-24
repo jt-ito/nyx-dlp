@@ -1,15 +1,55 @@
 {
   "name": "nyx-dlp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . \"nyx-dlp\" --platform=win32 --arch=x64 --out=dist --overwrite --extra-resource=scripts --ignore=\"(/node_modules|/dist|\\.md$|/__pycache__|/scripts)\"",
+    "build:portable": "electron-packager . \"nyx-dlp\" --platform=win32 --arch=x64 --out=dist/portable --overwrite --extra-resource=scripts --ignore=\"(/node_modules|/dist|\\.md$|/__pycache__|/scripts)\" && node -e \"require('fs').writeFileSync('dist/portable/nyx-dlp-win32-x64/.portable','')\"",
+    "build:installer": "electron-builder --win",
     "install-deps": "npm install"
   },
   "devDependencies": {
     "@electron/packager": "^19.1.0",
-    "electron": "^28.0.0"
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.nyxdlp.app",
+    "productName": "nyx-dlp",
+    "directories": {
+      "output": "dist/installer"
+    },
+    "extraResources": [
+      {
+        "from": "scripts",
+        "to": "scripts"
+      }
+    ],
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "!dist/**/*",
+      "!scripts/**/*",
+      "!*.md",
+      "!**/__pycache__/**/*"
+    ],
+    "asar": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

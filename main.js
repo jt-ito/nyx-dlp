@@ -3,6 +3,19 @@ const path = require('path');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
 
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+app.commandLine.appendSwitch('disable-gpu-cache');
+
+// Portable mode: if a .portable file sits next to the exe, store all user data
+// in a "data" folder alongside the exe instead of %AppData%.
+if (app.isPackaged) {
+  const portableMarker = path.join(path.dirname(app.getPath('exe')), '.portable');
+  if (fs.existsSync(portableMarker)) {
+    const dataDir = path.join(path.dirname(app.getPath('exe')), 'data');
+    app.setPath('userData', dataDir);
+  }
+}
+
 // In production the Python scripts are placed in resources/scripts/ (extraResources).
 // In dev they sit alongside main.js in scripts/.
 const scriptsDir = app.isPackaged

@@ -621,6 +621,8 @@ html, body {
   user-select: text;
   white-space: pre-wrap;
   word-break: break-word;
+  display: flex;
+  flex-direction: column;
 }
 .terminal-body .line-stdout  { color: var(--terminal-stdout); }
 .terminal-body .line-stderr  { color: var(--terminal-stderr); }
@@ -631,6 +633,48 @@ html, body {
 .terminal-body .line-error   { color: var(--danger); }
 .terminal-body .line-cmd     { color: var(--terminal-cmd); font-style: italic; }
 .terminal-body .line-input   { color: var(--terminal-input); }
+
+/* ── Collapsible log body ─────────────────────────────────────── */
+.terminal-body .log-body-start { display: none; }
+.terminal-body .log-detail { display: none; }
+.terminal-body .log-detail.open { display: block; }
+.terminal-body .log-expand-arrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 0 6px;
+  user-select: none;
+  opacity: 0.55;
+  transition: opacity 0.15s, color 0.15s;
+  margin-top: auto;
+}
+.terminal-body .log-expand-arrow:hover { opacity: 1; color: var(--accent); }
+.terminal-body .log-expand-arrow svg { transition: transform 0.2s; }
+.terminal-body .log-expand-arrow.open svg { transform: rotate(180deg); }
+
+/* ── Scroll jump button ───────────────────────────────────────── */
+.terminal-container { position: relative; }
+.log-scroll-btn {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  z-index: 10;
+}
+.log-scroll-btn:hover { opacity: 1; color: var(--accent); background: var(--accent-glow); }
 
 /* ── yt-dlp Advanced Options panel ───────────────────────────── */
 .settings-section-desc {

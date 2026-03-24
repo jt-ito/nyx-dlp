@@ -56,22 +56,22 @@
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-inner">
         <div class="nav-label">Tools</div>
-        <button class="nav-item active" data-tab="livestream">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="2" fill="currentColor"/>
-            <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <span>Live Archiver</span>
-          <div class="nav-indicator"></div>
-        </button>
-        <button class="nav-item" data-tab="ytdlp">
+        <button class="nav-item active" data-tab="ytdlp">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           <span>yt-dlp</span>
+          <div class="nav-indicator"></div>
+        </button>
+        <button class="nav-item" data-tab="livestream">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>Live Archiver</span>
           <div class="nav-indicator"></div>
         </button>
         <button class="nav-item" data-tab="batch">
@@ -119,7 +119,7 @@
     <!-- Content Area -->
     <main class="content">
       <!-- ── Tab: Live Stream Archiver ──────────────────────────── -->
-      <section class="tab-panel active" id="tab-livestream">
+      <section class="tab-panel" id="tab-livestream">
         <div class="panel-header">
           <div class="panel-title-group">
             <h1 class="panel-title">Live Stream Archiver</h1>
@@ -216,7 +216,7 @@
       </section>
 
       <!-- ── Tab: yt-dlp Single ─────────────────────────────────── -->
-      <section class="tab-panel" id="tab-ytdlp">
+      <section class="tab-panel active" id="tab-ytdlp">
         <div class="panel-header">
           <div class="panel-title-group">
             <h1 class="panel-title">yt-dlp Downloader</h1>

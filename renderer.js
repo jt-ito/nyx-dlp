@@ -48,7 +48,9 @@ document.querySelectorAll('.btn-folder').forEach(btn => {
       result = await window.api.pickFolder();
     }
     if (result) {
-      document.getElementById(btn.dataset.target).value = result;
+      const target = document.getElementById(btn.dataset.target);
+      target.value = result;
+      target.dispatchEvent(new Event('input'));
     }
   });
 });
@@ -369,7 +371,63 @@ function appendLog(logEl, text, cls) {
   logEl.appendChild(line);
   logEl.scrollTop = logEl.scrollHeight;
 }
-function clearLog(logEl) { logEl.innerHTML = ''; }
+function clearLog(logEl) {
+  logEl.innerHTML = '';
+  logEl.closest('.terminal-container')?.querySelector('.log-scroll-btn')?.remove();
+}
+
+function markBodyStart(logEl) {
+  const m = document.createElement('div');
+  m.className = 'log-body-start';
+  logEl.appendChild(m);
+}
+
+function collapseLogBody(logEl) {
+  const sentinel = logEl.querySelector('.log-body-start');
+  if (!sentinel) return;
+  const all = Array.from(logEl.children);
+  const start = all.indexOf(sentinel);
+  const bodyLines = all.slice(start + 1, all.length - 1);
+  if (bodyLines.length === 0) { sentinel.remove(); return; }
+  const detail = document.createElement('div');
+  detail.className = 'log-detail';
+  bodyLines.forEach(el => detail.appendChild(el));
+  sentinel.replaceWith(detail);
+  const arrow = document.createElement('div');
+  arrow.className = 'log-expand-arrow';
+  arrow.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  arrow.addEventListener('click', () => {
+    const open = detail.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+    if (open) logEl.scrollTop = logEl.scrollHeight;
+  });
+  logEl.appendChild(arrow);
+
+  // Scroll jump button (↑/↓) pinned to bottom-right of terminal-container
+  const container = logEl.closest('.terminal-container');
+  if (!container) return;
+  // Remove any previous scroll button (e.g. from a re-run)
+  container.querySelector('.log-scroll-btn')?.remove();
+  const upSVG   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const downSVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const btn = document.createElement('div');
+  btn.className = 'log-scroll-btn';
+  btn.innerHTML = upSVG;
+  btn.title = 'Scroll to top';
+  const updateBtn = () => {
+    const atTop = logEl.scrollTop === 0;
+    btn.innerHTML = atTop ? downSVG : upSVG;
+    btn.title = atTop ? 'Scroll to bottom' : 'Scroll to top';
+  };
+  btn.addEventListener('click', () => {
+    if (logEl.scrollTop === 0) logEl.scrollTop = logEl.scrollHeight;
+    else logEl.scrollTop = 0;
+    setTimeout(updateBtn, 50);
+  });
+  logEl.addEventListener('scroll', updateBtn);
+  updateBtn();
+  container.appendChild(btn);
+}
 
 function handleOutput(logEl, data, onExit) {
   switch (data.type) {
@@ -386,6 +444,7 @@ function handleOutput(logEl, data, onExit) {
     case 'exit':
       if (data.code === 0) appendLog(logEl, '✔ Process finished successfully.', 'success');
       else                 appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+      collapseLogBody(logEl);
       if (onExit) onExit(data.code);
       break;
   }
@@ -444,6 +503,7 @@ function handleOutput(logEl, data, onExit) {
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
+    markBodyStart(log);
 
     currentPid = null;
     isPaused   = false;
@@ -526,6 +586,7 @@ function handleOutput(logEl, data, onExit) {
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
+    markBodyStart(log);
 
     currentPid = null;
     isPaused   = false;
@@ -624,6 +685,7 @@ function handleOutput(logEl, data, onExit) {
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
+    markBodyStart(log);
 
     progressWrap.classList.remove('hidden');
     progressBar.style.width = '0%';
@@ -734,6 +796,7 @@ function handleOutput(logEl, data, onExit) {
     }
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
+    markBodyStart(log);
 
     currentPid = null;
     isPaused   = false;
@@ -825,6 +888,7 @@ try {
     appendLog(log, `  Output:    ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies:   ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
+    markBodyStart(log);
 
     currentPid = null;
     isPaused   = false;
