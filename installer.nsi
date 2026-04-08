@@ -2,7 +2,7 @@
 Unicode True
 
 !define APP_NAME     "nyx-dlp"
-!define APP_VERSION  "1.0.2"
+!define APP_VERSION  "1.0.3"
 !define APP_EXE      "nyx-dlp.exe"
 !define REG_KEY      "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 
@@ -17,8 +17,8 @@ SetCompressor /SOLID lzma
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 !define MUI_ABORTWARNING
-!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
-!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
+!define MUI_ICON "assets\icon.ico"
+!define MUI_UNICON "assets\icon.ico"
 
 ; Welcome page — show upgrade notice if already installed
 !define MUI_WELCOMEPAGE_TEXT "This will install ${APP_NAME} ${APP_VERSION} on your computer.$\r$\n$\r$\nIf a previous version is already installed it will be updated automatically in the same location.$\r$\n$\r$\nClick Next to continue."

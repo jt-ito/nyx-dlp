@@ -655,6 +655,17 @@ html, body {
 .terminal-body .log-expand-arrow svg { transition: transform 0.2s; }
 .terminal-body .log-expand-arrow.open svg { transform: rotate(180deg); }
 
+.settings-version {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  letter-spacing: 0.05em;
+}
+
 /* ── Scroll jump button ───────────────────────────────────────── */
 .terminal-container { position: relative; }
 .log-scroll-btn {
