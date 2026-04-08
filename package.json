@@ -1,12 +1,12 @@
 {
   "name": "nyx-dlp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build:portable": "electron-packager . \"nyx-dlp\" --platform=win32 --arch=x64 --out=dist/portable --overwrite --extra-resource=scripts --ignore=\"(/node_modules|/dist|\\.md$|/__pycache__|/scripts)\" && node -e \"require('fs').writeFileSync('dist/portable/nyx-dlp-win32-x64/.portable','')\"",
-    "build:installer": "electron-builder --win",
+    "build:installer": "electron-packager . \"nyx-dlp\" --platform=win32 --arch=x64 --out=dist/installer --overwrite --extra-resource=scripts --ignore=\"(/node_modules|/dist|\\.md$|/__pycache__|/scripts)\" && \"C:\\Program Files (x86)\\NSIS\\makensis.exe\" installer.nsi",
     "install-deps": "npm install"
   },
   "devDependencies": {
