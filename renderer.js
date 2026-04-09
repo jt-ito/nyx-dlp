@@ -369,7 +369,8 @@ function appendLog(logEl, text, cls) {
   line.className = 'line-' + cls;
   line.textContent = text;
   logEl.appendChild(line);
-  logEl.scrollTop = logEl.scrollHeight;
+  const scroller = logEl.closest('.content') ?? logEl;
+  scroller.scrollTop = scroller.scrollHeight;
 }
 function clearLog(logEl) {
   logEl.innerHTML = '';
@@ -411,7 +412,9 @@ function collapseLogBody(logEl) {
   btn.className = 'log-scroll-btn';
   btn.title = 'Scroll to top';
   btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  btn.addEventListener('click', () => { logEl.scrollTop = 0; });
+  btn.addEventListener('click', () => {
+    logEl.closest('.terminal-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   wrap.appendChild(btn);
 }
 
