@@ -374,6 +374,7 @@ function appendLog(logEl, text, cls) {
 function clearLog(logEl) {
   logEl.innerHTML = '';
   logEl.closest('.terminal-container')?.querySelector('.log-scroll-btn')?.remove();
+  logEl.querySelector('.log-scroll-wrap')?.remove();
 }
 
 function markBodyStart(logEl) {
@@ -403,17 +404,20 @@ function collapseLogBody(logEl) {
   });
   logEl.appendChild(arrow);
 
-  // Scroll jump button (↑/↓) pinned to bottom-right of terminal-container
+  // Scroll jump button — sticky inside terminal-body so it always floats
+  // in the bottom-right of the VISIBLE scroll area, not the full content
   const container = logEl.closest('.terminal-container');
   if (!container) return;
-  // Remove any previous scroll button (e.g. from a re-run)
-  container.querySelector('.log-scroll-btn')?.remove();
+  logEl.querySelector('.log-scroll-btn')?.remove();
   const upSVG   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const downSVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const btnWrap = document.createElement('div');
+  btnWrap.className = 'log-scroll-wrap';
   const btn = document.createElement('div');
   btn.className = 'log-scroll-btn';
   btn.innerHTML = upSVG;
   btn.title = 'Scroll to top';
+  btnWrap.appendChild(btn);
   const updateBtn = () => {
     const atTop = logEl.scrollTop === 0;
     btn.innerHTML = atTop ? downSVG : upSVG;
@@ -426,7 +430,7 @@ function collapseLogBody(logEl) {
   });
   logEl.addEventListener('scroll', updateBtn);
   updateBtn();
-  container.appendChild(btn);
+  logEl.appendChild(btnWrap);
 }
 
 function handleOutput(logEl, data, onExit) {

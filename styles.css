@@ -668,10 +668,19 @@ html, body {
 
 /* ── Scroll jump button ───────────────────────────────────────── */
 .terminal-container { position: relative; }
+.terminal-body .log-scroll-wrap {
+  position: sticky;
+  bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  /* zero height so it doesn't push content */
+  height: 0;
+  margin-top: -38px;
+  padding-right: 10px;
+}
 .log-scroll-btn {
-  position: absolute;
-  bottom: 14px;
-  right: 14px;
+  pointer-events: all;
   width: 28px;
   height: 28px;
   border-radius: 50%;
