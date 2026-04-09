@@ -25,6 +25,22 @@ url = sys.argv[1] if len(sys.argv) > 1 else input("Enter the URL and press enter
 fmt = sys.argv[2] if len(sys.argv) > 2 else 'bestvideo+bestaudio/best'
 cookies_path = sys.argv[3] if len(sys.argv) > 3 else ''
 extra_args   = _json.loads(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else []
+container    = sys.argv[5] if len(sys.argv) > 5 else 'mp4'
+start_time   = sys.argv[6] if len(sys.argv) > 6 else ''
+end_time     = sys.argv[7] if len(sys.argv) > 7 else ''
+
+def _hms_to_secs(ts: str) -> float:
+    """Convert HH:MM:SS (or MM:SS) timestamp string to total seconds."""
+    parts = ts.strip().split(':')
+    try:
+        parts = [float(p) for p in parts]
+    except ValueError:
+        return 0.0
+    if len(parts) == 3:
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+    if len(parts) == 2:
+        return parts[0] * 60 + parts[1]
+    return parts[0]
 
 # Initialize videos as an empty list
 videos = []
@@ -230,7 +246,7 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
         # Allow yt-dlp to fetch EJS scripts directly from GitHub
         'remote_components': 'ejs:github',
         'compat_options': ['no-file-locking'],  # Prevents file locking
-        'merge_output_format': 'mp4',  # Merge to MP4 format
+        'merge_output_format': container,
         'external_downloader': 'aria2c',  # Use aria2 as the downloader
         'postprocessors': [
             {
@@ -245,6 +261,12 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
         ydl_opts['cookiefile'] = cookies_path
     if extra_args:
         _apply_extra_args(ydl_opts, extra_args)
+    if start_time or end_time:
+        from yt_dlp.utils import download_range_func
+        s = _hms_to_secs(start_time) if start_time else 0.0
+        e = _hms_to_secs(end_time)   if end_time   else float('inf')
+        ydl_opts['download_ranges'] = download_range_func(None, [(s, e)])
+        ydl_opts['force_keyframes_at_cuts'] = True
 
     success = False
     for attempt in range(retries):
@@ -276,7 +298,7 @@ def download_without_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retr
         # Allow yt-dlp to fetch EJS scripts directly from GitHub
         'remote_components': 'ejs:github',
         'compat_options': ['no-file-locking'],  # Prevents file locking
-        'merge_output_format': 'mp4',  # Merge to MP4 format
+        'merge_output_format': container,
         'ignoreerrors': True,
         'verbose': True,  # Enable verbose logging
         'user_agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -295,6 +317,12 @@ def download_without_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retr
         ytdl_opts['cookiefile'] = cookies_path
     if extra_args:
         _apply_extra_args(ytdl_opts, extra_args)
+    if start_time or end_time:
+        from yt_dlp.utils import download_range_func
+        s = _hms_to_secs(start_time) if start_time else 0.0
+        e = _hms_to_secs(end_time)   if end_time   else float('inf')
+        ytdl_opts['download_ranges'] = download_range_func(None, [(s, e)])
+        ytdl_opts['force_keyframes_at_cuts'] = True
 
     success = False
     for attempt in range(retries):

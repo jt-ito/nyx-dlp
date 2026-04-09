@@ -130,6 +130,7 @@ signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 # ——— Configuration ——————————————————————————————————————
 COOKIE_FILE = sys.argv[3] if len(sys.argv) > 3 else ''
 EXTRA_ARGS  = json.loads(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else []
+CONTAINER   = sys.argv[5] if len(sys.argv) > 5 else 'mp4'
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -249,7 +250,7 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
         sys.executable, "-m", "yt_dlp", "-v",
         "-f", fmt,
         "--abort-on-unavailable-fragment",
-        "--merge-output-format", "mp4",
+        "--merge-output-format", CONTAINER,
         "--write-auto-sub", "--sub-langs", "en",
         "--embed-subs", "--add-metadata",
         "--ignore-errors",
@@ -297,7 +298,7 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
         sys.executable, "-m", "yt_dlp", "-v",
         "-f", fmt,
         "--abort-on-unavailable-fragment",
-        "--merge-output-format", "mp4",
+        "--merge-output-format", CONTAINER,
         "--write-auto-sub", "--sub-langs", "en",
         "--embed-subs", "--add-metadata",
         "--external-downloader", "aria2c",

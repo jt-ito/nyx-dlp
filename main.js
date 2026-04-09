@@ -175,22 +175,22 @@ ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath }) =>
 });
 
 // ── Tool 2: yt-dlp Single Download ───────────────────────────────────────────
-// yt-dlp.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON
-ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs }) => {
+// yt-dlp.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  sys.argv[6]=startTime  sys.argv[7]=endTime
+ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs, container, startTime, endTime }) => {
   const scriptPath = path.join(scriptsDir, 'yt-dlp.py');
   runScript(event, 'ytdlp-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || [])]
+    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '']
   });
 });
 
 // ── Tool 3: Batch Downloader ──────────────────────────────────────────────────
-// yt-dlp_multi.py: sys.argv[1]=format  sys.argv[2]=rest  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  stdin=URLs
-ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, extraArgs }) => {
+// yt-dlp_multi.py: sys.argv[1]=format  sys.argv[2]=rest  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  stdin=URLs
+ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, extraArgs, container }) => {
   const scriptPath = path.join(scriptsDir, 'yt-dlp_multi.py');
   runScript(event, 'batch-output', scriptPath, {
     cwd: outputDir,
-    args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || [])],
+    args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4'],
     stdinLines: [...urls, '']
   });
 });

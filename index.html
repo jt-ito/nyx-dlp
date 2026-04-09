@@ -264,6 +264,27 @@
             </select>
           </div>
 
+          <div class="form-group" id="yd-container-group">
+            <label class="form-label">Container</label>
+            <select id="yd-container" class="form-select">
+              <option value="mp4">MP4 — default</option>
+              <option value="mkv">MKV (Matroska)</option>
+              <option value="mov">MOV (QuickTime)</option>
+              <option value="webm">WebM</option>
+              <option value="avi">AVI</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="yd-start-group">
+            <label class="form-label">Start Time <span class="label-optional">(optional)</span></label>
+            <input type="text" id="yd-start" class="form-input" placeholder="HH:MM:SS" />
+          </div>
+
+          <div class="form-group" id="yd-end-group">
+            <label class="form-label">End Time <span class="label-optional">(optional)</span></label>
+            <input type="text" id="yd-end" class="form-input" placeholder="HH:MM:SS" />
+          </div>
+
           <div class="form-group full-width" id="yd-cookies-group">
             <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
             <div class="input-folder-group">
@@ -351,6 +372,17 @@
               <option value="bestvideo[height&lt;=480]+bestaudio/best[height&lt;=480]">480p Max</option>
               <option value="bestvideo[height&lt;=360]+bestaudio/best[height&lt;=360]">360p Max</option>
               <option value="bestaudio/best">Audio Only</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="batch-container-group">
+            <label class="form-label">Container</label>
+            <select id="batch-container" class="form-select">
+              <option value="mp4">MP4 — default</option>
+              <option value="mkv">MKV (Matroska)</option>
+              <option value="mov">MOV (QuickTime)</option>
+              <option value="webm">WebM</option>
+              <option value="avi">AVI</option>
             </select>
           </div>
 
@@ -928,7 +960,7 @@
             </div>
           </div>
 
-          <div class="settings-version">nyx-dlp v1.0.8</div>
+          <div class="settings-version">nyx-dlp v1.0.9</div>
 
         </div>
       </section>

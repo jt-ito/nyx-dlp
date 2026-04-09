@@ -619,6 +619,9 @@ function handleOutput(logEl, data, onExit) {
     const outputDir   = document.getElementById('yd-output').value.trim();
     const format      = document.getElementById('yd-format').value;
     const cookiesPath = document.getElementById('yd-cookies').value.trim();
+    const container   = document.getElementById('yd-container').value;
+    const startTime   = document.getElementById('yd-start').value.trim();
+    const endTime     = document.getElementById('yd-end').value.trim();
 
     if (!url)       { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
     if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -627,6 +630,8 @@ function handleOutput(logEl, data, onExit) {
     appendLog(log, `▶ Starting yt-dlp download...`, 'info');
     appendLog(log, `  URL:    ${url}`, 'cmd');
     appendLog(log, `  Format: ${format}`, 'cmd');
+    appendLog(log, `  Container: ${container}`, 'cmd');
+    if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
@@ -652,11 +657,13 @@ function handleOutput(logEl, data, onExit) {
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
+        document.getElementById('yd-start').value = '';
+        document.getElementById('yd-end').value   = '';
         decRunning();
       });
     });
 
-    window.api.runYtdlp({ url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs() });
+    window.api.runYtdlp({ url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), container, startTime, endTime });
   });
 })();
 
@@ -718,6 +725,7 @@ function handleOutput(logEl, data, onExit) {
     const format      = document.getElementById('batch-format').value;
     const rest        = document.getElementById('batch-rest').checked;
     const cookiesPath = document.getElementById('batch-cookies').value.trim();
+    const container   = document.getElementById('batch-container').value;
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter at least one valid URL.', 'error'); return; }
     if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -725,6 +733,7 @@ function handleOutput(logEl, data, onExit) {
     clearLog(log);
     appendLog(log, `▶ Starting batch download of ${urls.length} URL(s)...`, 'info');
     appendLog(log, `  Format: ${format}`, 'cmd');
+    appendLog(log, `  Container: ${container}`, 'cmd');
     appendLog(log, `  Rest between downloads: ${rest ? 'Yes (~5 min)' : 'No'}`, 'cmd');
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
@@ -759,7 +768,7 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    window.api.runBatch({ urls, outputDir, format, rest, cookiesPath, extraArgs: getBatchExtraArgs() });
+    window.api.runBatch({ urls, outputDir, format, rest, cookiesPath, extraArgs: getBatchExtraArgs(), container });
   });
 })();
 
