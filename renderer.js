@@ -373,6 +373,13 @@ function appendLog(logEl, text, cls) {
   line.className = 'line-' + cls;
   line.textContent = text;
   logEl.appendChild(line);
+  // Only flag critical failure on Python tracebacks — these mean an unhandled
+  // exception killed the process. A plain ERROR: line (e.g. one video in a
+  // playlist failed) does NOT mean the whole run failed.
+  const t = text.trimStart();
+  if (/^Traceback \(most recent call last\)/i.test(t) || /^\s+File ".*\.py"/.test(text)) {
+    logEl._hasError = true;
+  }
   const scroller = logEl.closest('.content') ?? logEl;
   if (!scroller._rafPending) {
     scroller._rafPending = true;
@@ -420,17 +427,31 @@ function markBodyStart(logEl) {
   }
 }
 
-function collapseLogBody(logEl) {
+function collapseLogBody(logEl, failed) {
   const sentinel = logEl.querySelector('.log-body-start');
   if (!sentinel) return;
   const all = Array.from(logEl.children);
   const start = all.indexOf(sentinel);
   const bodyLines = all.slice(start + 1, all.length - 1);
   if (bodyLines.length === 0) { sentinel.remove(); return; }
+
+  // On failure: keep error/warning/stderr lines visible, hide the rest
+  // On success: keep nothing visible (standard collapse — show summary only)
+  const isVisible = failed
+    ? el => el.classList.contains('line-error') || el.classList.contains('line-warning') || el.classList.contains('line-stderr')
+    : () => false;
+
+  const visible = bodyLines.filter(isVisible);
+  const hidden  = bodyLines.filter(el => !isVisible(el));
+
   const detail = document.createElement('div');
   detail.className = 'log-detail';
-  bodyLines.forEach(el => detail.appendChild(el));
+  hidden.forEach(el => detail.appendChild(el));
   sentinel.replaceWith(detail);
+
+  // Re-insert visible lines (errors/warnings) after the detail block
+  visible.forEach(el => logEl.appendChild(el));
+
   const arrow = document.createElement('div');
   arrow.className = 'log-expand-arrow';
   arrow.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -460,12 +481,16 @@ function handleOutput(logEl, data, onExit) {
       break;
     }
     case 'error':   appendLog(logEl, '⚠ ' + data.text, 'error'); break;
-    case 'exit':
-      if (data.code === 0) appendLog(logEl, '✔ Process finished successfully.', 'success');
-      else                 appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
-      collapseLogBody(logEl);
+    case 'exit': {
+      const failed = data.code !== 0 || !!logEl._hasError;
+      logEl._hasError = false;
+      if (!failed) appendLog(logEl, '✔ Process finished successfully.', 'success');
+      else if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+      else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
+      collapseLogBody(logEl, failed);
       if (onExit) onExit(data.code);
       break;
+    }
   }
 }
 
