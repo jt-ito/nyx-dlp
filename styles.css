@@ -587,6 +587,13 @@ html, body {
 .progress-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; min-width: 50px; text-align: right; }
 
 /* ── Terminal ─────────────────────────────────────────────────── */
+.terminal-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
 .terminal-container {
   flex: 1;
   display: flex;
@@ -595,7 +602,6 @@ html, body {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  min-height: 220px;
 }
 .terminal-header {
   display: flex;
@@ -622,8 +628,6 @@ html, body {
   user-select: text;
   white-space: pre-wrap;
   word-break: break-word;
-  display: flex;
-  flex-direction: column;
 }
 .terminal-body .line-stdout  { color: var(--terminal-stdout); }
 .terminal-body .line-stderr  { color: var(--terminal-stderr); }
@@ -649,7 +653,6 @@ html, body {
   user-select: none;
   opacity: 0.55;
   transition: opacity 0.15s, color 0.15s;
-  margin-top: auto;
 }
 .terminal-body .log-expand-arrow:hover { opacity: 1; color: var(--accent); }
 .terminal-body .log-expand-arrow svg { transition: transform 0.2s; }
@@ -667,20 +670,10 @@ html, body {
 }
 
 /* ── Scroll jump button ───────────────────────────────────────── */
-.terminal-container { position: relative; }
-.terminal-body .log-scroll-wrap {
-  position: sticky;
-  bottom: 10px;
-  display: flex;
-  justify-content: flex-end;
-  pointer-events: none;
-  /* zero height so it doesn't push content */
-  height: 0;
-  margin-top: -38px;
-  padding-right: 10px;
-}
 .log-scroll-btn {
-  pointer-events: all;
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
   width: 28px;
   height: 28px;
   border-radius: 50%;

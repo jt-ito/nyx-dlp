@@ -373,8 +373,7 @@ function appendLog(logEl, text, cls) {
 }
 function clearLog(logEl) {
   logEl.innerHTML = '';
-  logEl.closest('.terminal-container')?.querySelector('.log-scroll-btn')?.remove();
-  logEl.querySelector('.log-scroll-wrap')?.remove();
+  logEl.closest('.terminal-wrap')?.querySelector('.log-scroll-btn')?.remove();
 }
 
 function markBodyStart(logEl) {
@@ -404,33 +403,16 @@ function collapseLogBody(logEl) {
   });
   logEl.appendChild(arrow);
 
-  // Scroll jump button — sticky inside terminal-body so it always floats
-  // in the bottom-right of the VISIBLE scroll area, not the full content
-  const container = logEl.closest('.terminal-container');
-  if (!container) return;
-  logEl.querySelector('.log-scroll-btn')?.remove();
-  const upSVG   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const downSVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const btnWrap = document.createElement('div');
-  btnWrap.className = 'log-scroll-wrap';
+  // Scroll-to-top button — absolutely positioned in terminal-wrap (outside overflow:hidden)
+  const wrap = logEl.closest('.terminal-wrap');
+  if (!wrap) return;
+  wrap.querySelector('.log-scroll-btn')?.remove();
   const btn = document.createElement('div');
   btn.className = 'log-scroll-btn';
-  btn.innerHTML = upSVG;
   btn.title = 'Scroll to top';
-  btnWrap.appendChild(btn);
-  const updateBtn = () => {
-    const atTop = logEl.scrollTop === 0;
-    btn.innerHTML = atTop ? downSVG : upSVG;
-    btn.title = atTop ? 'Scroll to bottom' : 'Scroll to top';
-  };
-  btn.addEventListener('click', () => {
-    if (logEl.scrollTop === 0) logEl.scrollTop = logEl.scrollHeight;
-    else logEl.scrollTop = 0;
-    setTimeout(updateBtn, 50);
-  });
-  logEl.addEventListener('scroll', updateBtn);
-  updateBtn();
-  logEl.appendChild(btnWrap);
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  btn.addEventListener('click', () => { logEl.scrollTop = 0; });
+  wrap.appendChild(btn);
 }
 
 function handleOutput(logEl, data, onExit) {
