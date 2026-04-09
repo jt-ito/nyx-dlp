@@ -34,7 +34,11 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    const panel = document.getElementById('tab-' + btn.dataset.tab);
+    panel.classList.add('active');
+    // Snap scroll to bottom when switching back to a tab with a running download
+    const content = document.querySelector('.content');
+    if (content) content.scrollTop = content.scrollHeight;
   });
 });
 
@@ -370,9 +374,22 @@ function appendLog(logEl, text, cls) {
   line.textContent = text;
   logEl.appendChild(line);
   const scroller = logEl.closest('.content') ?? logEl;
-  scroller.scrollTop = scroller.scrollHeight;
+  if (!scroller._rafPending) {
+    scroller._rafPending = true;
+    requestAnimationFrame(() => {
+      scroller._rafPending = false;
+      if (logEl.closest('.tab-panel')?.classList.contains('active')) {
+        scroller.scrollTop = scroller.scrollHeight;
+      }
+    });
+  }
 }
 function clearLog(logEl) {
+  const scroller = logEl.closest('.content');
+  if (scroller && logEl._scrollBtnHandler) {
+    scroller.removeEventListener('scroll', logEl._scrollBtnHandler);
+    logEl._scrollBtnHandler = null;
+  }
   logEl.innerHTML = '';
   logEl.closest('.terminal-wrap')?.querySelector('.log-scroll-btn')?.remove();
 }
@@ -381,6 +398,26 @@ function markBodyStart(logEl) {
   const m = document.createElement('div');
   m.className = 'log-body-start';
   logEl.appendChild(m);
+
+  // Create scroll-to-top button immediately; show only when terminal top is off-screen
+  const wrap = logEl.closest('.terminal-wrap');
+  const scroller = logEl.closest('.content');
+  if (wrap && scroller) {
+    const btn = document.createElement('div');
+    btn.className = 'log-scroll-btn';
+    btn.title = 'Scroll to top';
+    btn.style.display = 'none';
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    btn.addEventListener('click', () => {
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    wrap.appendChild(btn);
+    logEl._scrollBtnHandler = () => {
+      const hidden = wrap.getBoundingClientRect().top < scroller.getBoundingClientRect().top - 10;
+      btn.style.display = hidden ? 'flex' : 'none';
+    };
+    scroller.addEventListener('scroll', logEl._scrollBtnHandler);
+  }
 }
 
 function collapseLogBody(logEl) {
@@ -400,22 +437,15 @@ function collapseLogBody(logEl) {
   arrow.addEventListener('click', () => {
     const open = detail.classList.toggle('open');
     arrow.classList.toggle('open', open);
-    if (open) logEl.scrollTop = logEl.scrollHeight;
+    if (open) {
+      const scroller = logEl.closest('.content') ?? logEl;
+      scroller.scrollTop = scroller.scrollHeight;
+    }
   });
   logEl.appendChild(arrow);
 
-  // Scroll-to-top button — absolutely positioned in terminal-wrap (outside overflow:hidden)
-  const wrap = logEl.closest('.terminal-wrap');
-  if (!wrap) return;
-  wrap.querySelector('.log-scroll-btn')?.remove();
-  const btn = document.createElement('div');
-  btn.className = 'log-scroll-btn';
-  btn.title = 'Scroll to top';
-  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  btn.addEventListener('click', () => {
-    logEl.closest('.terminal-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-  wrap.appendChild(btn);
+  // Trigger button visibility update now that content has collapsed
+  logEl._scrollBtnHandler?.();
 }
 
 function handleOutput(logEl, data, onExit) {
