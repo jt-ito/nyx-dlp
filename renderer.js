@@ -36,9 +36,6 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     btn.classList.add('active');
     const panel = document.getElementById('tab-' + btn.dataset.tab);
     panel.classList.add('active');
-    // Snap scroll to bottom when switching back to a tab with a running download
-    const content = document.querySelector('.content');
-    if (content) content.scrollTop = content.scrollHeight;
   });
 });
 
@@ -381,11 +378,27 @@ function appendLog(logEl, text, cls) {
     logEl._hasError = true;
   }
   const scroller = logEl.closest('.content') ?? logEl;
+
+  // Cap log DOM at 2000 lines; trim oldest 100 at a time to keep layout cheap
+  logEl._lineCount = (logEl._lineCount || 0) + 1;
+  if (logEl._lineCount > 2000) {
+    let removed = 0;
+    while (removed < 100 && logEl.firstChild) {
+      const first = logEl.firstChild;
+      if (first.classList.contains('log-body-start') ||
+          first.classList.contains('log-detail') ||
+          first.classList.contains('log-expand-arrow')) break;
+      logEl.removeChild(first);
+      removed++;
+    }
+    logEl._lineCount -= removed;
+  }
+
   if (!scroller._rafPending) {
     scroller._rafPending = true;
     requestAnimationFrame(() => {
       scroller._rafPending = false;
-      if (logEl.closest('.tab-panel')?.classList.contains('active')) {
+      if (scroller._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
         scroller.scrollTop = scroller.scrollHeight;
       }
     });
@@ -398,6 +411,9 @@ function clearLog(logEl) {
     logEl._scrollBtnHandler = null;
   }
   logEl.innerHTML = '';
+  logEl._lineCount = 0;
+  logEl._hasError = false;
+  if (scroller) scroller._autoFollow = true;
   logEl.closest('.terminal-wrap')?.querySelector('.log-scroll-btn')?.remove();
 }
 
@@ -416,12 +432,17 @@ function markBodyStart(logEl) {
     btn.style.display = 'none';
     btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     btn.addEventListener('click', () => {
+      scroller._autoFollow = false;
       wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     wrap.appendChild(btn);
+    scroller._autoFollow = true;
     logEl._scrollBtnHandler = () => {
       const hidden = wrap.getBoundingClientRect().top < scroller.getBoundingClientRect().top - 10;
       btn.style.display = hidden ? 'flex' : 'none';
+      // Re-enable auto-follow when user scrolls back to the bottom
+      const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 30;
+      scroller._autoFollow = atBottom;
     };
     scroller.addEventListener('scroll', logEl._scrollBtnHandler);
   }
