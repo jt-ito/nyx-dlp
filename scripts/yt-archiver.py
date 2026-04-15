@@ -13,6 +13,51 @@ def _ensure(pip_pkg, import_name=None):
         print(f'[setup] Installing {pip_pkg}...', flush=True)
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_pkg])
 
+def _ensure_bgutil():
+    """Install bgutil-ytdlp-pot-provider yt-dlp plugin if not already present."""
+    try:
+        result = subprocess.run(
+            [sys.executable, '-m', 'pip', 'show', 'bgutil-ytdlp-pot-provider'],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode == 0:
+            return
+    except Exception:
+        pass
+    print('[setup] Installing bgutil-ytdlp-pot-provider...', flush=True)
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'bgutil-ytdlp-pot-provider'])
+    print('[setup] bgutil-ytdlp-pot-provider installed', flush=True)
+
+def _ensure_deno():
+    """Ensure deno is on PATH, installing it if not present."""
+    import shutil as _shutil
+    if _shutil.which('deno'):
+        return
+    deno_bin = Path.home() / '.deno' / 'bin' / ('deno.exe' if sys.platform == 'win32' else 'deno')
+    if deno_bin.exists():
+        os.environ['PATH'] = str(deno_bin.parent) + os.pathsep + os.environ['PATH']
+        return
+    print('[setup] deno not found — installing...', flush=True)
+    try:
+        if sys.platform == 'win32':
+            result = subprocess.run(
+                ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+                 'irm https://deno.land/install.ps1 | iex'],
+                capture_output=True, text=True, timeout=120,
+            )
+        else:
+            result = subprocess.run(
+                ['sh', '-c', 'curl -fsSL https://deno.land/install.sh | sh'],
+                capture_output=True, text=True, timeout=120,
+            )
+        if result.returncode == 0 and deno_bin.exists():
+            os.environ['PATH'] = str(deno_bin.parent) + os.pathsep + os.environ['PATH']
+            print('[setup] deno installed successfully', flush=True)
+        else:
+            print(f'[setup] deno install failed (exit {result.returncode})', flush=True)
+    except Exception as e:
+        print(f'[setup] deno install failed: {e}', flush=True)
+
 _ensure('yt-dlp',        'yt_dlp')
 _ensure('python-slugify', 'slugify')
 
@@ -24,6 +69,21 @@ url = sys.argv[1] if len(sys.argv) > 1 else input("Enter the URL and press enter
 fmt = sys.argv[2] if len(sys.argv) > 2 else 'bestvideo*+bestaudio/best'
 cookies_path = sys.argv[3] if len(sys.argv) > 3 else ''
 container    = sys.argv[4] if len(sys.argv) > 4 else 'mp4'
+bgutil_url   = sys.argv[5] if len(sys.argv) > 5 else ''
+use_deno     = sys.argv[6].lower() == 'y' if len(sys.argv) > 6 else True
+
+# Bootstrap optional dependencies
+if use_deno:
+    _ensure_deno()
+if bgutil_url:
+    _ensure_bgutil()
+
+# Extractor args for bgutil PO token provider (applied in run_ytdlp below)
+_extractor_args: dict = {}
+if bgutil_url:
+    _extractor_args = {'youtube': {'player_client': ['web']}}
+    if bgutil_url != 'local':
+        _extractor_args['youtubepot-bgutilhttp'] = {'base_url': [bgutil_url]}
 
 # Split the URL to get the video ID
 try:
@@ -130,6 +190,8 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
         'no_warnings': False,
     }
     
+    if _extractor_args:
+        ydl_opts['extractor_args'] = _extractor_args
     if cookies_path and os.path.isfile(cookies_path):
         ydl_opts['cookiefile'] = cookies_path
     

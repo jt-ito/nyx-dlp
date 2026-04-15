@@ -100,6 +100,7 @@ const SETTINGS_MAP = {
   'show-gdl-filetypes':   { el: 'gdl-filetypes-group' },
   'show-gdl-meta':        { el: 'gdl-meta-group' },
   'show-gdl-cookies':     { el: 'gdl-cookies-group' },
+  'dep-use-bgutil':       { el: 'dep-bgutil-url-group' },
 };
 const SETTINGS_DEFAULTS = {
   'show-tool-livestream': true,
@@ -119,6 +120,9 @@ const SETTINGS_DEFAULTS = {
   'show-gdl-filetypes':   true,
   'show-gdl-meta':        true,
   'show-gdl-cookies':     false,
+  'dep-use-bgutil':       true,
+  'dep-use-deno':         true,
+  'dep-install-gdl':      true,
 };
 
 // ── yt-dlp Advanced Options definition ────────────────────────
@@ -636,7 +640,9 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    window.api.runLivestream({ url, outputDir, format, cookiesPath, container });
+    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('setting:bgutil-url') || 'local') : '';
+    const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
+    window.api.runLivestream({ url, outputDir, format, cookiesPath, container, bgutilUrl, useDeno });
   });
 })();
 
@@ -726,7 +732,9 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    window.api.runYtdlp({ url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), container, startTime, endTime });
+    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('setting:bgutil-url') || 'local') : '';
+    const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
+    window.api.runYtdlp({ url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), container, startTime, endTime, bgutilUrl, useDeno });
   });
 })();
 
@@ -831,7 +839,9 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    window.api.runBatch({ urls, outputDir, format, rest, cookiesPath, extraArgs: getBatchExtraArgs(), container });
+    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('setting:bgutil-url') || 'local') : '';
+    const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
+    window.api.runBatch({ urls, outputDir, format, rest, cookiesPath, extraArgs: getBatchExtraArgs(), container, bgutilUrl, useDeno });
   });
 })();
 
@@ -1038,7 +1048,8 @@ try {
       });
     });
 
-    window.api.runGalleryDl({ url, outputDir, filetypes, metadata, cookiesPath });
+    const installGdl = getSetting('dep-install-gdl') ? 'y' : 'n';
+    window.api.runGalleryDl({ url, outputDir, filetypes, metadata, cookiesPath, installGdl });
   });
 })()
 } catch (e) {
@@ -1120,6 +1131,7 @@ try {
     'batch-output', 'batch-cookies',
     'm3-output',    'm3-cookies',
     'gdl-output',   'gdl-cookies',
+    'dep-bgutil-url',
   ];
 
   // Select dropdowns — save on change

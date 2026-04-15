@@ -1025,7 +1025,47 @@
             </div>
           </div>
 
-          <div class="settings-version">nyx-dlp v1.13</div>
+          <div class="settings-section">
+            <div class="settings-section-title">Dependencies</div>
+            <p class="settings-section-desc">Control which optional tools are auto-installed at run time</p>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Use bgutil PO token provider</div>
+                <div class="toggle-desc">Installs bgutil-ytdlp-pot-provider to bypass YouTube bot-detection on yt-dlp downloads (recommended)</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="dep-use-bgutil" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div id="dep-bgutil-url-group" style="padding: 4px 0 8px;">
+              <label class="form-label" style="margin-bottom:4px;">bgutil server URL <span class="label-optional">(optional)</span></label>
+              <input type="text" id="dep-bgutil-url" class="form-input" placeholder="Leave empty for local deno mode — or http://127.0.0.1:4416" />
+              <p class="settings-section-desc" style="margin-top:4px;">Leave empty to run locally via deno. Only set a URL if you have a bgutil-http server running.</p>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Auto-install deno</div>
+                <div class="toggle-desc">Automatically install deno if not found — required for bgutil local mode and JS challenge solving</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="dep-use-deno" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Auto-install gallery-dl</div>
+                <div class="toggle-desc">Automatically install the gallery-dl Python package when the gallery-dl tab is used</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="dep-install-gdl" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-version">nyx-dlp v1.14</div>
 
         </div>
       </section>

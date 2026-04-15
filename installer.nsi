@@ -2,7 +2,7 @@
 Unicode True
 
 !define APP_NAME     "nyx-dlp"
-!define APP_VERSION  "1.13"
+!define APP_VERSION  "1.14"
 !define APP_EXE      "nyx-dlp.exe"
 !define REG_KEY      "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 
@@ -22,6 +22,10 @@ SetCompressor /SOLID lzma
 
 ; Welcome page — show upgrade notice if already installed
 !define MUI_WELCOMEPAGE_TEXT "This will install ${APP_NAME} ${APP_VERSION} on your computer.$\r$\n$\r$\nIf a previous version is already installed it will be updated automatically in the same location.$\r$\n$\r$\nClick Next to continue."
+
+; Finish page — offer to launch the app
+!define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXE}"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch ${APP_NAME}"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME

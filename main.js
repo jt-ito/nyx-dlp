@@ -166,31 +166,31 @@ ipcMain.on('resume-script', (event, { pid }) => suspendResumeTree(pid, 'resume')
 
 // ── Tool 1: YouTube Live Stream Archiver ──────────────────────────────────────
 // yt-archiver.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=container
-ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container }) => {
+ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container, bgutilUrl, useDeno }) => {
   const scriptPath = path.join(scriptsDir, 'yt-archiver.py');
   runScript(event, 'livestream-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', container || 'mp4']
+    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || '', useDeno || 'n']
   });
 });
 
 // ── Tool 2: yt-dlp Single Download ───────────────────────────────────────────
 // yt-dlp.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  sys.argv[6]=startTime  sys.argv[7]=endTime
-ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs, container, startTime, endTime }) => {
+ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs, container, startTime, endTime, bgutilUrl, useDeno }) => {
   const scriptPath = path.join(scriptsDir, 'yt-dlp.py');
   runScript(event, 'ytdlp-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '']
+    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '', bgutilUrl || '', useDeno || 'n']
   });
 });
 
 // ── Tool 3: Batch Downloader ──────────────────────────────────────────────────
 // yt-dlp_multi.py: sys.argv[1]=format  sys.argv[2]=rest  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  stdin=URLs
-ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, extraArgs, container }) => {
+ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, extraArgs, container, bgutilUrl, useDeno }) => {
   const scriptPath = path.join(scriptsDir, 'yt-dlp_multi.py');
   runScript(event, 'batch-output', scriptPath, {
     cwd: outputDir,
-    args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4'],
+    args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', bgutilUrl || '', useDeno || 'n'],
     stdinLines: [...urls, '']
   });
 });
@@ -207,10 +207,10 @@ ipcMain.on('run-m3u8', (event, { url, outputDir, encode, codec, bitrate, resolut
 });
 // ── Tool 5: gallery-dl ────────────────────────────────────────────────────────────
 // gallery-dl.py: sys.argv[1]=url  [2]=filetypes  [3]=metadata(y/n)  [4]=cookiesPath
-ipcMain.on('run-gallery-dl', (event, { url, outputDir, filetypes, metadata, cookiesPath }) => {
+ipcMain.on('run-gallery-dl', (event, { url, outputDir, filetypes, metadata, cookiesPath, installGdl }) => {
   const scriptPath = path.join(scriptsDir, 'gallery-dl.py');
   runScript(event, 'gallery-dl-output', scriptPath, {
     cwd: outputDir,
-    args: [url, filetypes, metadata ? 'y' : 'n', cookiesPath || '']
+    args: [url, filetypes, metadata ? 'y' : 'n', cookiesPath || '', installGdl || 'y']
   });
 });

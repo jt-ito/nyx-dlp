@@ -16,12 +16,21 @@ def _ensure(pip_pkg, import_name=None):
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_pkg])
         print(f'[setup] {pip_pkg} installed', flush=True)
 
-_ensure('gallery-dl', 'gallery_dl')
-
-url       = sys.argv[1] if len(sys.argv) > 1 else input("Enter the URL and press enter: ")
-filetypes = sys.argv[2] if len(sys.argv) > 2 else 'all'
-metadata  = sys.argv[3] if len(sys.argv) > 3 else 'n'
+install_gdl  = sys.argv[5] if len(sys.argv) > 5 else 'y'
+url          = sys.argv[1] if len(sys.argv) > 1 else input("Enter the URL and press enter: ")
+filetypes    = sys.argv[2] if len(sys.argv) > 2 else 'all'
+metadata     = sys.argv[3] if len(sys.argv) > 3 else 'n'
 cookies_path = sys.argv[4] if len(sys.argv) > 4 else ''
+
+if install_gdl != 'n':
+    _ensure('gallery-dl', 'gallery_dl')
+else:
+    try:
+        importlib.import_module('gallery_dl')
+    except ImportError:
+        print('[setup] gallery-dl is not installed and auto-install is disabled.', flush=True)
+        print('[setup] Enable "Auto-install gallery-dl" in Settings \u2192 Dependencies to install it.', flush=True)
+        sys.exit(1)
 
 cmd = [sys.executable, '-u', '-m', 'gallery_dl', '--verbose', '-d', '.', url]
 

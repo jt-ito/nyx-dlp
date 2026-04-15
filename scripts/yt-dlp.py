@@ -4,6 +4,7 @@ import importlib
 import subprocess
 import atexit
 import signal
+from pathlib import Path
 
 def _ensure(pip_pkg, import_name=None):
     try:
@@ -11,6 +12,51 @@ def _ensure(pip_pkg, import_name=None):
     except ImportError:
         print(f'[setup] Installing {pip_pkg}...', flush=True)
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', pip_pkg])
+
+def _ensure_bgutil():
+    """Install bgutil-ytdlp-pot-provider yt-dlp plugin if not already present."""
+    try:
+        result = subprocess.run(
+            [sys.executable, '-m', 'pip', 'show', 'bgutil-ytdlp-pot-provider'],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode == 0:
+            return
+    except Exception:
+        pass
+    print('[setup] Installing bgutil-ytdlp-pot-provider...', flush=True)
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'bgutil-ytdlp-pot-provider'])
+    print('[setup] bgutil-ytdlp-pot-provider installed', flush=True)
+
+def _ensure_deno():
+    """Ensure deno is on PATH, installing it if not present."""
+    import shutil as _shutil
+    if _shutil.which('deno'):
+        return
+    deno_bin = Path.home() / '.deno' / 'bin' / ('deno.exe' if sys.platform == 'win32' else 'deno')
+    if deno_bin.exists():
+        os.environ['PATH'] = str(deno_bin.parent) + os.pathsep + os.environ['PATH']
+        return
+    print('[setup] deno not found — installing...', flush=True)
+    try:
+        if sys.platform == 'win32':
+            result = subprocess.run(
+                ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+                 'irm https://deno.land/install.ps1 | iex'],
+                capture_output=True, text=True, timeout=120,
+            )
+        else:
+            result = subprocess.run(
+                ['sh', '-c', 'curl -fsSL https://deno.land/install.sh | sh'],
+                capture_output=True, text=True, timeout=120,
+            )
+        if result.returncode == 0 and deno_bin.exists():
+            os.environ['PATH'] = str(deno_bin.parent) + os.pathsep + os.environ['PATH']
+            print('[setup] deno installed successfully', flush=True)
+        else:
+            print(f'[setup] deno install failed (exit {result.returncode})', flush=True)
+    except Exception as e:
+        print(f'[setup] deno install failed: {e}', flush=True)
 
 _ensure('yt-dlp',        'yt_dlp')
 _ensure('python-slugify', 'slugify')
@@ -28,6 +74,21 @@ extra_args   = _json.loads(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] els
 container    = sys.argv[5] if len(sys.argv) > 5 else 'mp4'
 start_time   = sys.argv[6] if len(sys.argv) > 6 else ''
 end_time     = sys.argv[7] if len(sys.argv) > 7 else ''
+bgutil_url   = sys.argv[8] if len(sys.argv) > 8 else ''
+use_deno     = sys.argv[9].lower() == 'y' if len(sys.argv) > 9 else True
+
+# Bootstrap optional dependencies
+if use_deno:
+    _ensure_deno()
+if bgutil_url:
+    _ensure_bgutil()
+
+# Extractor args for bgutil PO token provider (applied in ydl_opts below)
+_extractor_args: dict = {}
+if bgutil_url:
+    _extractor_args = {'youtube': {'player_client': ['web']}}
+    if bgutil_url != 'local':
+        _extractor_args['youtubepot-bgutilhttp'] = {'base_url': [bgutil_url]}
 
 def _hms_to_secs(ts: str) -> float:
     """Convert HH:MM:SS (or MM:SS) timestamp string to total seconds."""
@@ -257,6 +318,8 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
             },
         ],
     }
+    if _extractor_args:
+        ydl_opts['extractor_args'] = _extractor_args
     if cookies_path and os.path.isfile(cookies_path):
         ydl_opts['cookiefile'] = cookies_path
     if extra_args:
@@ -313,6 +376,8 @@ def download_without_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retr
             },
         ],
     }
+    if _extractor_args:
+        ytdl_opts['extractor_args'] = _extractor_args
     if cookies_path and os.path.isfile(cookies_path):
         ytdl_opts['cookiefile'] = cookies_path
     if extra_args:

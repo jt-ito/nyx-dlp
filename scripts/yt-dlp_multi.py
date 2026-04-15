@@ -33,6 +33,7 @@ import os
 import importlib
 import subprocess as _sp
 import sys
+from pathlib import Path
 
 def _ensure(pip_pkg, import_name=None):
     try:
@@ -40,6 +41,51 @@ def _ensure(pip_pkg, import_name=None):
     except ImportError:
         print(f'[setup] Installing {pip_pkg}...', flush=True)
         _sp.check_call([sys.executable, '-m', 'pip', 'install', pip_pkg])
+
+def _ensure_bgutil():
+    """Install bgutil-ytdlp-pot-provider yt-dlp plugin if not already present."""
+    try:
+        result = _sp.run(
+            [sys.executable, '-m', 'pip', 'show', 'bgutil-ytdlp-pot-provider'],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode == 0:
+            return
+    except Exception:
+        pass
+    print('[setup] Installing bgutil-ytdlp-pot-provider...', flush=True)
+    _sp.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'bgutil-ytdlp-pot-provider'])
+    print('[setup] bgutil-ytdlp-pot-provider installed', flush=True)
+
+def _ensure_deno():
+    """Ensure deno is on PATH, installing it if not present."""
+    import shutil as _shutil
+    if _shutil.which('deno'):
+        return
+    deno_bin = Path.home() / '.deno' / 'bin' / ('deno.exe' if sys.platform == 'win32' else 'deno')
+    if deno_bin.exists():
+        os.environ['PATH'] = str(deno_bin.parent) + os.pathsep + os.environ['PATH']
+        return
+    print('[setup] deno not found — installing...', flush=True)
+    try:
+        if sys.platform == 'win32':
+            result = _sp.run(
+                ['powershell', '-NoProfile', '-NonInteractive', '-Command',
+                 'irm https://deno.land/install.ps1 | iex'],
+                capture_output=True, text=True, timeout=120,
+            )
+        else:
+            result = _sp.run(
+                ['sh', '-c', 'curl -fsSL https://deno.land/install.sh | sh'],
+                capture_output=True, text=True, timeout=120,
+            )
+        if result.returncode == 0 and deno_bin.exists():
+            os.environ['PATH'] = str(deno_bin.parent) + os.pathsep + os.environ['PATH']
+            print('[setup] deno installed successfully', flush=True)
+        else:
+            print(f'[setup] deno install failed (exit {result.returncode})', flush=True)
+    except Exception as e:
+        print(f'[setup] deno install failed: {e}', flush=True)
 
 _ensure('yt-dlp',        'yt_dlp')
 _ensure('python-slugify', 'slugify')
@@ -131,11 +177,19 @@ signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 COOKIE_FILE = sys.argv[3] if len(sys.argv) > 3 else ''
 EXTRA_ARGS  = json.loads(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else []
 CONTAINER   = sys.argv[5] if len(sys.argv) > 5 else 'mp4'
+BGUTIL_URL  = sys.argv[6] if len(sys.argv) > 6 else ''
+USE_DENO    = sys.argv[7].lower() == 'y' if len(sys.argv) > 7 else True
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/136.0.0.0 Safari/537.36"
 )
+
+# Bootstrap optional dependencies
+if USE_DENO:
+    _ensure_deno()
+if BGUTIL_URL:
+    _ensure_bgutil()
 
 # ——— Context Manager for Directory Changes ——————————————
 @contextmanager
@@ -262,6 +316,10 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
         cmd += ["--cookies", COOKIE_FILE]
     if EXTRA_ARGS:
         cmd.extend(EXTRA_ARGS)
+    if BGUTIL_URL:
+        cmd += ['--extractor-args', 'youtube:player_client=web']
+        if BGUTIL_URL != 'local':
+            cmd += ['--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
     cmd.append(url)
     for attempt in range(1, retries + 1):
         logger.info(f" [default downloader] attempt {attempt}/{retries}")
@@ -314,6 +372,10 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
     # Add output template for Twitch links to keep naming format but limit length
     if "twitch.tv" in url:
         cmd += ["-o", "%(title).100s [%(id)s].%(ext)s"]
+    if BGUTIL_URL:
+        cmd += ['--extractor-args', 'youtube:player_client=web']
+        if BGUTIL_URL != 'local':
+            cmd += ['--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
     cmd.append(url)
     for attempt in range(1, retries + 1):
         logger.info(f" [aria2c downloader] attempt {attempt}/{retries}")
