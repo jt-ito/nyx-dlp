@@ -170,7 +170,7 @@ ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, cont
   const scriptPath = path.join(scriptsDir, 'yt-archiver.py');
   runScript(event, 'livestream-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || '', useDeno || 'n']
+    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || 'local', useDeno || 'n']
   });
 });
 
@@ -180,7 +180,7 @@ ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs
   const scriptPath = path.join(scriptsDir, 'yt-dlp.py');
   runScript(event, 'ytdlp-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '', bgutilUrl || '', useDeno || 'n']
+    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '', bgutilUrl || 'local', useDeno || 'n']
   });
 });
 
@@ -190,7 +190,7 @@ ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, ex
   const scriptPath = path.join(scriptsDir, 'yt-dlp_multi.py');
   runScript(event, 'batch-output', scriptPath, {
     cwd: outputDir,
-    args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', bgutilUrl || '', useDeno || 'n'],
+    args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', bgutilUrl || 'local', useDeno || 'n'],
     stdinLines: [...urls, '']
   });
 });

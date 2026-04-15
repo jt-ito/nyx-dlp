@@ -468,7 +468,7 @@ function markBodyStart(logEl) {
       // Pause auto-scroll and jump to top
       scroller._autoFollow = false;
       updateBtn();
-      wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      scroller.scrollTop = 0;
     } else {
       // Resume auto-scroll and jump to bottom
       scroller._autoFollow = true;
@@ -477,11 +477,15 @@ function markBodyStart(logEl) {
     }
   });
 
-  // Only re-enables auto-follow (never disables it — only the ↑ button does that)
+  // Only re-enables auto-follow (never disables it — only the ↑ button or manual scroll up does that)
   logEl._scrollBtnHandler = () => {
     const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 30;
-    if (atBottom && !scroller._autoFollow) {
+    if (atBottom) {
+      // User reached the bottom — re-engage auto-follow silently
       scroller._autoFollow = true;
+    } else if (scroller._autoFollow) {
+      // User scrolled away from the bottom manually — pause auto-follow
+      scroller._autoFollow = false;
     }
     updateBtn();
   };
@@ -640,7 +644,7 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('setting:bgutil-url') || 'local') : '';
+    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
     window.api.runLivestream({ url, outputDir, format, cookiesPath, container, bgutilUrl, useDeno });
   });
@@ -732,7 +736,7 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('setting:bgutil-url') || 'local') : '';
+    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
     window.api.runYtdlp({ url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), container, startTime, endTime, bgutilUrl, useDeno });
   });
@@ -839,7 +843,7 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('setting:bgutil-url') || 'local') : '';
+    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
     window.api.runBatch({ urls, outputDir, format, rest, cookiesPath, extraArgs: getBatchExtraArgs(), container, bgutilUrl, useDeno });
   });

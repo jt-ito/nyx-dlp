@@ -84,11 +84,24 @@ if bgutil_url:
     _ensure_bgutil()
 
 # Extractor args for bgutil PO token provider (applied in ydl_opts below)
+# In local/deno mode we install the plugin + deno and let yt-dlp use whichever client works
+# best — we do NOT force player_client=web because that hard-requires a PO token, and if
+# deno is unavailable the download would stall or skip formats. Only force web when an
+# explicit HTTP server URL is provided and known to be reachable.
 _extractor_args: dict = {}
-if bgutil_url:
-    _extractor_args = {'youtube': {'player_client': ['web']}}
-    if bgutil_url != 'local':
-        _extractor_args['youtubepot-bgutilhttp'] = {'base_url': [bgutil_url]}
+if bgutil_url and bgutil_url != 'local':
+    # HTTP server mode: ensure we use the web client (full format list) and route PO tokens
+    # through the user-configured server.
+    _extractor_args = {
+        'youtube': {'player_client': ['web']},
+        'youtubepot-bgutilhttp': {'base_url': [bgutil_url]},
+    }
+    print(f'[bgutil] Using HTTP server at {bgutil_url}', flush=True)
+elif bgutil_url == 'local':
+    # Local deno mode: package + deno are installed; the plugin registers itself and
+    # supplies PO tokens automatically when yt-dlp needs them. The HTTP provider will
+    # emit a warning that 127.0.0.1:4416 is unreachable — that is expected and harmless.
+    print('[bgutil] Local deno mode — plugin will provide PO tokens via deno', flush=True)
 
 def _hms_to_secs(ts: str) -> float:
     """Convert HH:MM:SS (or MM:SS) timestamp string to total seconds."""

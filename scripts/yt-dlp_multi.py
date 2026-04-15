@@ -316,10 +316,9 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
         cmd += ["--cookies", COOKIE_FILE]
     if EXTRA_ARGS:
         cmd.extend(EXTRA_ARGS)
-    if BGUTIL_URL:
-        cmd += ['--extractor-args', 'youtube:player_client=web']
-        if BGUTIL_URL != 'local':
-            cmd += ['--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+    if BGUTIL_URL and BGUTIL_URL != 'local':
+        cmd += ['--extractor-args', 'youtube:player_client=web',
+                '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
     cmd.append(url)
     for attempt in range(1, retries + 1):
         logger.info(f" [default downloader] attempt {attempt}/{retries}")
@@ -372,10 +371,9 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
     # Add output template for Twitch links to keep naming format but limit length
     if "twitch.tv" in url:
         cmd += ["-o", "%(title).100s [%(id)s].%(ext)s"]
-    if BGUTIL_URL:
-        cmd += ['--extractor-args', 'youtube:player_client=web']
-        if BGUTIL_URL != 'local':
-            cmd += ['--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+    if BGUTIL_URL and BGUTIL_URL != 'local':
+        cmd += ['--extractor-args', 'youtube:player_client=web',
+                '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
     cmd.append(url)
     for attempt in range(1, retries + 1):
         logger.info(f" [aria2c downloader] attempt {attempt}/{retries}")
