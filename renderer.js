@@ -422,30 +422,56 @@ function markBodyStart(logEl) {
   m.className = 'log-body-start';
   logEl.appendChild(m);
 
-  // Create scroll-to-top button immediately; show only when terminal top is off-screen
   const wrap = logEl.closest('.terminal-wrap');
   const scroller = logEl.closest('.content');
-  if (wrap && scroller) {
-    const btn = document.createElement('div');
-    btn.className = 'log-scroll-btn';
-    btn.title = 'Scroll to top';
-    btn.style.display = 'none';
-    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    btn.addEventListener('click', () => {
+  if (!wrap || !scroller) return;
+
+  const svgUp   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgDown = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  const btn = document.createElement('div');
+  btn.className = 'log-scroll-btn';
+  btn.style.display = 'none';
+  wrap.appendChild(btn);
+
+  scroller._autoFollow = true;
+
+  const updateBtn = () => {
+    const hasScroll = scroller.scrollHeight > scroller.clientHeight + 20;
+    btn.style.display = hasScroll ? 'flex' : 'none';
+    if (scroller._autoFollow) {
+      btn.innerHTML = svgUp;
+      btn.title = 'Scroll to top';
+    } else {
+      btn.innerHTML = svgDown;
+      btn.title = 'Resume auto-scroll';
+    }
+  };
+
+  btn.addEventListener('click', () => {
+    if (scroller._autoFollow) {
+      // Pause auto-scroll and jump to top
       scroller._autoFollow = false;
+      updateBtn();
       wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    wrap.appendChild(btn);
-    scroller._autoFollow = true;
-    logEl._scrollBtnHandler = () => {
-      const hidden = wrap.getBoundingClientRect().top < scroller.getBoundingClientRect().top - 10;
-      btn.style.display = hidden ? 'flex' : 'none';
-      // Re-enable auto-follow when user scrolls back to the bottom
-      const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 30;
-      scroller._autoFollow = atBottom;
-    };
-    scroller.addEventListener('scroll', logEl._scrollBtnHandler);
-  }
+    } else {
+      // Resume auto-scroll and jump to bottom
+      scroller._autoFollow = true;
+      updateBtn();
+      scroller.scrollTop = scroller.scrollHeight;
+    }
+  });
+
+  // Only re-enables auto-follow (never disables it — only the ↑ button does that)
+  logEl._scrollBtnHandler = () => {
+    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 30;
+    if (atBottom && !scroller._autoFollow) {
+      scroller._autoFollow = true;
+    }
+    updateBtn();
+  };
+
+  scroller.addEventListener('scroll', logEl._scrollBtnHandler);
 }
 
 function collapseLogBody(logEl, failed) {
