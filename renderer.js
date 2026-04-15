@@ -854,6 +854,14 @@ function handleOutput(logEl, data, onExit) {
   // Toggle encode options
   encodeChk.addEventListener('change', () => {
     encodeOpts.forEach(el => el.classList.toggle('hidden', !encodeChk.checked));
+    if (encodeChk.checked) {
+      const advBody = document.getElementById('m3-adv');
+      const advBtn  = document.querySelector('[data-adv="m3-adv"]');
+      if (advBody && !advBody.classList.contains('open')) {
+        advBody.classList.add('open');
+        advBtn?.setAttribute('aria-expanded', 'true');
+      }
+    }
   });
   document.getElementById('m3-encode-toggle').addEventListener('click', (e) => {
     if (e.target.closest('label')) return;

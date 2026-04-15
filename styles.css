@@ -702,26 +702,38 @@ html, body {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 9px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  padding: 10px 16px;
+  background: var(--terminal-bg-header);
+  border: 1px solid var(--terminal-border);
   border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 12.5px;
+  color: var(--terminal-title);
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: background var(--transition), color var(--transition);
   user-select: none;
 }
 .form-adv-toggle:hover { background: var(--bg-hover); color: var(--text); }
+.form-adv-toggle[aria-expanded="true"] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+}
 .form-adv-toggle[aria-expanded="true"] .ytdlp-chevron { transform: rotate(180deg); }
 .adv-body { grid-column: 1 / -1; display: none; }
-.adv-body.open { display: block; }
+.adv-body.open {
+  display: block;
+  border: 1px solid var(--terminal-border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
 .adv-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  padding-top: 8px;
+  padding: 12px;
 }
 .adv-grid .form-group.full-width { grid-column: 1 / -1; }
 

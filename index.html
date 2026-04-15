@@ -548,58 +548,6 @@
             </div>
           </div>
 
-          <div class="form-group encode-options hidden" id="m3-encode-opts">
-            <label class="form-label">Video Codec</label>
-            <select id="m3-codec" class="form-select">
-              <option value="h264_nvenc">H.264 NVENC (NVIDIA GPU) — default</option>
-              <option value="h265_nvenc">H.265 NVENC (NVIDIA GPU)</option>
-              <option value="libx264">H.264 x264 (CPU)</option>
-              <option value="libx265">H.265 x265 (CPU)</option>
-            </select>
-          </div>
-
-          <div class="form-group encode-options hidden">
-            <label class="form-label">Video Bitrate</label>
-            <select id="m3-bitrate" class="form-select">
-              <option value="6M">6 Mbps — default</option>
-              <option value="8M">8 Mbps</option>
-              <option value="10M">10 Mbps</option>
-              <option value="15M">15 Mbps</option>
-              <option value="20M">20 Mbps</option>
-            </select>
-          </div>
-
-          <div class="form-group encode-options hidden">
-            <label class="form-label">Resolution</label>
-            <select id="m3-resolution" class="form-select">
-              <option value="1920x1080">1920×1080 — default</option>
-              <option value="1280x720">1280×720</option>
-              <option value="2560x1440">2560×1440</option>
-              <option value="3840x2160">3840×2160 (4K)</option>
-              <option value="source">Source (no scaling)</option>
-            </select>
-          </div>
-
-          <div class="form-group encode-options hidden">
-            <label class="form-label">Frame Rate</label>
-            <select id="m3-fps" class="form-select">
-              <option value="60">60 fps — default</option>
-              <option value="30">30 fps</option>
-              <option value="24">24 fps</option>
-              <option value="source">Source (no override)</option>
-            </select>
-          </div>
-
-          <div class="form-group encode-options hidden">
-            <label class="form-label">Audio Bitrate</label>
-            <select id="m3-audio-bitrate" class="form-select">
-              <option value="192k">192k — default</option>
-              <option value="128k">128k</option>
-              <option value="256k">256k</option>
-              <option value="320k">320k</option>
-            </select>
-          </div>
-
           <div class="adv-toggle-wrap">
             <button class="form-adv-toggle" aria-expanded="false" data-adv="m3-adv">
               <span>More options</span>
@@ -610,6 +558,58 @@
           </div>
           <div class="adv-body" id="m3-adv">
             <div class="adv-grid">
+              <div class="form-group encode-options hidden" id="m3-encode-opts">
+                <label class="form-label">Video Codec</label>
+                <select id="m3-codec" class="form-select">
+                  <option value="h264_nvenc">H.264 NVENC (NVIDIA GPU) — default</option>
+                  <option value="h265_nvenc">H.265 NVENC (NVIDIA GPU)</option>
+                  <option value="libx264">H.264 x264 (CPU)</option>
+                  <option value="libx265">H.265 x265 (CPU)</option>
+                </select>
+              </div>
+
+              <div class="form-group encode-options hidden">
+                <label class="form-label">Video Bitrate</label>
+                <select id="m3-bitrate" class="form-select">
+                  <option value="6M">6 Mbps — default</option>
+                  <option value="8M">8 Mbps</option>
+                  <option value="10M">10 Mbps</option>
+                  <option value="15M">15 Mbps</option>
+                  <option value="20M">20 Mbps</option>
+                </select>
+              </div>
+
+              <div class="form-group encode-options hidden">
+                <label class="form-label">Resolution</label>
+                <select id="m3-resolution" class="form-select">
+                  <option value="1920x1080">1920×1080 — default</option>
+                  <option value="1280x720">1280×720</option>
+                  <option value="2560x1440">2560×1440</option>
+                  <option value="3840x2160">3840×2160 (4K)</option>
+                  <option value="source">Source (no scaling)</option>
+                </select>
+              </div>
+
+              <div class="form-group encode-options hidden">
+                <label class="form-label">Frame Rate</label>
+                <select id="m3-fps" class="form-select">
+                  <option value="60">60 fps — default</option>
+                  <option value="30">30 fps</option>
+                  <option value="24">24 fps</option>
+                  <option value="source">Source (no override)</option>
+                </select>
+              </div>
+
+              <div class="form-group encode-options hidden">
+                <label class="form-label">Audio Bitrate</label>
+                <select id="m3-audio-bitrate" class="form-select">
+                  <option value="192k">192k — default</option>
+                  <option value="128k">128k</option>
+                  <option value="256k">256k</option>
+                  <option value="320k">320k</option>
+                </select>
+              </div>
+
               <div class="form-group">
                 <label class="form-label">Container</label>
                 <select id="m3-container" class="form-select">
@@ -1025,7 +1025,7 @@
             </div>
           </div>
 
-          <div class="settings-version">nyx-dlp v1.12</div>
+          <div class="settings-version">nyx-dlp v1.13</div>
 
         </div>
       </section>
