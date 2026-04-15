@@ -593,6 +593,11 @@ html, body {
   min-height: 220px;
   display: flex;
   flex-direction: column;
+  transition: min-height 250ms ease;
+}
+.terminal-wrap.collapsed {
+  flex: none;
+  min-height: 0;
 }
 .terminal-container {
   flex: 1;
@@ -689,6 +694,36 @@ html, body {
   z-index: 10;
 }
 .log-scroll-btn:hover { opacity: 1; color: var(--accent); background: var(--accent-glow); }
+
+/* ── Form-level advanced section ─────────────────────────────── */
+.adv-toggle-wrap { grid-column: 1 / -1; }
+.form-adv-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  user-select: none;
+}
+.form-adv-toggle:hover { background: var(--bg-hover); color: var(--text); }
+.form-adv-toggle[aria-expanded="true"] .ytdlp-chevron { transform: rotate(180deg); }
+.adv-body { grid-column: 1 / -1; display: none; }
+.adv-body.open { display: block; }
+.adv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding-top: 8px;
+}
+.adv-grid .form-group.full-width { grid-column: 1 / -1; }
 
 /* ── yt-dlp Advanced Options panel ───────────────────────────── */
 .settings-section-desc {

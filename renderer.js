@@ -39,6 +39,16 @@ document.querySelectorAll('.nav-item').forEach(btn => {
   });
 });
 
+// ── Form-level advanced section toggles ─────────────────────────
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.form-adv-toggle');
+  if (!btn) return;
+  const body = document.getElementById(btn.dataset.adv);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  btn.setAttribute('aria-expanded', String(open));
+});
+
 // ── Folder Picker ──────────────────────────────────────────────
 document.querySelectorAll('.btn-folder').forEach(btn => {
   btn.addEventListener('click', async () => {
@@ -414,6 +424,7 @@ function clearLog(logEl) {
   logEl._lineCount = 0;
   logEl._hasError = false;
   if (scroller) scroller._autoFollow = true;
+  logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
   logEl.closest('.terminal-wrap')?.querySelector('.log-scroll-btn')?.remove();
 }
 
@@ -512,6 +523,9 @@ function collapseLogBody(logEl, failed) {
   });
   logEl.appendChild(arrow);
 
+  // Shrink the terminal wrap to fit collapsed content
+  logEl.closest('.terminal-wrap')?.classList.add('collapsed');
+
   // Trigger button visibility update now that content has collapsed
   logEl._scrollBtnHandler?.();
 }
@@ -583,6 +597,7 @@ function handleOutput(logEl, data, onExit) {
     const outputDir   = document.getElementById('ls-output').value.trim();
     const format      = document.getElementById('ls-quality').value;
     const cookiesPath = document.getElementById('ls-cookies').value.trim();
+    const container   = document.getElementById('ls-container').value;
 
     if (!url)       { appendLog(log, '⚠ Please enter a stream URL.', 'error'); return; }
     if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -591,6 +606,7 @@ function handleOutput(logEl, data, onExit) {
     appendLog(log, `▶ Starting live archiver...`, 'info');
     appendLog(log, `  URL:    ${url}`, 'cmd');
     appendLog(log, `  Format: ${format}`, 'cmd');
+    appendLog(log, `  Container: ${container}`, 'cmd');
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
@@ -620,7 +636,7 @@ function handleOutput(logEl, data, onExit) {
       });
     });
 
-    window.api.runLivestream({ url, outputDir, format, cookiesPath });
+    window.api.runLivestream({ url, outputDir, format, cookiesPath, container });
   });
 })();
 

@@ -165,12 +165,12 @@ ipcMain.on('pause-script',  (event, { pid }) => suspendResumeTree(pid, 'suspend'
 ipcMain.on('resume-script', (event, { pid }) => suspendResumeTree(pid, 'resume'));
 
 // ── Tool 1: YouTube Live Stream Archiver ──────────────────────────────────────
-// yt-archiver.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath
-ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath }) => {
+// yt-archiver.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=container
+ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container }) => {
   const scriptPath = path.join(scriptsDir, 'yt-archiver.py');
   runScript(event, 'livestream-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '']
+    args: [url, format, cookiesPath || '', container || 'mp4']
   });
 });
 

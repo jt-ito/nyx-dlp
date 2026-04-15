@@ -23,6 +23,7 @@ import yt_dlp
 url = sys.argv[1] if len(sys.argv) > 1 else input("Enter the URL and press enter: ")
 fmt = sys.argv[2] if len(sys.argv) > 2 else 'bestvideo*+bestaudio/best'
 cookies_path = sys.argv[3] if len(sys.argv) > 3 else ''
+container    = sys.argv[4] if len(sys.argv) > 4 else 'mp4'
 
 # Split the URL to get the video ID
 try:
@@ -121,6 +122,7 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
         'noprogress': False,
         'no_color': True,
         'hls_prefer_native': True,
+        'merge_output_format': container,
         # Hooks
         'progress_hooks': [progress_hook],
         # Logging
