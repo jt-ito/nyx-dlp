@@ -767,6 +767,23 @@ function handleOutput(logEl, data, onExit) {
     counter.textContent = urls.length + (urls.length === 1 ? ' URL' : ' URLs');
   });
 
+  // Auto-newline on paste so each pasted URL lands on its own line
+  textarea.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    const start  = textarea.selectionStart;
+    const end    = textarea.selectionEnd;
+    const before = textarea.value.substring(0, start);
+    const after  = textarea.value.substring(end);
+    // Ensure the pasted block is followed by a newline
+    const insert = pasted.endsWith('\n') ? pasted : pasted + '\n';
+    textarea.value = before + insert + after;
+    const newPos = start + insert.length;
+    textarea.selectionStart = newPos;
+    textarea.selectionEnd   = newPos;
+    textarea.dispatchEvent(new Event('input'));
+  });
+
   function getUrls() {
     return textarea.value.split('\n').map(l => l.trim()).filter(l => l.length > 0 && l.startsWith('http'));
   }
@@ -868,14 +885,6 @@ function handleOutput(logEl, data, onExit) {
   // Toggle encode options
   encodeChk.addEventListener('change', () => {
     encodeOpts.forEach(el => el.classList.toggle('hidden', !encodeChk.checked));
-    if (encodeChk.checked) {
-      const advBody = document.getElementById('m3-adv');
-      const advBtn  = document.querySelector('[data-adv="m3-adv"]');
-      if (advBody && !advBody.classList.contains('open')) {
-        advBody.classList.add('open');
-        advBtn?.setAttribute('aria-expanded', 'true');
-      }
-    }
   });
   document.getElementById('m3-encode-toggle').addEventListener('click', (e) => {
     if (e.target.closest('label')) return;
