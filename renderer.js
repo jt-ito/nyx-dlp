@@ -415,6 +415,7 @@ function appendLog(logEl, text, cls) {
       if (scroller._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
         scroller.scrollTop = scroller.scrollHeight;
       }
+      scroller._updateScrollBtn?.();
     });
   }
 }
@@ -462,23 +463,27 @@ function markBodyStart(logEl) {
       btn.title = 'Resume auto-scroll';
     }
   };
+  scroller._updateScrollBtn = updateBtn;
 
   btn.addEventListener('click', () => {
     if (scroller._autoFollow) {
       // Pause auto-scroll and jump to top
       scroller._autoFollow = false;
+      scroller._ignoreScroll = true;
       updateBtn();
       scroller.scrollTop = 0;
     } else {
       // Resume auto-scroll and jump to bottom
       scroller._autoFollow = true;
+      scroller._ignoreScroll = true;
       updateBtn();
       scroller.scrollTop = scroller.scrollHeight;
     }
   });
 
-  // Only re-enables auto-follow (never disables it — only the ↑ button or manual scroll up does that)
   logEl._scrollBtnHandler = () => {
+    // Ignore scroll events triggered by the button itself
+    if (scroller._ignoreScroll) { scroller._ignoreScroll = false; updateBtn(); return; }
     const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 30;
     if (atBottom) {
       // User reached the bottom — re-engage auto-follow silently
@@ -846,10 +851,28 @@ function handleOutput(logEl, data, onExit) {
     stopBtn.classList.remove('hidden');
     incRunning();
 
+    let completedCount = 0;
     window.api.removeAllListeners('batch-output');
     window.api.onBatchOutput((data) => {
       if (data.type === 'pid') { currentPid = data.pid; return; }
-      handleOutput(log, data, () => {
+      // Update progress bar whenever the script announces a new URL starting
+      if (data.type === 'stderr' || data.type === 'stdout') {
+        data.text.split('\n').forEach(line => {
+          const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
+          if (m) {
+            completedCount = parseInt(m[1], 10) - 1;
+            const total    = parseInt(m[2], 10);
+            progressBar.style.width = (completedCount / total * 100) + '%';
+            progressLbl.textContent = `${completedCount} / ${total}`;
+          }
+        });
+      }
+      handleOutput(log, data, (code) => {
+        // On clean exit, mark all URLs as done
+        if (code === 0) {
+          progressBar.style.width = '100%';
+          progressLbl.textContent = `${urls.length} / ${urls.length}`;
+        }
         runBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
         stopBtn.classList.add('hidden');

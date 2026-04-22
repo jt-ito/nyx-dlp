@@ -1,11 +1,11 @@
 {
   "name": "nyx-dlp",
-  "version": "1.16",
+  "version": "1.17",
   "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build:portable": "electron-packager . \"nyx-dlp\" --platform=win32 --arch=x64 --out=dist/portable --overwrite --extra-resource=scripts --icon=assets/icon.ico --ignore=\"(/node_modules|/dist|\\.md$|/__pycache__|/scripts)\" && node -e \"require('fs').writeFileSync('dist/portable/nyx-dlp-win32-x64/.portable','')\"",
+    "build:portable": "electron-packager . \"nyx-dlp\" --platform=win32 --arch=x64 --out=dist/portable --overwrite --extra-resource=scripts --icon=assets/icon.ico --ignore=\"(/node_modules|/dist|\\.md$|/__pycache__|/scripts)\" && node -e \"require('fs').writeFileSync('dist/portable/nyx-dlp-win32-x64/.portable','')\" && node -e \"const {execSync}=require('child_process'),v=require('./package.json').version;execSync('powershell -Command Compress-Archive -Force dist/portable/nyx-dlp-win32-x64 dist/nyx-dlp-v'+v+'-portable.zip');\"",
     "build:installer": "electron-packager . \"nyx-dlp\" --platform=win32 --arch=x64 --out=dist/installer --overwrite --extra-resource=scripts --icon=assets/icon.ico --ignore=\"(/node_modules|/dist|\\.md$|/__pycache__|/scripts)\" && \"C:\\Program Files (x86)\\NSIS\\makensis.exe\" installer.nsi",
     "install-deps": "npm install"
   },

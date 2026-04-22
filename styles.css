@@ -407,6 +407,7 @@ html, body {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 .form-textarea::placeholder { color: var(--text-subtle); }
+.form-textarea::-webkit-resizer { background: var(--bg-input); }
 
 /* Folder picker group */
 .input-folder-group { display: flex; gap: 6px; }
@@ -598,6 +599,10 @@ html, body {
 .terminal-wrap.collapsed {
   flex: none;
   min-height: 0;
+}
+.terminal-wrap.collapsed .terminal-container,
+.terminal-wrap.collapsed .terminal-body {
+  flex: none;
 }
 .terminal-container {
   flex: 1;
@@ -884,6 +889,9 @@ html, body {
 }
 
 /* ── Settings Page ────────────────────────────────────────────── */
+#tab-settings {
+  padding-left: 20px;
+}
 .settings-layout {
   display: flex;
   flex-direction: column;
