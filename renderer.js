@@ -89,17 +89,12 @@ const SETTINGS_MAP = {
   'show-tool-m3u8':       { navTab: 'm3u8' },
   'show-tool-gallery':    { navTab: 'gallery' },
   'show-ls-quality':      { el: 'ls-quality-group' },
-  'show-ls-cookies':      { el: 'ls-cookies-group' },
   'show-yd-format':       { el: 'yd-format-group' },
-  'show-yd-cookies':      { el: 'yd-cookies-group' },
   'show-batch-format':    { el: 'batch-format-group' },
   'show-batch-rest':      { el: 'batch-rest-group' },
-  'show-batch-cookies':   { el: 'batch-cookies-group' },
   'show-m3-encode':       { el: 'm3-encode-group' },
-  'show-m3-cookies':      { el: 'm3-cookies-group' },
   'show-gdl-filetypes':   { el: 'gdl-filetypes-group' },
   'show-gdl-meta':        { el: 'gdl-meta-group' },
-  'show-gdl-cookies':     { el: 'gdl-cookies-group' },
   'dep-use-bgutil':       { el: 'dep-bgutil-url-group' },
 };
 const SETTINGS_DEFAULTS = {
@@ -109,17 +104,12 @@ const SETTINGS_DEFAULTS = {
   'show-tool-m3u8':       true,
   'show-tool-gallery':    true,
   'show-ls-quality':      true,
-  'show-ls-cookies':      false,
   'show-yd-format':       true,
-  'show-yd-cookies':      false,
   'show-batch-format':    true,
   'show-batch-rest':      true,
-  'show-batch-cookies':   false,
   'show-m3-encode':       true,
-  'show-m3-cookies':      false,
   'show-gdl-filetypes':   true,
   'show-gdl-meta':        true,
-  'show-gdl-cookies':     false,
   'dep-use-bgutil':       true,
   'dep-use-deno':         true,
   'dep-install-gdl':      true,
@@ -420,15 +410,14 @@ function appendLog(logEl, text, cls) {
   }
 }
 function clearLog(logEl) {
-  const scroller = logEl.closest('.content');
-  if (scroller && logEl._scrollBtnHandler) {
-    scroller.removeEventListener('scroll', logEl._scrollBtnHandler);
+  if (logEl._scrollBtnHandler) {
+    logEl.removeEventListener('scroll', logEl._scrollBtnHandler);
     logEl._scrollBtnHandler = null;
   }
   logEl.innerHTML = '';
   logEl._lineCount = 0;
   logEl._hasError = false;
-  if (scroller) scroller._autoFollow = true;
+  if (logEl) logEl._autoFollow = true;
   logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
   logEl.closest('.terminal-wrap')?.querySelector('.log-scroll-btn')?.remove();
 }
@@ -439,8 +428,7 @@ function markBodyStart(logEl) {
   logEl.appendChild(m);
 
   const wrap = logEl.closest('.terminal-wrap');
-  const scroller = logEl.closest('.content');
-  if (!wrap || !scroller) return;
+  const scroller = logEl; // scroll the terminal-body itself
 
   const svgUp   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const svgDown = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -1108,12 +1096,24 @@ try {
   // Apply all settings on init
   Object.keys(SETTINGS_MAP).forEach(key => applySetting(key, getSetting(key)));
 
+  // Set version number dynamically
+  const verEl = document.getElementById('settings-version');
+  if (verEl && window.api.appVersion) verEl.textContent = 'nyx-dlp v' + window.api.appVersion;
+
   // Sync checkbox states and listen for changes
   document.querySelectorAll('[data-setting]').forEach(chk => {
     chk.checked = getSetting(chk.dataset.setting);
     chk.addEventListener('change', () => {
       localStorage.setItem('setting:' + chk.dataset.setting, chk.checked);
       applySetting(chk.dataset.setting, chk.checked);
+      // Auto-fill bgutil default URL when toggled on and field is empty
+      if (chk.dataset.setting === 'dep-use-bgutil' && chk.checked) {
+        const urlField = document.getElementById('dep-bgutil-url');
+        if (urlField && !urlField.value.trim()) {
+          urlField.value = 'http://127.0.0.1:4416';
+          localStorage.setItem('field:dep-bgutil-url', urlField.value);
+        }
+      }
     });
   });
 
@@ -1209,4 +1209,11 @@ try {
     }
     el.addEventListener('change', () => localStorage.setItem(fkey(id), el.checked));
   });
+
+  // Auto-fill bgutil default URL on load if enabled and no value has been saved
+  const bgutilField = document.getElementById('dep-bgutil-url');
+  if (bgutilField && getSetting('dep-use-bgutil') && !bgutilField.value.trim()) {
+    bgutilField.value = 'http://127.0.0.1:4416';
+    localStorage.setItem('field:dep-bgutil-url', bgutilField.value);
+  }
 })();
