@@ -733,6 +733,7 @@ html, body {
   border: 1px solid var(--terminal-border);
   border-top: none;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  margin-top: -16px;
 }
 .adv-grid {
   display: grid;
