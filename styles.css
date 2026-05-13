@@ -701,7 +701,8 @@ html, body {
 .log-scroll-btn:hover { opacity: 1; color: var(--accent); background: var(--accent-glow); }
 
 /* ── Form-level advanced section ─────────────────────────────── */
-.adv-toggle-wrap { grid-column: 1 / -1; }
+.adv-section { grid-column: 1 / -1; }
+.adv-toggle-wrap { }
 .form-adv-toggle {
   display: flex;
   align-items: center;
@@ -727,13 +728,12 @@ html, body {
   border-bottom-color: transparent;
 }
 .form-adv-toggle[aria-expanded="true"] .ytdlp-chevron { transform: rotate(180deg); }
-.adv-body { grid-column: 1 / -1; display: none; }
+.adv-body { display: none; }
 .adv-body.open {
   display: block;
   border: 1px solid var(--terminal-border);
   border-top: none;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  margin-top: -16px;
 }
 .adv-grid {
   display: grid;
