@@ -66,6 +66,7 @@ ipcMain.on('window-close', () => mainWindow.close());
 
 // Folder picker
 ipcMain.handle('pick-folder', async () => {
+  mainWindow.focus();
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory']
   });
@@ -74,6 +75,7 @@ ipcMain.handle('pick-folder', async () => {
 
 // File picker (for cookies.txt)
 ipcMain.handle('pick-file', async () => {
+  mainWindow.focus();
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [{ name: 'Cookies / Text', extensions: ['txt', 'cookies'] }, { name: 'All Files', extensions: ['*'] }]

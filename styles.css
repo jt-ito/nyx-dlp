@@ -111,10 +111,6 @@ html, body {
   position: relative;
   z-index: 100;
 }
-.titlebar-drag-region {
-  position: absolute; inset: 0;
-  -webkit-app-region: drag;
-}
 .titlebar-left {
   display: flex;
   align-items: center;
