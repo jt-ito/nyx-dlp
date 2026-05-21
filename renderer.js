@@ -574,9 +574,20 @@ function handleOutput(logEl, data, onExit) {
     case 'exit': {
       const failed = data.code !== 0 || !!logEl._hasError;
       logEl._hasError = false;
-      if (!failed) appendLog(logEl, '✔ Process finished successfully.', 'success');
-      else if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
-      else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
+      if (!failed) {
+        const bs = logEl._batchStats;
+        logEl._batchStats = null;
+        if (bs && bs.failed > 0) {
+          const ok = bs.total - bs.failed;
+          appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed to download.`, 'warning');
+        } else {
+          appendLog(logEl, '✔ Process finished successfully.', 'success');
+        }
+      } else if (data.code !== 0) {
+        appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+      } else {
+        appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
+      }
       collapseLogBody(logEl, failed);
       if (onExit) onExit(data.code);
       break;
@@ -868,12 +879,14 @@ function handleOutput(logEl, data, onExit) {
     incRunning();
 
     let completedCount = 0;
+    log._batchStats = null;
     window.api.removeAllListeners('batch-output');
     window.api.onBatchOutput((data) => {
       if (data.type === 'pid') { currentPid = data.pid; return; }
-      // Update progress bar whenever the script announces a new URL starting
+      // Update progress bar and track partial failures
       if (data.type === 'stderr' || data.type === 'stdout') {
         data.text.split('\n').forEach(line => {
+          // Progress counter
           const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
           if (m) {
             completedCount = parseInt(m[1], 10) - 1;
@@ -881,6 +894,9 @@ function handleOutput(logEl, data, onExit) {
             progressBar.style.width = (completedCount / total * 100) + '%';
             progressLbl.textContent = `${completedCount} / ${total}`;
           }
+          // Partial-failure summary line: "N downloads failed. See failed_downloads.txt"
+          const fm = line.match(/(\d+)\s+downloads?\s+failed/i);
+          if (fm) log._batchStats = { failed: parseInt(fm[1], 10), total: urls.length };
         });
       }
       handleOutput(log, data, (code) => {
