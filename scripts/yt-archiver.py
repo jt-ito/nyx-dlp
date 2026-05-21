@@ -185,8 +185,8 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
         'retries': 30,
         'socket_timeout': 30,  # 30 second timeout
         'source_address': '0.0.0.0',  # Bind to default interface
-        # Livestream specific
-        'wait_for_video': (300, 300),  # Poll every 5 minutes until stream goes live
+        # Livestream specific — retry every 30-60 s while waiting for stream to go live
+        'wait_for_video': (30, 60),
         'noprogress': False,
         'no_color': True,
         'hls_prefer_native': True,

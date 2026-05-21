@@ -422,7 +422,8 @@ function appendLog(logEl, text, cls) {
     requestAnimationFrame(() => {
       scroller._rafPending = false;
       if (scroller._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
-        scroller.scrollTop = scroller.scrollHeight;
+        const scrollEl = scroller._scrollEl || scroller;
+        scrollEl.scrollTop = scrollEl.scrollHeight;
       }
       scroller._updateScrollBtn?.();
     });
@@ -430,8 +431,9 @@ function appendLog(logEl, text, cls) {
 }
 function clearLog(logEl) {
   if (logEl._scrollBtnHandler) {
-    logEl.removeEventListener('scroll', logEl._scrollBtnHandler);
+    (logEl._scrollEl || logEl).removeEventListener('scroll', logEl._scrollBtnHandler);
     logEl._scrollBtnHandler = null;
+    logEl._scrollEl = null;
   }
   logEl.innerHTML = '';
   logEl._lineCount = 0;
@@ -446,8 +448,10 @@ function markBodyStart(logEl) {
   m.className = 'log-body-start';
   logEl.appendChild(m);
 
-  const wrap = logEl.closest('.terminal-wrap');
-  const scroller = logEl; // terminal-body scrolls itself
+  const wrap     = logEl.closest('.terminal-wrap');
+  // .content is the actual scrollable container; terminal-body just grows to fit
+  const scrollEl = logEl.closest('.content');
+  logEl._scrollEl = scrollEl;
 
   const svgUp     = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const svgDown   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -467,13 +471,19 @@ function markBodyStart(logEl) {
   resumeBtn.style.display = 'none';
   wrap.appendChild(resumeBtn);
 
-  scroller._autoFollow = true;
+  logEl._autoFollow = true;
+
+  // Scroll so the top of the terminal box aligns with the top of the viewport
+  const scrollToWrapTop = () => {
+    scrollEl.scrollTop = wrap.getBoundingClientRect().top + scrollEl.scrollTop
+                       - scrollEl.getBoundingClientRect().top;
+  };
 
   const updateBtn = () => {
-    const hasScroll = scroller.scrollHeight > scroller.clientHeight + 20;
+    const hasScroll = scrollEl.scrollHeight > scrollEl.clientHeight + 20;
     if (!hasScroll) { btn.style.display = 'none'; resumeBtn.style.display = 'none'; return; }
     btn.style.display = 'flex';
-    if (scroller._autoFollow) {
+    if (logEl._autoFollow) {
       btn.innerHTML = svgUp;
       btn.title = 'Scroll to top';
       resumeBtn.style.display = 'none';
@@ -483,47 +493,46 @@ function markBodyStart(logEl) {
       resumeBtn.style.display = 'flex';
     }
   };
-  scroller._updateScrollBtn = updateBtn;
+  logEl._updateScrollBtn = updateBtn;
 
   // Main button click
   btn.addEventListener('click', () => {
-    if (scroller._autoFollow) {
-      // Auto ON → pause and jump to top
-      scroller._autoFollow = false;
-      scroller._ignoreScroll = true;
+    if (logEl._autoFollow) {
+      // Auto ON → pause and jump to top of terminal
+      logEl._autoFollow = false;
+      logEl._ignoreScroll = true;
       updateBtn();
-      scroller.scrollTop = 0;
+      scrollToWrapTop();
     } else {
       // Auto OFF → jump to bottom without resuming auto-scroll
-      scroller._ignoreScroll = true;
-      scroller.scrollTop = scroller.scrollHeight;
-      // keep _autoFollow false; updateBtn after scroll event clears ignore
+      logEl._ignoreScroll = true;
+      scrollEl.scrollTop = scrollEl.scrollHeight;
     }
   });
 
   // Resume button click → jump to bottom AND resume auto-scroll
   resumeBtn.addEventListener('click', () => {
-    scroller._autoFollow = true;
-    scroller._ignoreScroll = true;
+    logEl._autoFollow = true;
+    logEl._ignoreScroll = true;
     updateBtn();
-    scroller.scrollTop = scroller.scrollHeight;
+    scrollEl.scrollTop = scrollEl.scrollHeight;
   });
 
   logEl._scrollBtnHandler = () => {
     // Ignore scroll events triggered programmatically
-    if (scroller._ignoreScroll) { scroller._ignoreScroll = false; updateBtn(); return; }
-    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 30;
+    if (logEl._ignoreScroll) { logEl._ignoreScroll = false; updateBtn(); return; }
+    const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 30;
     if (atBottom) {
       // Reached bottom manually — silently re-engage auto-follow
-      scroller._autoFollow = true;
-    } else if (scroller._autoFollow) {
+      logEl._autoFollow = true;
+    } else if (logEl._autoFollow) {
       // Scrolled away from bottom — pause auto-follow
-      scroller._autoFollow = false;
+      logEl._autoFollow = false;
     }
     updateBtn();
   };
 
-  scroller.addEventListener('scroll', logEl._scrollBtnHandler);
+  scrollEl.addEventListener('scroll', logEl._scrollBtnHandler);
 }
 
 function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
@@ -561,7 +570,7 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
         const open = errDetail.classList.toggle('open');
         logEl.closest('.terminal-wrap')?.classList.toggle('collapsed', !open);
         btn.textContent = open ? 'Hide errors' : `View errors (${errLines.length} lines)`;
-        if (open) logEl.scrollTop = logEl.scrollHeight;
+        if (open) { const se = logEl._scrollEl || logEl; se.scrollTop = se.scrollHeight; }
       });
       logEl.appendChild(btn);
       logEl.appendChild(errDetail);
@@ -589,7 +598,7 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
       const open = detail.classList.toggle('open');
       arrow.classList.toggle('open', open);
       logEl.closest('.terminal-wrap')?.classList.toggle('collapsed', !open);
-      if (open) logEl.scrollTop = logEl.scrollHeight;
+      if (open) { const se = logEl._scrollEl || logEl; se.scrollTop = se.scrollHeight; }
     });
     logEl.appendChild(arrow);
   }
