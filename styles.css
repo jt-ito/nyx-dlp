@@ -238,6 +238,7 @@ html, body {
   0%,100% { opacity: 1; }
   50%      { opacity: 0.4; }
 }
+.status-wrap { display: flex; align-items: center; gap: 6px; }
 .status-text { font-size: 12px; color: var(--text-muted); }
 .disk-space-pill {
   margin-left: auto;
@@ -686,6 +687,20 @@ html, body {
 .terminal-body .log-expand-arrow:hover { opacity: 1; color: var(--accent); }
 .terminal-body .log-expand-arrow svg { transition: transform 0.2s; }
 .terminal-body .log-expand-arrow.open svg { transform: rotate(180deg); }
+.terminal-body .log-view-errors-btn {
+  display: block;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  margin: 4px auto 2px;
+  padding: 3px 12px;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.terminal-body .log-view-errors-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .settings-version {
   margin-top: 32px;

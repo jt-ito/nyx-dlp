@@ -69,15 +69,27 @@ document.querySelectorAll('.btn-folder').forEach(btn => {
 // ── Status Bar ─────────────────────────────────────────────────
 const statusDot  = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
+const statusWrap = document.getElementById('statusWrap');
 let runningCount = 0;
+const runningTools = new Set();
 
 function setStatus(state, text) {
   statusDot.className = 'status-dot ' + (state || '');
   statusText.textContent = text || 'Idle';
 }
-function incRunning() { runningCount++; setStatus('running', 'Running...'); }
-function decRunning() {
+function updateRunningTooltip() {
+  statusWrap.title = runningTools.size > 0 ? [...runningTools].join('\n') : '';
+}
+function incRunning(tool) {
+  runningCount++;
+  if (tool) runningTools.add(tool);
+  updateRunningTooltip();
+  setStatus('running', 'Running...');
+}
+function decRunning(tool) {
   runningCount = Math.max(0, runningCount - 1);
+  if (tool) runningTools.delete(tool);
+  updateRunningTooltip();
   if (runningCount === 0) setStatus('done', 'Done');
 }
 
@@ -514,43 +526,73 @@ function markBodyStart(logEl) {
   scroller.addEventListener('scroll', logEl._scrollBtnHandler);
 }
 
-function collapseLogBody(logEl, failed) {
+function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
+  trailingCount = trailingCount || 1;
   const sentinel = logEl.querySelector('.log-body-start');
   if (!sentinel) return;
   const all = Array.from(logEl.children);
   const start = all.indexOf(sentinel);
-  const bodyLines = all.slice(start + 1, all.length - 1);
+  const bodyLines = all.slice(start + 1, all.length - trailingCount);
   if (bodyLines.length === 0) { sentinel.remove(); return; }
 
-  // On failure: keep error/warning/stderr lines visible, hide the rest
-  // On success: keep nothing visible (standard collapse — show summary only)
-  const isVisible = failed
-    ? el => el.classList.contains('line-error') || el.classList.contains('line-warning') || el.classList.contains('line-stderr')
-    : () => false;
+  if (withViewErrors) {
+    // Batch-errors mode: collapse everything; show a "View errors" button for
+    // error/warning lines only. Non-error lines are hidden with no toggle.
+    const isErr = el => el.classList.contains('line-error') ||
+                        el.classList.contains('line-warning') ||
+                        el.classList.contains('line-stderr');
+    const errLines   = bodyLines.filter(isErr);
+    const otherLines = bodyLines.filter(el => !isErr(el));
 
-  const visible = bodyLines.filter(isVisible);
-  const hidden  = bodyLines.filter(el => !isVisible(el));
+    const detail = document.createElement('div');
+    detail.className = 'log-detail';
+    otherLines.forEach(el => detail.appendChild(el));
+    sentinel.replaceWith(detail);
 
-  const detail = document.createElement('div');
-  detail.className = 'log-detail';
-  hidden.forEach(el => detail.appendChild(el));
-  sentinel.replaceWith(detail);
+    const errDetail = document.createElement('div');
+    errDetail.className = 'log-detail';
+    errLines.forEach(el => errDetail.appendChild(el));
 
-  // Re-insert visible lines (errors/warnings) after the detail block
-  visible.forEach(el => logEl.appendChild(el));
-
-  const arrow = document.createElement('div');
-  arrow.className = 'log-expand-arrow';
-  arrow.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  arrow.addEventListener('click', () => {
-    const open = detail.classList.toggle('open');
-    arrow.classList.toggle('open', open);
-    if (open) {
-      const scroller = logEl.closest('.content') ?? logEl;
-      scroller.scrollTop = scroller.scrollHeight;
+    if (errLines.length > 0) {
+      const btn = document.createElement('button');
+      btn.className = 'log-view-errors-btn';
+      btn.textContent = `View errors (${errLines.length} lines)`;
+      btn.addEventListener('click', () => {
+        const open = errDetail.classList.toggle('open');
+        logEl.closest('.terminal-wrap')?.classList.toggle('collapsed', !open);
+        btn.textContent = open ? 'Hide errors' : `View errors (${errLines.length} lines)`;
+        if (open) logEl.scrollTop = logEl.scrollHeight;
+      });
+      logEl.appendChild(btn);
+      logEl.appendChild(errDetail);
     }
-  });
-  logEl.appendChild(arrow);
+  } else {
+    // Standard mode: on failure keep error/warning lines visible; on success hide all.
+    const isVisible = failed
+      ? el => el.classList.contains('line-error') || el.classList.contains('line-warning') || el.classList.contains('line-stderr')
+      : () => false;
+
+    const visible = bodyLines.filter(isVisible);
+    const hidden  = bodyLines.filter(el => !isVisible(el));
+
+    const detail = document.createElement('div');
+    detail.className = 'log-detail';
+    hidden.forEach(el => detail.appendChild(el));
+    sentinel.replaceWith(detail);
+
+    visible.forEach(el => logEl.appendChild(el));
+
+    const arrow = document.createElement('div');
+    arrow.className = 'log-expand-arrow';
+    arrow.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    arrow.addEventListener('click', () => {
+      const open = detail.classList.toggle('open');
+      arrow.classList.toggle('open', open);
+      logEl.closest('.terminal-wrap')?.classList.toggle('collapsed', !open);
+      if (open) logEl.scrollTop = logEl.scrollHeight;
+    });
+    logEl.appendChild(arrow);
+  }
 
   // Shrink the terminal wrap to fit collapsed content
   logEl.closest('.terminal-wrap')?.classList.add('collapsed');
@@ -574,21 +616,28 @@ function handleOutput(logEl, data, onExit) {
     case 'exit': {
       const failed = data.code !== 0 || !!logEl._hasError;
       logEl._hasError = false;
+      const bs = logEl._batchStats;
+      logEl._batchStats = null;
       if (!failed) {
-        const bs = logEl._batchStats;
-        logEl._batchStats = null;
         if (bs && bs.failed > 0) {
           const ok = bs.total - bs.failed;
-          appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed to download.`, 'warning');
+          appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
         } else {
           appendLog(logEl, '✔ Process finished successfully.', 'success');
         }
-      } else if (data.code !== 0) {
-        appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+        collapseLogBody(logEl, false);
+      } else if (bs && bs.failed > 0) {
+        // Batch partial failure: clean summary + "View errors" button
+        if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+        else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
+        const ok = bs.total - bs.failed;
+        appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
+        collapseLogBody(logEl, false, 2, true);
       } else {
-        appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
+        if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+        else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
+        collapseLogBody(logEl, true);
       }
-      collapseLogBody(logEl, failed);
       if (onExit) onExit(data.code);
       break;
     }
@@ -660,7 +709,7 @@ function handleOutput(logEl, data, onExit) {
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning();
+    incRunning('Live Stream Archiver');
 
     window.api.removeAllListeners('livestream-output');
     window.api.onLivestreamOutput((data) => {
@@ -672,7 +721,7 @@ function handleOutput(logEl, data, onExit) {
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
-        decRunning();
+        decRunning('Live Stream Archiver');
       });
     });
 
@@ -750,7 +799,7 @@ function handleOutput(logEl, data, onExit) {
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning();
+    incRunning('yt-dlp');
 
     window.api.removeAllListeners('ytdlp-output');
     window.api.onYtdlpOutput((data) => {
@@ -764,7 +813,7 @@ function handleOutput(logEl, data, onExit) {
         isPaused = false;
         document.getElementById('yd-start').value = '';
         document.getElementById('yd-end').value   = '';
-        decRunning();
+        decRunning('yt-dlp');
       });
     });
 
@@ -876,9 +925,10 @@ function handleOutput(logEl, data, onExit) {
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning();
+    incRunning('Batch Downloader');
 
     let completedCount = 0;
+    let batchTotal = urls.length;
     log._batchStats = null;
     window.api.removeAllListeners('batch-output');
     window.api.onBatchOutput((data) => {
@@ -886,13 +936,21 @@ function handleOutput(logEl, data, onExit) {
       // Update progress bar and track partial failures
       if (data.type === 'stderr' || data.type === 'stdout') {
         data.text.split('\n').forEach(line => {
-          // Progress counter
+          // [X/Y] Processing: — fires at the START of each URL; captures total and
+          // resets completedCount to X-1 (how many were done before this one started).
           const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
           if (m) {
             completedCount = parseInt(m[1], 10) - 1;
-            const total    = parseInt(m[2], 10);
-            progressBar.style.width = (completedCount / total * 100) + '%';
-            progressLbl.textContent = `${completedCount} / ${total}`;
+            batchTotal     = parseInt(m[2], 10);
+            progressBar.style.width = (completedCount / batchTotal * 100) + '%';
+            progressLbl.textContent = `${completedCount} / ${batchTotal}`;
+          }
+          // Increment on successful finish OR per-URL failure — fires at the END of
+          // each URL so the counter updates without waiting for the next one to start.
+          if (/Finished processing media from|Download failed:/i.test(line)) {
+            completedCount = Math.min(completedCount + 1, batchTotal);
+            progressBar.style.width = (completedCount / batchTotal * 100) + '%';
+            progressLbl.textContent = `${completedCount} / ${batchTotal}`;
           }
           // Partial-failure summary line: "N downloads failed. See failed_downloads.txt"
           const fm = line.match(/(\d+)\s+downloads?\s+failed/i);
@@ -911,7 +969,7 @@ function handleOutput(logEl, data, onExit) {
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
-        decRunning();
+        decRunning('Batch Downloader');
       });
     });
 
@@ -1008,7 +1066,7 @@ function handleOutput(logEl, data, onExit) {
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning();
+    incRunning('M3U8 Downloader');
 
     window.api.removeAllListeners('m3u8-output');
     window.api.onM3u8Output((data) => {
@@ -1020,7 +1078,7 @@ function handleOutput(logEl, data, onExit) {
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
-        decRunning();
+        decRunning('M3U8 Downloader');
       });
     });
 
@@ -1100,7 +1158,7 @@ try {
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning();
+    incRunning('gallery-dl');
 
     window.api.removeAllListeners('gallery-dl-output');
     window.api.onGalleryDlOutput((data) => {
@@ -1112,7 +1170,7 @@ try {
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
-        decRunning();
+        decRunning('gallery-dl');
       });
     });
 
