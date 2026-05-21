@@ -96,6 +96,7 @@ const SETTINGS_MAP = {
   'show-gdl-filetypes':   { el: 'gdl-filetypes-group' },
   'show-gdl-meta':        { el: 'gdl-meta-group' },
   'dep-use-bgutil':       { el: 'dep-bgutil-url-group' },
+  'show-disk-space':      { custom: 'disk-space' },
 };
 const SETTINGS_DEFAULTS = {
   'show-tool-livestream': true,
@@ -113,6 +114,7 @@ const SETTINGS_DEFAULTS = {
   'dep-use-bgutil':       true,
   'dep-use-deno':         true,
   'dep-install-gdl':      true,
+  'show-disk-space':      false,
 };
 
 // ── yt-dlp Advanced Options definition ────────────────────────
@@ -355,6 +357,8 @@ function applySetting(key, value) {
   } else if (cfg.el) {
     const el = document.getElementById(cfg.el);
     if (el) el.style.display = value ? '' : 'none';
+  } else if (cfg.custom === 'disk-space') {
+    diskSpace.setEnabled(value);
   }
 }
 
@@ -365,6 +369,9 @@ function classifyLine(text, streamType) {
   if (/^warning:/i.test(t))                      return 'warning';
   if (/^error:/i.test(t))                        return 'error';
   if (/\berror\b.*:/i.test(t) && streamType === 'stderr') return 'error';
+  // Python traceback lines: '  File "...", line N, in ...' and '~~~~^^^' indicator lines
+  if (/^\s+File ".*", line \d+/.test(text))      return 'error';
+  if (/^\s*[~^]+\s*$/.test(text))                return 'error';
   if (streamType === 'stdout' && /:\s*$/.test(t)) return 'input';
   return streamType; // 'stdout' or 'stderr'
 }
@@ -381,7 +388,7 @@ function appendLog(logEl, text, cls) {
   if (/^Traceback \(most recent call last\)/i.test(t) || /^\s+File ".*\.py"/.test(text)) {
     logEl._hasError = true;
   }
-  const scroller = logEl.closest('.content') ?? logEl;
+  const scroller = logEl; // terminal-body scrolls itself
 
   // Cap log DOM at 2000 lines; trim oldest 100 at a time to keep layout cheap
   logEl._lineCount = (logEl._lineCount || 0) + 1;
@@ -417,9 +424,9 @@ function clearLog(logEl) {
   logEl.innerHTML = '';
   logEl._lineCount = 0;
   logEl._hasError = false;
-  if (logEl) logEl._autoFollow = true;
+  logEl._autoFollow = true;
   logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
-  logEl.closest('.terminal-wrap')?.querySelector('.log-scroll-btn')?.remove();
+  logEl.closest('.terminal-wrap')?.querySelectorAll('.log-scroll-btn').forEach(b => b.remove());
 }
 
 function markBodyStart(logEl) {
@@ -428,56 +435,77 @@ function markBodyStart(logEl) {
   logEl.appendChild(m);
 
   const wrap = logEl.closest('.terminal-wrap');
-  const scroller = logEl; // scroll the terminal-body itself
+  const scroller = logEl; // terminal-body scrolls itself
 
-  const svgUp   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const svgDown = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgUp     = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgDown   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgResume = '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
 
+  // Main button: ↑ to-top (auto ON) or ↓ to-bottom (auto OFF)
   const btn = document.createElement('div');
   btn.className = 'log-scroll-btn';
   btn.style.display = 'none';
   wrap.appendChild(btn);
 
+  // Resume button: only visible when auto-scroll is paused
+  const resumeBtn = document.createElement('div');
+  resumeBtn.className = 'log-scroll-btn log-scroll-resume';
+  resumeBtn.title = 'Resume auto-scroll';
+  resumeBtn.innerHTML = svgResume;
+  resumeBtn.style.display = 'none';
+  wrap.appendChild(resumeBtn);
+
   scroller._autoFollow = true;
 
   const updateBtn = () => {
     const hasScroll = scroller.scrollHeight > scroller.clientHeight + 20;
-    btn.style.display = hasScroll ? 'flex' : 'none';
+    if (!hasScroll) { btn.style.display = 'none'; resumeBtn.style.display = 'none'; return; }
+    btn.style.display = 'flex';
     if (scroller._autoFollow) {
       btn.innerHTML = svgUp;
       btn.title = 'Scroll to top';
+      resumeBtn.style.display = 'none';
     } else {
       btn.innerHTML = svgDown;
-      btn.title = 'Resume auto-scroll';
+      btn.title = 'Scroll to bottom';
+      resumeBtn.style.display = 'flex';
     }
   };
   scroller._updateScrollBtn = updateBtn;
 
+  // Main button click
   btn.addEventListener('click', () => {
     if (scroller._autoFollow) {
-      // Pause auto-scroll and jump to top
+      // Auto ON → pause and jump to top
       scroller._autoFollow = false;
       scroller._ignoreScroll = true;
       updateBtn();
       scroller.scrollTop = 0;
     } else {
-      // Resume auto-scroll and jump to bottom
-      scroller._autoFollow = true;
+      // Auto OFF → jump to bottom without resuming auto-scroll
       scroller._ignoreScroll = true;
-      updateBtn();
       scroller.scrollTop = scroller.scrollHeight;
+      // keep _autoFollow false; updateBtn after scroll event clears ignore
     }
   });
 
+  // Resume button click → jump to bottom AND resume auto-scroll
+  resumeBtn.addEventListener('click', () => {
+    scroller._autoFollow = true;
+    scroller._ignoreScroll = true;
+    updateBtn();
+    scroller.scrollTop = scroller.scrollHeight;
+  });
+
   logEl._scrollBtnHandler = () => {
-    // Ignore scroll events triggered by the button itself
+    // Ignore scroll events triggered programmatically
     if (scroller._ignoreScroll) { scroller._ignoreScroll = false; updateBtn(); return; }
     const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 30;
     if (atBottom) {
-      // User reached the bottom — re-engage auto-follow silently
+      // Reached bottom manually — silently re-engage auto-follow
       scroller._autoFollow = true;
     } else if (scroller._autoFollow) {
-      // User scrolled away from the bottom manually — pause auto-follow
+      // Scrolled away from bottom — pause auto-follow
       scroller._autoFollow = false;
     }
     updateBtn();
@@ -1093,8 +1121,11 @@ try {
 // ── 6. Settings ──────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 (function () {
-  // Apply all settings on init
-  Object.keys(SETTINGS_MAP).forEach(key => applySetting(key, getSetting(key)));
+  // Apply all settings on init (skip disk-space — its module isn't ready yet)
+  Object.keys(SETTINGS_MAP).forEach(key => {
+    if (key === 'show-disk-space') return;
+    applySetting(key, getSetting(key));
+  });
 
   // Set version number dynamically
   const verEl = document.getElementById('settings-version');
@@ -1202,11 +1233,10 @@ try {
     const el = document.getElementById(id);
     if (!el) return;
     const v = localStorage.getItem(fkey(id));
-    if (v !== null) {
-      el.checked = v === 'true';
-      // Fire change so any dependent UI (e.g. encode-options visibility) updates
-      el.dispatchEvent(new Event('change'));
-    }
+    // Default overrides for checkboxes that should be ON out of the box
+    const defaults = { 'batch-rest': true };
+    el.checked = v !== null ? v === 'true' : (defaults[id] ?? false);
+    el.dispatchEvent(new Event('change'));
     el.addEventListener('change', () => localStorage.setItem(fkey(id), el.checked));
   });
 
@@ -1217,3 +1247,108 @@ try {
     localStorage.setItem('field:dep-bgutil-url', bgutilField.value);
   }
 })();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 8. Disk Space ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+const diskSpace = (() => {
+  // Map tab name → output directory input id
+  const TAB_OUTPUT_IDS = {
+    ytdlp:      'yd-output',
+    livestream: 'ls-output',
+    batch:      'batch-output',
+    m3u8:       'm3-output',
+    gallery:    'gdl-output',
+  };
+
+  const pill      = document.getElementById('diskSpacePill');
+  const modeGrp   = document.getElementById('disk-space-mode-group');
+  const staticGrp = document.getElementById('disk-static-drive-group');
+  const radioAuto   = document.getElementById('disk-mode-auto');
+  const radioStatic = document.getElementById('disk-mode-static');
+  const staticInput = document.getElementById('disk-static-drive');
+
+  let enabled   = false;
+  let pollTimer = null;
+  let activeTab = document.querySelector('.nav-item.active')?.dataset.tab || 'ytdlp';
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function getDrivePath() {
+    const mode = localStorage.getItem('disk-space-mode') || 'auto';
+    if (mode === 'static') {
+      const drive = (localStorage.getItem('disk-static-drive') || '').trim();
+      return drive || null;
+    }
+    // auto: pull from current tab's output field
+    const outputId = TAB_OUTPUT_IDS[activeTab];
+    const val = outputId ? (document.getElementById(outputId)?.value.trim() || '') : '';
+    if (!val) return null;
+    // Extract root drive (e.g. C:\ from C:\Users\...)
+    const m = val.match(/^([A-Za-z]:[/\\])/);
+    return m ? m[1] : (val.includes('/') ? '/' : null);
+  }
+
+  function fmtGB(bytes) {
+    const gb = bytes / (1024 ** 3);
+    return gb >= 10 ? gb.toFixed(1) + ' GB' : gb.toFixed(2) + ' GB';
+  }
+
+  async function refresh() {
+    if (!enabled) return;
+    const drivePath = getDrivePath();
+    if (!drivePath) { pill.textContent = '— free'; pill.className = 'disk-space-pill'; return; }
+    const result = await window.api.getDiskSpace(drivePath);
+    if (!result) { pill.textContent = '? free'; pill.className = 'disk-space-pill'; return; }
+    const freeGB = result.free / (1024 ** 3);
+    pill.textContent = fmtGB(result.free) + ' free';
+    pill.className = 'disk-space-pill' + (freeGB < 5 ? ' critical' : freeGB < 20 ? ' low' : '');
+  }
+
+  function startPolling() { refresh(); pollTimer = setInterval(refresh, 10000); }
+  function stopPolling()  { clearInterval(pollTimer); pollTimer = null; }
+
+  // ── Public: enable / disable ─────────────────────────────────
+  function setEnabled(val) {
+    enabled = val;
+    pill.style.display    = val ? '' : 'none';
+    modeGrp.style.display = val ? '' : 'none';
+    if (val) startPolling();
+    else     stopPolling();
+  }
+
+  // ── Settings UI wiring ────────────────────────────────────────
+  function syncStaticGroup() {
+    const isStatic = radioStatic.checked;
+    staticGrp.style.display = isStatic ? '' : 'none';
+    localStorage.setItem('disk-space-mode', isStatic ? 'static' : 'auto');
+    refresh();
+  }
+  radioAuto.addEventListener('change',   syncStaticGroup);
+  radioStatic.addEventListener('change', syncStaticGroup);
+
+  staticInput.addEventListener('input', () => {
+    localStorage.setItem('disk-static-drive', staticInput.value);
+    refresh();
+  });
+
+  // Restore persisted mode + drive
+  const savedMode = localStorage.getItem('disk-space-mode') || 'auto';
+  if (savedMode === 'static') { radioStatic.checked = true; staticGrp.style.display = ''; }
+  const savedDrive = localStorage.getItem('disk-static-drive') || '';
+  if (savedDrive) staticInput.value = savedDrive;
+
+  // Refresh when any output directory field changes
+  Object.values(TAB_OUTPUT_IDS).forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => { if (enabled) refresh(); });
+  });
+
+  // Refresh when tab changes
+  document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => { activeTab = btn.dataset.tab; if (enabled) refresh(); });
+  });
+
+  return { setEnabled, refresh };
+})();
+
+// Apply disk-space setting now that the module is initialized
+applySetting('show-disk-space', getSetting('show-disk-space'));

@@ -239,6 +239,29 @@ html, body {
   50%      { opacity: 0.4; }
 }
 .status-text { font-size: 12px; color: var(--text-muted); }
+.disk-space-pill {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.disk-space-pill.low  { color: var(--warning); border-color: var(--warning); background: rgba(255,179,71,0.1); }
+.disk-space-pill.critical { color: var(--danger); border-color: var(--danger); background: rgba(255,85,100,0.1); }
+.disk-radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.disk-radio-label input[type="radio"] { margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; }
 
 /* ── Content Area ─────────────────────────────────────────────── */
 .content {
@@ -675,7 +698,7 @@ html, body {
   letter-spacing: 0.05em;
 }
 
-/* ── Scroll jump button ───────────────────────────────────────── */
+/* ── Scroll jump buttons ──────────────────────────────────────── */
 .log-scroll-btn {
   position: absolute;
   bottom: 14px;
@@ -695,6 +718,10 @@ html, body {
   z-index: 10;
 }
 .log-scroll-btn:hover { opacity: 1; color: var(--accent); background: var(--accent-glow); }
+/* Resume button sits immediately to the left of the main button */
+.log-scroll-resume {
+  right: 50px; /* 14px edge + 28px main btn + 8px gap */
+}
 
 /* ── Form-level advanced section ─────────────────────────────── */
 .adv-toggle-wrap { grid-column: 1 / -1; }

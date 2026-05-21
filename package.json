@@ -1,6 +1,6 @@
 {
   "name": "nyx-dlp",
-  "version": "1.19",
+  "version": "1.20",
   "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
   "main": "main.js",
   "scripts": {

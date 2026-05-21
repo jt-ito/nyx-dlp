@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
   // Folder picker
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   pickFile:   () => ipcRenderer.invoke('pick-file'),
+  getDiskSpace: (drivePath) => ipcRenderer.invoke('get-disk-space', drivePath),
 
   // Script runners
   runLivestream: (opts) => ipcRenderer.send('run-livestream', opts),

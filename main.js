@@ -22,6 +22,12 @@ const scriptsDir = app.isPackaged
   ? path.join(process.resourcesPath, 'scripts')
   : path.join(__dirname, 'scripts');
 
+// Single-instance lock — if another instance tries to open, focus this one instead
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+}
+
 let mainWindow;
 const activeProcs = new Map(); // pid → ChildProcess
 
@@ -48,6 +54,12 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -82,6 +94,16 @@ ipcMain.handle('pick-file', async () => {
     filters: [{ name: 'Cookies / Text', extensions: ['txt', 'cookies'] }, { name: 'All Files', extensions: ['*'] }]
   });
   return result.canceled ? null : result.filePaths[0];
+});
+
+// Disk space — returns { free, total } in bytes for the drive containing `drivePath`
+ipcMain.handle('get-disk-space', async (_e, drivePath) => {
+  try {
+    const stats = await fs.promises.statfs(drivePath);
+    return { free: stats.bfree * stats.bsize, total: stats.blocks * stats.bsize };
+  } catch {
+    return null;
+  }
 });
 
 // Script runner — passes argv args, optionally pipes stdin, sets cwd, streams output
