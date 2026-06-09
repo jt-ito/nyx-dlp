@@ -504,8 +504,10 @@ function markBodyStart(logEl) {
       updateBtn();
       scrollToWrapTop();
     } else {
-      // Auto OFF → jump to bottom without resuming auto-scroll
+      // Auto OFF → jump to bottom AND resume auto-scroll
+      logEl._autoFollow = true;
       logEl._ignoreScroll = true;
+      updateBtn();
       scrollEl.scrollTop = scrollEl.scrollHeight;
     }
   });
