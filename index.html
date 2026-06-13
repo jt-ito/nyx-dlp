@@ -98,6 +98,26 @@
           <span>gallery-dl</span>
           <div class="nav-indicator"></div>
         </button>
+        <button class="nav-item" data-tab="splitter">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="6" cy="18" r="3"></circle>
+            <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+            <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+            <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+          </svg>
+          <span>Video Splitter</span>
+          <div class="nav-indicator"></div>
+        </button>
+        <button class="nav-item" data-tab="concatenator">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+          </svg>
+          <span>Video Concatenator</span>
+          <div class="nav-indicator"></div>
+        </button>
         <div class="nav-divider"></div>
         <button class="nav-item" data-tab="settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -513,13 +533,28 @@
 
         <div class="form-grid">
           <div class="form-group full-width">
-            <label class="form-label">M3U8 URL</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <input type="text" id="m3-url" class="form-input" placeholder="https://example.com/stream/playlist.m3u8" />
+            <div class="form-label-row">
+              <label class="form-label">M3U8 URL</label>
+              <span class="url-count-inline hidden" id="m3-url-counter">0 URLs</span>
+            </div>
+            <div class="url-input-group">
+              <div id="m3-url-single">
+                <div class="input-wrapper">
+                  <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <input type="text" id="m3-url" class="form-input" placeholder="https://example.com/stream/playlist.m3u8" />
+                </div>
+              </div>
+              <div id="m3-url-multi" class="hidden">
+                <textarea id="m3-urls" class="form-textarea" placeholder="https://example.com/stream1/playlist.m3u8&#10;https://example.com/stream2/playlist.m3u8&#10;https://..." style="min-height:100px"></textarea>
+              </div>
+              <div class="url-expand-wrap">
+                <button class="btn-url-expand" id="m3-url-mode-btn" title="Switch to multi-URL mode">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -685,13 +720,28 @@
 
         <div class="form-grid">
           <div class="form-group full-width">
-            <label class="form-label">URL</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <input type="text" id="gdl-url" class="form-input" placeholder="https://twitter.com/user  or  https://www.pixiv.net/..." />
+            <div class="form-label-row">
+              <label class="form-label">URL</label>
+              <span class="url-count-inline hidden" id="gdl-url-counter">0 URLs</span>
+            </div>
+            <div class="url-input-group">
+              <div id="gdl-url-single">
+                <div class="input-wrapper">
+                  <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <input type="text" id="gdl-url" class="form-input" placeholder="https://twitter.com/user  or  https://www.pixiv.net/..." />
+                </div>
+              </div>
+              <div id="gdl-url-multi" class="hidden">
+                <textarea id="gdl-urls" class="form-textarea" placeholder="https://twitter.com/user&#10;https://www.pixiv.net/...&#10;https://..." style="min-height:100px"></textarea>
+              </div>
+              <div class="url-expand-wrap">
+                <button class="btn-url-expand" id="gdl-url-mode-btn" title="Switch to multi-URL mode">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -784,6 +834,192 @@
         </div>
       </section>
 
+      <!-- ── Tab: Video Splitter ────────────────────────────────── -->
+      <section class="tab-panel" id="tab-splitter">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Video Splitter</h1>
+            <p class="panel-subtitle">Perfectly split a video into multiple parts</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">Input Video File</label>
+            <div class="input-folder-group">
+              <input type="text" id="sp-file" class="form-input" placeholder="C:\Videos\my_video.mp4" />
+              <button class="btn-folder" data-target="sp-file" data-pick-type="file">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="sp-output" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="sp-output">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group" id="sp-parts-group">
+            <label class="form-label">Number of Parts</label>
+            <select id="sp-parts-select" class="form-select">
+              <option value="2">2 Parts</option>
+              <option value="3">3 Parts</option>
+              <option value="4">4 Parts</option>
+              <option value="5">5 Parts</option>
+              <option value="custom">Custom...</option>
+            </select>
+          </div>
+
+          <div class="form-group hidden" id="sp-parts-custom-group">
+            <label class="form-label">Custom Parts</label>
+            <input type="number" id="sp-parts-custom" class="form-input" placeholder="Enter number..." min="2" />
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="sp-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Split Video
+          </button>
+          <button class="btn btn-pause hidden" id="sp-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="sp-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="sp-clear">Clear Log</button>
+        </div>
+
+        <div class="terminal-wrap">
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="sp-log"></div>
+        </div>
+        </div>
+      </section>
+
+      <!-- ── Tab: Video Concatenator ────────────────────────────── -->
+      <section class="tab-panel" id="tab-concatenator">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Video Concatenator</h1>
+            <p class="panel-subtitle">Merge multiple videos into a single MP4</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width" style="margin-bottom: -6px;">
+            <label class="form-label">Input Videos</label>
+            <div class="input-folder-group" style="align-items: flex-start;">
+              <div class="sortable-list-container">
+                <div id="concat-file-list" class="sortable-list">
+                  <div class="sortable-empty-state">No files selected. Use the browse button to add videos.</div>
+                </div>
+              </div>
+              <button class="btn-folder" data-target="concat-file-list" data-pick-type="multi-file" style="margin-top: 0;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <p class="form-help" style="margin: 4px 0 -2px 0; font-size: 11px; color: var(--text-muted);">Enter one file path per line, or use the browse button to select multiple files.</p>
+            <p class="form-help" style="margin: 0; font-size: 11px; color: var(--text-muted);">Drag and drop items to reorder them before merging.</p>
+          </div>
+
+          <div class="form-group full-width">
+            <label class="form-label">Output Filename</label>
+            <input type="text" id="concat-output-name" class="form-input" placeholder="merged_video.mp4" />
+          </div>
+
+          <div class="form-group full-width">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="concat-output-dir" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="concat-output-dir">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Force re-encode all videos</div>
+                <div class="toggle-desc">Check this if you want to bypass fast-copy and enforce a full re-encode.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="concat-force" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="concat-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Merge Videos
+          </button>
+          <button class="btn btn-pause hidden" id="concat-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="concat-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="concat-clear">Clear Log</button>
+        </div>
+
+        <div class="terminal-wrap">
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="concat-log"></div>
+        </div>
+        </div>
+      </section>
+
       <!-- ── Tab: Settings ─────────────────────────────────── -->
       <section class="tab-panel" id="tab-settings">
         <div class="panel-header">
@@ -844,6 +1080,26 @@
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" data-setting="show-tool-gallery" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Video Splitter</div>
+                <div class="toggle-desc">Show the Video Splitter tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-splitter" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Video Concatenator</div>
+                <div class="toggle-desc">Show the Video Concatenator tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-concatenator" checked />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
@@ -978,10 +1234,10 @@
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
-            <div id="dep-bgutil-url-group" style="padding: 4px 0 8px;">
+            <div id="dep-bgutil-url-group" style="padding: 4px 16px 0px;">
               <label class="form-label" style="margin-bottom:4px;">bgutil server URL <span class="label-optional">(optional)</span></label>
               <input type="text" id="dep-bgutil-url" class="form-input" placeholder="Leave empty for local deno mode — or http://127.0.0.1:4416" />
-              <p class="settings-section-desc" style="margin-top:4px;">Leave empty to run locally via deno. Only set a URL if you have a bgutil-http server running.</p>
+              <p class="settings-section-desc" style="margin: 4px 0 -4px;">Leave empty to run locally via deno. Only set a URL if you have a bgutil-http server running.</p>
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">

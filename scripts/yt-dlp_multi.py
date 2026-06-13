@@ -349,8 +349,14 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
     return False
 
 def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', retries: int = 3) -> bool:
-    """Download using yt-dlp with aria2c as external downloader."""
-    aria_args = f"--retry-wait=5 --max-tries={retries} --file-allocation=none"
+    """Download using yt-dlp with aria2c as external downloader.
+
+    If every retry fails with 'Initialization fragment found after media
+    fragments' (a known hlsnative limitation with certain HLS manifests,
+    e.g. Twitch DVR streams), automatically falls back to ffmpeg which has
+    a native HLS demuxer that handles non-standard EXT-X-MAP placement.
+    """
+    aria_args = f"aria2c:--retry-wait=5 --max-tries={retries} --file-allocation=none"
     cmd = [
         sys.executable, "-m", "yt_dlp", "-v",
         "-f", fmt,
@@ -375,6 +381,10 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
         cmd += ['--extractor-args', 'youtube:player_client=web',
                 '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
     cmd.append(url)
+
+    _INIT_FRAG_ERR = "initialization fragment found after media fragments"
+    init_frag_fail_count = 0
+
     for attempt in range(1, retries + 1):
         logger.info(f" [aria2c downloader] attempt {attempt}/{retries}")
         try:
@@ -397,8 +407,54 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
         if is_unrecoverable_error(err_accum):
             logger.warning(" Unrecoverable error detected – skipping retries.")
             return False
+        if _INIT_FRAG_ERR in err_accum.lower():
+            init_frag_fail_count += 1
         logger.warning(f" attempt {attempt} failed (exit code {proc.returncode})")
         time.sleep(1 + attempt * 0.5)
+
+    # All retries failed exclusively due to the init-fragment limitation of
+    # hlsnative. Fall back to ffmpeg which has a native HLS demuxer that
+    # handles non-standard EXT-X-MAP placement correctly.
+    if init_frag_fail_count == retries:
+        logger.warning(" All aria2c attempts hit 'Initialization fragment' error – falling back to ffmpeg downloader.")
+        ffmpeg_cmd = [
+            sys.executable, "-m", "yt_dlp", "-v",
+            "-f", fmt,
+            "--merge-output-format", CONTAINER,
+            "--write-auto-sub", "--sub-langs", "en",
+            "--embed-subs", "--add-metadata",
+            "--downloader", "ffmpeg",
+            "--remote-components", "ejs:github",
+            "--user-agent", USER_AGENT,
+        ]
+        if "twitch.tv" in url:
+            ffmpeg_cmd += ["-o", "%(title).100s [%(id)s].%(ext)s"]
+        if COOKIE_FILE and os.path.isfile(COOKIE_FILE):
+            ffmpeg_cmd += ["--cookies", COOKIE_FILE]
+        if EXTRA_ARGS:
+            ffmpeg_cmd.extend(EXTRA_ARGS)
+        if BGUTIL_URL and BGUTIL_URL != 'local':
+            ffmpeg_cmd += ['--extractor-args', 'youtube:player_client=web',
+                           '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+        ffmpeg_cmd.append(url)
+        logger.info(" [ffmpeg fallback] attempt 1/1")
+        try:
+            proc = Popen(ffmpeg_cmd, stdout=None, stderr=PIPE)
+        except Exception as e:
+            logger.error(f"Failed to start yt-dlp with ffmpeg: {safe_text(e)}")
+            return False
+        if proc.stderr is not None:
+            for raw in proc.stderr:
+                try:
+                    line = raw.decode('utf-8', errors='backslashreplace')
+                except Exception:
+                    line = repr(raw)
+                print(line, end='')
+        proc.wait()
+        if proc.returncode == 0 and is_download_successful():
+            return True
+        logger.warning(" ffmpeg fallback also failed.")
+
     return False
 
 # ——— Folder naming via metadata dump (silent) —————————————

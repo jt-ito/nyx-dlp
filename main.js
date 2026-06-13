@@ -96,6 +96,16 @@ ipcMain.handle('pick-file', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
+// Multi-file picker
+ipcMain.handle('pick-files', async () => {
+  mainWindow.focus();
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Video Files', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm', 'ts', 'flv'] }, { name: 'All Files', extensions: ['*'] }]
+  });
+  return result.canceled ? null : result.filePaths;
+});
+
 // Disk space — returns { free, total } in bytes for the drive containing `drivePath`
 ipcMain.handle('get-disk-space', async (_e, drivePath) => {
   try {
@@ -106,12 +116,44 @@ ipcMain.handle('get-disk-space', async (_e, drivePath) => {
   }
 });
 
+// ── Protected-path guard (main process) ──────────────────────────────
+function isProtectedPath(p) {
+  if (!p) return null;
+  const norm = p.replace(/\\/g, '/');
+  if (/^[A-Za-z]:\/?$/.test(p)) return `Drive root is not allowed: "${p}"`;
+  if (/^\/\/[^/]+\/?$/.test(norm) || /^\\\\[^\\]+\\?$/.test(p)) return `Network share root is not allowed: "${p}"`;
+  const sysRoots = [
+    /^[A-Za-z]:\/Windows(\/|$)/i,
+    /^[A-Za-z]:\/Program Files( \(x86\))?(\/|$)/i,
+    /^[A-Za-z]:\/ProgramData(\/|$)/i,
+    /^[A-Za-z]:\/System Volume Information(\/|$)/i,
+    /^[A-Za-z]:\/Recovery(\/|$)/i,
+    /^[A-Za-z]:\/\$Recycle\.Bin(\/|$)/i,
+  ];
+  for (const re of sysRoots) if (re.test(norm)) return `System directory is not allowed: "${p}"`;
+  return null;
+}
+
 // Script runner — passes argv args, optionally pipes stdin, sets cwd, streams output
 function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines = [] }) {
   const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
 
+  // Reject protected output directories before touching the filesystem
+  const pathErr = isProtectedPath(cwd);
+  if (pathErr) {
+    event.sender.send(replyChannel, { type: 'error', text: pathErr });
+    event.sender.send(replyChannel, { type: 'exit', code: 1 });
+    return null;
+  }
+
   // Ensure output directory exists
-  fs.mkdirSync(cwd, { recursive: true });
+  try {
+    fs.mkdirSync(cwd, { recursive: true });
+  } catch (err) {
+    event.sender.send(replyChannel, { type: 'error', text: `Cannot create output directory: ${err.message}` });
+    event.sender.send(replyChannel, { type: 'exit', code: 1 });
+    return null;
+  }
 
   const proc = spawn(pythonCmd, ['-u', scriptPath, ...args], {
     cwd,
@@ -237,5 +279,32 @@ ipcMain.on('run-gallery-dl', (event, { url, outputDir, filetypes, metadata, cook
   runScript(event, 'gallery-dl-output', scriptPath, {
     cwd: outputDir,
     args: [url, filetypes, metadata ? 'y' : 'n', cookiesPath || '', installGdl || 'y']
+  });
+});
+
+// ── Tool 6: Video Splitter ──────────────────────────────────────────────────────────
+// video-splitter.py: sys.argv[1]=file  sys.argv[2]=parts  sys.argv[3]=outputDir
+ipcMain.on('run-splitter', (event, { file, parts, outputDir }) => {
+  const scriptPath = path.join(scriptsDir, 'video-splitter.py');
+  const targetDir = outputDir || path.dirname(file);
+  runScript(event, 'splitter-output', scriptPath, {
+    cwd: targetDir,
+    args: [file, String(parts), targetDir]
+  });
+});
+
+// ── Tool 7: Video Concatenator ──────────────────────────────────────────────────────
+// video-concatenator.py: --output output.mp4 [--force-encode] file1 file2 ...
+ipcMain.on('run-concatenator', (event, { files, output, forceEncode, outputDir }) => {
+  const scriptPath = path.join(scriptsDir, 'video-concatenator.py');
+  const targetDir = outputDir || path.dirname(files[0]);
+  
+  const args = ['--output', output];
+  if (forceEncode) args.push('--force-encode');
+  args.push(...files);
+  
+  runScript(event, 'concatenator-output', scriptPath, {
+    cwd: targetDir,
+    args: args
   });
 });

@@ -312,7 +312,9 @@ def move(folder_name, success):
         os.chdir("..")  # Change back to the original directory
 
 def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries=3):
-    # Download the videos using yt-dlp with aria2c
+    # Download the videos using yt-dlp with aria2c.
+    # If every retry fails with 'Initialization fragment found after media
+    # fragments', automatically falls back to download_with_ffmpeg.
     ydl_opts = {
         'format': fmt,
         'subtitleslangs': ['en'],
@@ -344,6 +346,8 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
         ydl_opts['download_ranges'] = download_range_func(None, [(s, e)])
         ydl_opts['force_keyframes_at_cuts'] = True
 
+    _INIT_FRAG_ERR = "initialization fragment found after media fragments"
+    init_frag_fail_count = 0
     success = False
     for attempt in range(retries):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -358,11 +362,76 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
                     success = True
                 break  # Exit the loop if download is successful
             except Exception as e:
-                print(f"Attempt {attempt + 1} failed: {e}")
+                err_str = str(e)
+                print(f"Attempt {attempt + 1} failed: {err_str}")
+                if _INIT_FRAG_ERR in err_str.lower():
+                    init_frag_fail_count += 1
                 if attempt == retries - 1:
                     print("Max retries reached. Download failed.")
                 else:
                     print("Retrying...")
+
+    # All retries failed exclusively due to the init-fragment limitation of
+    # hlsnative. Fall back to ffmpeg which handles non-standard HLS manifests.
+    if not success and init_frag_fail_count == retries:
+        print("[ffmpeg fallback] All aria2c attempts hit 'Initialization fragment' error – retrying with ffmpeg downloader.")
+        download_with_ffmpeg(url, folder_name, fmt=fmt, retries=1)
+        return  # download_with_ffmpeg handles move()
+
+    move(folder_name, success)
+
+
+def download_with_ffmpeg(url, folder_name, fmt='bestvideo+bestaudio/best', retries=3):
+    """Download using yt-dlp with ffmpeg as the external downloader.
+
+    ffmpeg has a native HLS demuxer that handles non-standard EXT-X-MAP
+    placement (e.g. Twitch DVR streams), unlike yt-dlp's hlsnative wrapper.
+    """
+    ydl_opts = {
+        'format': fmt,
+        'subtitleslangs': ['en'],
+        'writeautomaticsub': True,
+        'remote_components': 'ejs:github',
+        'compat_options': ['no-file-locking'],
+        'merge_output_format': container,
+        'external_downloader': {'default': 'ffmpeg'},
+        'postprocessors': [
+            {'key': 'FFmpegEmbedSubtitle'},
+            {'key': 'FFmpegMetadata'},
+        ],
+    }
+    if _extractor_args:
+        ydl_opts['extractor_args'] = _extractor_args
+    if cookies_path and os.path.isfile(cookies_path):
+        ydl_opts['cookiefile'] = cookies_path
+    if extra_args:
+        _apply_extra_args(ydl_opts, extra_args)
+    if start_time or end_time:
+        from yt_dlp.utils import download_range_func
+        s = _hms_to_secs(start_time) if start_time else 0.0
+        e = _hms_to_secs(end_time)   if end_time   else float('inf')
+        ydl_opts['download_ranges'] = download_range_func(None, [(s, e)])
+        ydl_opts['force_keyframes_at_cuts'] = True
+
+    success = False
+    for attempt in range(retries):
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            try:
+                ydl.download([url])
+                if os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
+                    os.path.exists('.part') or os.path.exists('.ytdlp') or \
+                    any(file.endswith('.vtt') for file in os.listdir()) or \
+                    any('.f' in file and file.split('.f')[1].isdigit() for file in os.listdir()):
+                    print("Download was not successful.")
+                else:
+                    success = True
+                break
+            except Exception as e:
+                print(f"[ffmpeg fallback] Attempt {attempt + 1} failed: {e}")
+                if attempt == retries - 1:
+                    print("[ffmpeg fallback] Max retries reached. Download failed.")
+                else:
+                    print("[ffmpeg fallback] Retrying...")
     move(folder_name, success)
 
 def download_without_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries=3):

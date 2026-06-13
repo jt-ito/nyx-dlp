@@ -32,10 +32,14 @@ document.getElementById('btnClose').addEventListener('click', () => window.api.c
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      p.classList.remove('active');
+      p.querySelectorAll('.terminal-body').forEach(t => t._updateScrollBtn?.());
+    });
     btn.classList.add('active');
     const panel = document.getElementById('tab-' + btn.dataset.tab);
     panel.classList.add('active');
+    panel.querySelectorAll('.terminal-body').forEach(t => t._updateScrollBtn?.());
   });
 });
 
@@ -52,19 +56,113 @@ document.addEventListener('click', e => {
 // ── Folder Picker ──────────────────────────────────────────────
 document.querySelectorAll('.btn-folder').forEach(btn => {
   btn.addEventListener('click', async () => {
-    let result;
-    if (btn.dataset.pickType === 'file') {
-      result = await window.api.pickFile();
+    const type = btn.dataset.pickType;
+    let res;
+    if (type === 'file') {
+      res = await window.api.pickFile();
+    } else if (type === 'multi-file') {
+      res = await window.api.pickFiles();
     } else {
-      result = await window.api.pickFolder();
+      res = await window.api.pickFolder();
     }
-    if (result) {
+    if (res) {
       const target = document.getElementById(btn.dataset.target);
-      target.value = result;
-      target.dispatchEvent(new Event('input'));
+      if (target) {
+        if (target.classList.contains('sortable-list')) {
+          if (type === 'multi-file') {
+            res.forEach(filepath => window.addSortableItem(target, filepath));
+          }
+        } else if (type === 'multi-file') {
+          const current = target.value.trim();
+          target.value = current ? current + '\n' + res.join('\n') : res.join('\n');
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+          target.value = res;
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
     }
   });
 });
+
+// ── Sortable List Logic ────────────────────────────────────────
+window.addSortableItem = function(container, filepath) {
+  const emptyState = container.querySelector('.sortable-empty-state');
+  if (emptyState) emptyState.remove();
+
+  const item = document.createElement('div');
+  item.className = 'sortable-item';
+  item.draggable = true;
+  item.dataset.path = filepath;
+
+  const dragHandle = document.createElement('div');
+  dragHandle.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 6h8M8 12h8M8 18h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  dragHandle.style.cursor = 'grab';
+  dragHandle.style.color = 'var(--text-subtle)';
+
+  const content = document.createElement('div');
+  content.className = 'sortable-item-content';
+  content.title = filepath;
+  const filename = filepath.split('\\').pop().split('/').pop();
+  content.textContent = filename;
+
+  const removeBtn = document.createElement('div');
+  removeBtn.className = 'sortable-item-remove';
+  removeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  removeBtn.onclick = () => {
+    item.remove();
+    if (container.children.length === 0) {
+      container.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add videos.</div>';
+    }
+  };
+
+  item.appendChild(dragHandle);
+  item.appendChild(content);
+  item.appendChild(removeBtn);
+
+  item.addEventListener('dragstart', (e) => {
+    item.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    window._draggingItem = item;
+  });
+  item.addEventListener('dragend', () => {
+    item.classList.remove('dragging');
+    window._draggingItem = null;
+    container.querySelectorAll('.sortable-item').forEach(el => {
+      el.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+  });
+  item.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (!window._draggingItem || window._draggingItem === item) return;
+    const rect = item.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    if (e.clientY < mid) {
+      item.classList.add('drag-over-top');
+      item.classList.remove('drag-over-bottom');
+    } else {
+      item.classList.add('drag-over-bottom');
+      item.classList.remove('drag-over-top');
+    }
+  });
+  item.addEventListener('dragleave', () => {
+    item.classList.remove('drag-over-top', 'drag-over-bottom');
+  });
+  item.addEventListener('drop', (e) => {
+    e.preventDefault();
+    item.classList.remove('drag-over-top', 'drag-over-bottom');
+    if (!window._draggingItem || window._draggingItem === item) return;
+    const rect = item.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    if (e.clientY < mid) {
+      container.insertBefore(window._draggingItem, item);
+    } else {
+      container.insertBefore(window._draggingItem, item.nextSibling);
+    }
+  });
+
+  container.appendChild(item);
+};
 
 // ── Status Bar ─────────────────────────────────────────────────
 const statusDot  = document.getElementById('statusDot');
@@ -100,6 +198,8 @@ const SETTINGS_MAP = {
   'show-tool-batch':      { navTab: 'batch' },
   'show-tool-m3u8':       { navTab: 'm3u8' },
   'show-tool-gallery':    { navTab: 'gallery' },
+  'show-tool-splitter':   { navTab: 'splitter' },
+  'show-tool-concatenator': { navTab: 'concatenator' },
   'show-ls-quality':      { el: 'ls-quality-group' },
   'show-yd-format':       { el: 'yd-format-group' },
   'show-batch-format':    { el: 'batch-format-group' },
@@ -116,6 +216,8 @@ const SETTINGS_DEFAULTS = {
   'show-tool-batch':      true,
   'show-tool-m3u8':       true,
   'show-tool-gallery':    true,
+  'show-tool-splitter':   true,
+  'show-tool-concatenator': true,
   'show-ls-quality':      true,
   'show-yd-format':       true,
   'show-batch-format':    true,
@@ -374,6 +476,43 @@ function applySetting(key, value) {
   }
 }
 
+// ── Protected-path guard ──────────────────────────────────────
+/**
+ * Returns a user-friendly error string if the path is a protected location
+ * (drive root, Windows system directories, etc.), or null if safe.
+ */
+function isProtectedPath(p) {
+  if (!p || !p.trim()) return null;
+  const norm = p.trim().replace(/\\/g, '/');
+
+  // Drive root: "C:", "C:\" or "C:/" with nothing after it
+  if (/^[A-Za-z]:\/?$/.test(p.trim())) {
+    return `Cannot download to the root of a drive ("${p.trim()}"). Please choose a subfolder.`;
+  }
+
+  // Network/UNC root: "\\server" or "//server" with no share path
+  if (/^\/\/[^/]+\/?$/.test(norm) || /^\\\\[^\\]+\\?$/.test(p.trim())) {
+    return `Cannot download to the root of a network share ("${p.trim()}"). Please choose a subfolder.`;
+  }
+
+  // Windows protected system directories (case-insensitive)
+  const sysRoots = [
+    /^[A-Za-z]:\/Windows(\/?|\/.+)$/i,
+    /^[A-Za-z]:\/Program Files( \(x86\))?(\/?|\/.+)$/i,
+    /^[A-Za-z]:\/ProgramData(\/?|\/.+)$/i,
+    /^[A-Za-z]:\/System Volume Information(\/?|\/.+)$/i,
+    /^[A-Za-z]:\/Recovery(\/?|\/.+)$/i,
+    /^[A-Za-z]:\/\$Recycle\.Bin(\/?|\/.+)$/i,
+  ];
+  for (const re of sysRoots) {
+    if (re.test(norm)) {
+      return `Cannot download to a protected system directory ("${p.trim()}"). Please choose a different folder.`;
+    }
+  }
+
+  return null; // safe
+}
+
 // ── Terminal helpers ───────────────────────────────────────────
 function classifyLine(text, streamType) {
   const t = text.trimStart();
@@ -388,44 +527,62 @@ function classifyLine(text, streamType) {
   return streamType; // 'stdout' or 'stderr'
 }
 
+// ── Line buffer for batched DOM appends ──────────────────────────
+// Instead of one appendChild per line, we collect lines into a buffer and
+// flush them all at once via a DocumentFragment on the next RAF tick.
+// This dramatically reduces layout thrashing when hundreds of lines arrive
+// per second (e.g. during a large batch download).
 function appendLog(logEl, text, cls) {
-  const line = document.createElement('div');
-  line.className = 'line-' + cls;
-  line.textContent = text;
-  logEl.appendChild(line);
-  // Only flag critical failure on Python tracebacks — these mean an unhandled
-  // exception killed the process. A plain ERROR: line (e.g. one video in a
-  // playlist failed) does NOT mean the whole run failed.
+  // Only flag critical failure on Python tracebacks
   const t = text.trimStart();
   if (/^Traceback \(most recent call last\)/i.test(t) || /^\s+File ".*\.py"/.test(text)) {
     logEl._hasError = true;
   }
-  const scroller = logEl; // terminal-body scrolls itself
 
-  // Cap log DOM at 2000 lines; trim oldest 100 at a time to keep layout cheap
-  logEl._lineCount = (logEl._lineCount || 0) + 1;
-  if (logEl._lineCount > 2000) {
-    let removed = 0;
-    while (removed < 100 && logEl.firstChild) {
-      const first = logEl.firstChild;
-      if (first.classList.contains('log-body-start') ||
-          first.classList.contains('log-detail') ||
-          first.classList.contains('log-expand-arrow')) break;
-      logEl.removeChild(first);
-      removed++;
-    }
-    logEl._lineCount -= removed;
-  }
+  // Accumulate into a pending buffer
+  if (!logEl._pendingLines) logEl._pendingLines = [];
+  logEl._pendingLines.push({ text, cls });
 
-  if (!scroller._rafPending) {
-    scroller._rafPending = true;
+  // Schedule a single flush per animation frame
+  if (!logEl._rafPending) {
+    logEl._rafPending = true;
     requestAnimationFrame(() => {
-      scroller._rafPending = false;
-      if (scroller._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
-        const scrollEl = scroller._scrollEl || scroller;
+      logEl._rafPending = false;
+
+      // Flush all buffered lines into a DocumentFragment
+      const frag = document.createDocumentFragment();
+      const lines = logEl._pendingLines || [];
+      logEl._pendingLines = [];
+      logEl._lineCount = (logEl._lineCount || 0) + lines.length;
+
+      for (const { text: t2, cls: c } of lines) {
+        const div = document.createElement('div');
+        div.className = 'line-' + c;
+        div.textContent = t2;
+        frag.appendChild(div);
+      }
+      logEl.appendChild(frag);
+
+      // Cap log DOM at 800 lines; trim 200 at a time to keep layout cheap
+      if (logEl._lineCount > 800) {
+        let removed = 0;
+        while (removed < 200 && logEl.firstChild) {
+          const first = logEl.firstChild;
+          if (first.classList.contains('log-body-start') ||
+              first.classList.contains('log-detail') ||
+              first.classList.contains('log-expand-arrow')) break;
+          logEl.removeChild(first);
+          removed++;
+        }
+        logEl._lineCount -= removed;
+      }
+
+      // Auto-scroll only when the tab is active and follow-mode is on
+      if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
+        const scrollEl = logEl._scrollEl || logEl;
         scrollEl.scrollTop = scrollEl.scrollHeight;
       }
-      scroller._updateScrollBtn?.();
+      logEl._updateScrollBtn?.();
     });
   }
 }
@@ -435,12 +592,15 @@ function clearLog(logEl) {
     logEl._scrollBtnHandler = null;
     logEl._scrollEl = null;
   }
+  logEl._scrollBtn?.remove();
+  logEl._scrollBtn = null;
   logEl.innerHTML = '';
   logEl._lineCount = 0;
   logEl._hasError = false;
   logEl._autoFollow = true;
+  logEl._pendingLines = [];  // discard any buffered lines not yet flushed
+  logEl._rafPending = false;
   logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
-  logEl.closest('.terminal-wrap')?.querySelectorAll('.log-scroll-btn').forEach(b => b.remove());
 }
 
 function markBodyStart(logEl) {
@@ -448,61 +608,52 @@ function markBodyStart(logEl) {
   m.className = 'log-body-start';
   logEl.appendChild(m);
 
-  const wrap     = logEl.closest('.terminal-wrap');
   // .content is the actual scrollable container; terminal-body just grows to fit
   const scrollEl = logEl.closest('.content');
   logEl._scrollEl = scrollEl;
 
-  const svgUp     = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const svgDown   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const svgResume = '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
+  const svgUp   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="18 15 12 9 6 15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgDown = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  // Main button: ↑ to-top (auto ON) or ↓ to-bottom (auto OFF)
+  // Clean up any previous button for this logEl
+  logEl._scrollBtn?.remove();
+
+  // Single toggle button: ↑ scroll-to-top (pauses auto-scroll) / ↓ scroll-to-bottom (resumes)
   const btn = document.createElement('div');
   btn.className = 'log-scroll-btn';
   btn.style.display = 'none';
-  wrap.appendChild(btn);
-
-  // Resume button: only visible when auto-scroll is paused
-  const resumeBtn = document.createElement('div');
-  resumeBtn.className = 'log-scroll-btn log-scroll-resume';
-  resumeBtn.title = 'Resume auto-scroll';
-  resumeBtn.innerHTML = svgResume;
-  resumeBtn.style.display = 'none';
-  wrap.appendChild(resumeBtn);
+  document.body.appendChild(btn);
+  logEl._scrollBtn = btn;
 
   logEl._autoFollow = true;
 
-  // Scroll so the top of the terminal box aligns with the top of the viewport
-  const scrollToWrapTop = () => {
-    scrollEl.scrollTop = wrap.getBoundingClientRect().top + scrollEl.scrollTop
-                       - scrollEl.getBoundingClientRect().top;
-  };
-
   const updateBtn = () => {
+    // Only show when the owning tab panel is active
+    if (!logEl.closest('.tab-panel')?.classList.contains('active')) {
+      btn.style.display = 'none';
+      return;
+    }
     const hasScroll = scrollEl.scrollHeight > scrollEl.clientHeight + 20;
-    if (!hasScroll) { btn.style.display = 'none'; resumeBtn.style.display = 'none'; return; }
+    if (!hasScroll) { btn.style.display = 'none'; return; }
     btn.style.display = 'flex';
     if (logEl._autoFollow) {
       btn.innerHTML = svgUp;
-      btn.title = 'Scroll to top';
-      resumeBtn.style.display = 'none';
+      btn.title = 'Scroll to top — pauses auto-scroll';
     } else {
       btn.innerHTML = svgDown;
-      btn.title = 'Scroll to bottom';
-      resumeBtn.style.display = 'flex';
+      btn.title = 'Scroll to bottom — resumes auto-scroll';
     }
   };
   logEl._updateScrollBtn = updateBtn;
 
-  // Main button click
+  // Button click: ↑ = go to top + pause; ↓ = go to bottom + resume
   btn.addEventListener('click', () => {
     if (logEl._autoFollow) {
-      // Auto ON → pause and jump to top of terminal
+      // Auto ON → pause and jump to very top of page
       logEl._autoFollow = false;
       logEl._ignoreScroll = true;
       updateBtn();
-      scrollToWrapTop();
+      scrollEl.scrollTop = 0;
     } else {
       // Auto OFF → jump to bottom AND resume auto-scroll
       logEl._autoFollow = true;
@@ -510,14 +661,6 @@ function markBodyStart(logEl) {
       updateBtn();
       scrollEl.scrollTop = scrollEl.scrollHeight;
     }
-  });
-
-  // Resume button click → jump to bottom AND resume auto-scroll
-  resumeBtn.addEventListener('click', () => {
-    logEl._autoFollow = true;
-    logEl._ignoreScroll = true;
-    updateBtn();
-    scrollEl.scrollTop = scrollEl.scrollHeight;
   });
 
   logEl._scrollBtnHandler = () => {
@@ -701,6 +844,8 @@ function handleOutput(logEl, data, onExit) {
 
     if (!url)       { appendLog(log, '⚠ Please enter a stream URL.', 'error'); return; }
     if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    const lsPathErr = isProtectedPath(outputDir);
+    if (lsPathErr)  { appendLog(log, '⚠ ' + lsPathErr, 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting live archiver...`, 'info');
@@ -790,6 +935,8 @@ function handleOutput(logEl, data, onExit) {
 
     if (!url)       { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
     if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    const ydPathErr = isProtectedPath(outputDir);
+    if (ydPathErr)  { appendLog(log, '⚠ ' + ydPathErr, 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting yt-dlp download...`, 'info');
@@ -849,6 +996,27 @@ function handleOutput(logEl, data, onExit) {
   const progressLbl  = document.getElementById('batch-progress-label');
   let currentPid = null;
   let isPaused   = false;
+  let countdownTimer = null;
+  let lastProgressText = '0 / 0';
+
+  function startRestCountdown(seconds) {
+    clearInterval(countdownTimer);
+    let rem = seconds;
+    const tick = () => {
+      const m = Math.floor(rem / 60);
+      const s = rem % 60;
+      progressLbl.textContent = `Resting… ${m}:${s.toString().padStart(2, '0')}`;
+      if (rem <= 0) clearInterval(countdownTimer);
+      rem--;
+    };
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+  }
+  function stopRestCountdown() {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    progressLbl.textContent = lastProgressText;
+  }
 
   const pauseIconHTML = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
@@ -913,6 +1081,8 @@ function handleOutput(logEl, data, onExit) {
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter at least one valid URL.', 'error'); return; }
     if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    const batchPathErr = isProtectedPath(outputDir);
+    if (batchPathErr)      { appendLog(log, '⚠ ' + batchPathErr, 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting batch download of ${urls.length} URL(s)...`, 'info');
@@ -940,6 +1110,7 @@ function handleOutput(logEl, data, onExit) {
 
     let completedCount = 0;
     let batchTotal = urls.length;
+    let _progressPending = false; // RAF guard for progress bar writes
     log._batchStats = null;
     window.api.removeAllListeners('batch-output');
     window.api.onBatchOutput((data) => {
@@ -951,28 +1122,43 @@ function handleOutput(logEl, data, onExit) {
           // resets completedCount to X-1 (how many were done before this one started).
           const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
           if (m) {
+            stopRestCountdown();
             completedCount = parseInt(m[1], 10) - 1;
             batchTotal     = parseInt(m[2], 10);
-            progressBar.style.width = (completedCount / batchTotal * 100) + '%';
-            progressLbl.textContent = `${completedCount} / ${batchTotal}`;
+            lastProgressText = `${completedCount} / ${batchTotal}`;
           }
           // Increment on successful finish OR per-URL failure — fires at the END of
           // each URL so the counter updates without waiting for the next one to start.
           if (/Finished processing media from|Download failed:/i.test(line)) {
             completedCount = Math.min(completedCount + 1, batchTotal);
-            progressBar.style.width = (completedCount / batchTotal * 100) + '%';
-            progressLbl.textContent = `${completedCount} / ${batchTotal}`;
+            lastProgressText = `${completedCount} / ${batchTotal}`;
           }
+          // Detect rest periods and start countdown
+          const rest5  = line.match(/Pausing 5 minutes/i);
+          const rest30 = line.match(/Pausing 30 minutes/i);
+          if (rest5)  startRestCountdown(5 * 60);
+          if (rest30) startRestCountdown(30 * 60);
           // Partial-failure summary line: "N downloads failed. See failed_downloads.txt"
           const fm = line.match(/(\d+)\s+downloads?\s+failed/i);
           if (fm) log._batchStats = { failed: parseInt(fm[1], 10), total: urls.length };
         });
+        // Flush progress bar updates once per RAF to avoid layout thrashing
+        if (!_progressPending) {
+          _progressPending = true;
+          requestAnimationFrame(() => {
+            _progressPending = false;
+            progressBar.style.width = (completedCount / batchTotal * 100) + '%';
+            progressLbl.textContent = lastProgressText;
+          });
+        }
       }
       handleOutput(log, data, (code) => {
         // On clean exit, mark all URLs as done
+        stopRestCountdown();
         if (code === 0) {
           progressBar.style.width = '100%';
-          progressLbl.textContent = `${urls.length} / ${urls.length}`;
+          lastProgressText = `${urls.length} / ${urls.length}`;
+          progressLbl.textContent = lastProgressText;
         }
         runBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
@@ -1000,10 +1186,15 @@ function handleOutput(logEl, data, onExit) {
   const stopBtn    = document.getElementById('m3-stop');
   const encodeChk  = document.getElementById('m3-encode');
   const encodeOpts = document.querySelectorAll('.encode-options');
-  let currentPid = null;
-  let isPaused   = false;
+  const modeBtnM3  = document.getElementById('m3-url-mode-btn');
+  const singleDiv  = document.getElementById('m3-url-single');
+  const multiDiv   = document.getElementById('m3-url-multi');
+  const countBadge = document.getElementById('m3-url-counter');
+  let currentPid  = null;
+  let isPaused    = false;
+  let m3MultiMode = false;
 
-  const pauseIconHTML = pauseBtn.innerHTML;
+  const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
   // Toggle encode options
@@ -1016,11 +1207,46 @@ function handleOutput(logEl, data, onExit) {
     encodeChk.dispatchEvent(new Event('change'));
   });
 
-  document.getElementById('m3-clear').addEventListener('click', () => clearLog(log));
-
-  stopBtn.addEventListener('click', () => {
-    if (currentPid) window.api.stopScript(currentPid);
+  // ── URL mode toggle ──────────────────────────────────────────
+  const m3Textarea = document.getElementById('m3-urls');
+  function updateM3Count() {
+    const n = getM3Urls().length;
+    countBadge.textContent = n + (n === 1 ? ' URL' : ' URLs');
+  }
+  m3Textarea.addEventListener('input', updateM3Count);
+  m3Textarea.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    const start  = m3Textarea.selectionStart;
+    const end    = m3Textarea.selectionEnd;
+    const insert = pasted.endsWith('\n') ? pasted : pasted + '\n';
+    m3Textarea.value = m3Textarea.value.substring(0, start) + insert + m3Textarea.value.substring(end);
+    m3Textarea.selectionStart = m3Textarea.selectionEnd = start + insert.length;
+    updateM3Count();
   });
+  modeBtnM3.addEventListener('click', () => {
+    m3MultiMode = !m3MultiMode;
+    singleDiv.classList.toggle('hidden', m3MultiMode);
+    multiDiv.classList.toggle('hidden', !m3MultiMode);
+    countBadge.classList.toggle('hidden', !m3MultiMode);
+    modeBtnM3.classList.toggle('active', m3MultiMode);
+    modeBtnM3.title = m3MultiMode ? 'Switch to single URL' : 'Switch to multi-URL mode';
+    if (m3MultiMode) {
+      const single = document.getElementById('m3-url').value.trim();
+      if (single && !m3Textarea.value.trim()) m3Textarea.value = single + '\n';
+      updateM3Count();
+    }
+  });
+  function getM3Urls() {
+    if (!m3MultiMode) {
+      const u = document.getElementById('m3-url').value.trim();
+      return u ? [u] : [];
+    }
+    return m3Textarea.value.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+  }
+
+  document.getElementById('m3-clear').addEventListener('click', () => clearLog(log));
+  stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
@@ -1040,7 +1266,7 @@ function handleOutput(logEl, data, onExit) {
   });
 
   runBtn.addEventListener('click', () => {
-    const url          = document.getElementById('m3-url').value.trim();
+    const urls         = getM3Urls();
     const outputDir    = document.getElementById('m3-output').value.trim();
     const encode       = encodeChk.checked;
     const container    = document.getElementById('m3-container').value;
@@ -1051,12 +1277,18 @@ function handleOutput(logEl, data, onExit) {
     const audioBitrate = document.getElementById('m3-audio-bitrate').value;
     const cookiesPath  = document.getElementById('m3-cookies').value.trim();
 
-    if (!url)       { appendLog(log, '⚠ Please enter an M3U8 URL.', 'error'); return; }
-    if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    if (urls.length === 0) { appendLog(log, '⚠ Please enter an M3U8 URL.', 'error'); return; }
+    if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    const m3PathErr = isProtectedPath(outputDir);
+    if (m3PathErr)         { appendLog(log, '⚠ ' + m3PathErr, 'error'); return; }
 
     clearLog(log);
-    appendLog(log, `▶ Starting M3U8 download...`, 'info');
-    appendLog(log, `  URL:    ${url}`, 'cmd');
+    if (urls.length > 1) {
+      appendLog(log, `▶ Starting M3U8 batch (${urls.length} URLs)...`, 'info');
+    } else {
+      appendLog(log, `▶ Starting M3U8 download...`, 'info');
+      appendLog(log, `  URL:    ${urls[0]}`, 'cmd');
+    }
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (encode) {
       appendLog(log, `  Codec:  ${codec}`, 'cmd');
@@ -1073,27 +1305,42 @@ function handleOutput(logEl, data, onExit) {
     isPaused   = false;
     pauseBtn.innerHTML = pauseIconHTML;
     pauseBtn.classList.remove('paused');
-
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
     incRunning('M3U8 Downloader');
 
+    let urlIdx = 0;
+    if (urls.length > 1) appendLog(log, `▶ [1/${urls.length}] ${urls[0]}`, 'info');
+
     window.api.removeAllListeners('m3u8-output');
     window.api.onM3u8Output((data) => {
       if (data.type === 'pid') { currentPid = data.pid; return; }
-      handleOutput(log, data, () => {
-        runBtn.classList.remove('hidden');
-        pauseBtn.classList.add('hidden');
-        stopBtn.classList.add('hidden');
-        pauseBtn.innerHTML = pauseIconHTML;
-        pauseBtn.classList.remove('paused');
-        isPaused = false;
-        decRunning('M3U8 Downloader');
-      });
+      // Intermediate exit: log status and start next URL without collapsing
+      if (data.type === 'exit' && urlIdx < urls.length - 1) {
+        const failed = data.code !== 0 || !!log._hasError;
+        log._hasError = false;
+        if (failed) appendLog(log, `✖ URL ${urlIdx + 1}/${urls.length} failed (code ${data.code})`, 'error');
+        else        appendLog(log, `✔ URL ${urlIdx + 1}/${urls.length} complete.`, 'success');
+        urlIdx++;
+        currentPid = null;
+        appendLog(log, `▶ [${urlIdx + 1}/${urls.length}] ${urls[urlIdx]}`, 'info');
+        window.api.runM3u8({ url: urls[urlIdx], outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath });
+      } else {
+        // Last URL (or single): normal handler which collapses on finish
+        handleOutput(log, data, () => {
+          runBtn.classList.remove('hidden');
+          pauseBtn.classList.add('hidden');
+          stopBtn.classList.add('hidden');
+          pauseBtn.innerHTML = pauseIconHTML;
+          pauseBtn.classList.remove('paused');
+          isPaused = false;
+          decRunning('M3U8 Downloader');
+        });
+      }
     });
 
-    window.api.runM3u8({ url, outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath });
+    window.api.runM3u8({ url: urls[0], outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath });
   });
 })()
 
@@ -1102,27 +1349,67 @@ function handleOutput(logEl, data, onExit) {
 // ══════════════════════════════════════════════════════════════
 try {
 (function () {
-  const log      = document.getElementById('gdl-log');
-  const runBtn   = document.getElementById('gdl-run');
-  const pauseBtn = document.getElementById('gdl-pause');
-  const stopBtn  = document.getElementById('gdl-stop');
+  const log        = document.getElementById('gdl-log');
+  const runBtn     = document.getElementById('gdl-run');
+  const pauseBtn   = document.getElementById('gdl-pause');
+  const stopBtn    = document.getElementById('gdl-stop');
+  const modeBtnGdl = document.getElementById('gdl-url-mode-btn');
+  const singleDiv  = document.getElementById('gdl-url-single');
+  const multiDiv   = document.getElementById('gdl-url-multi');
+  const countBadge = document.getElementById('gdl-url-counter');
 
   // Verify elements exist before touching them
   if (!log || !runBtn || !pauseBtn || !stopBtn) {
     console.error('[gallery-dl IIFE] Missing element:', { log, runBtn, pauseBtn, stopBtn });
     throw new Error('Missing DOM element — see console');
   }
-  let currentPid = null;
-  let isPaused   = false;
+  let currentPid   = null;
+  let isPaused     = false;
+  let gdlMultiMode = false;
 
   const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
-  document.getElementById('gdl-clear').addEventListener('click', () => clearLog(log));
-
-  stopBtn.addEventListener('click', () => {
-    if (currentPid) window.api.stopScript(currentPid);
+  // ── URL mode toggle ──────────────────────────────────────────
+  const gdlTextarea = document.getElementById('gdl-urls');
+  function updateGdlCount() {
+    const n = getGdlUrls().length;
+    countBadge.textContent = n + (n === 1 ? ' URL' : ' URLs');
+  }
+  gdlTextarea.addEventListener('input', updateGdlCount);
+  gdlTextarea.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    const start  = gdlTextarea.selectionStart;
+    const end    = gdlTextarea.selectionEnd;
+    const insert = pasted.endsWith('\n') ? pasted : pasted + '\n';
+    gdlTextarea.value = gdlTextarea.value.substring(0, start) + insert + gdlTextarea.value.substring(end);
+    gdlTextarea.selectionStart = gdlTextarea.selectionEnd = start + insert.length;
+    updateGdlCount();
   });
+  modeBtnGdl.addEventListener('click', () => {
+    gdlMultiMode = !gdlMultiMode;
+    singleDiv.classList.toggle('hidden', gdlMultiMode);
+    multiDiv.classList.toggle('hidden', !gdlMultiMode);
+    countBadge.classList.toggle('hidden', !gdlMultiMode);
+    modeBtnGdl.classList.toggle('active', gdlMultiMode);
+    modeBtnGdl.title = gdlMultiMode ? 'Switch to single URL' : 'Switch to multi-URL mode';
+    if (gdlMultiMode) {
+      const single = document.getElementById('gdl-url').value.trim();
+      if (single && !gdlTextarea.value.trim()) gdlTextarea.value = single + '\n';
+      updateGdlCount();
+    }
+  });
+  function getGdlUrls() {
+    if (!gdlMultiMode) {
+      const u = document.getElementById('gdl-url').value.trim();
+      return u ? [u] : [];
+    }
+    return gdlTextarea.value.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+  }
+
+  document.getElementById('gdl-clear').addEventListener('click', () => clearLog(log));
+  stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
@@ -1142,18 +1429,25 @@ try {
   });
 
   runBtn.addEventListener('click', () => {
-    const url         = document.getElementById('gdl-url').value.trim();
+    const urls        = getGdlUrls();
     const outputDir   = document.getElementById('gdl-output').value.trim();
     const filetypes   = document.getElementById('gdl-filetypes').value;
     const metadata    = document.getElementById('gdl-meta').checked;
     const cookiesPath = document.getElementById('gdl-cookies').value.trim();
+    const installGdl  = getSetting('dep-install-gdl') ? 'y' : 'n';
 
-    if (!url)       { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
-    if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    if (urls.length === 0) { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
+    if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    const gdlPathErr = isProtectedPath(outputDir);
+    if (gdlPathErr)        { appendLog(log, '⚠ ' + gdlPathErr, 'error'); return; }
 
     clearLog(log);
-    appendLog(log, `▶ Starting gallery-dl...`, 'info');
-    appendLog(log, `  URL:       ${url}`, 'cmd');
+    if (urls.length > 1) {
+      appendLog(log, `▶ Starting gallery-dl batch (${urls.length} URLs)...`, 'info');
+    } else {
+      appendLog(log, `▶ Starting gallery-dl...`, 'info');
+      appendLog(log, `  URL:       ${urls[0]}`, 'cmd');
+    }
     appendLog(log, `  Files:     ${filetypes === 'all' ? 'All files' : filetypes}`, 'cmd');
     appendLog(log, `  Metadata:  ${metadata ? 'Yes' : 'No'}`, 'cmd');
     appendLog(log, `  Output:    ${outputDir}`, 'cmd');
@@ -1165,28 +1459,42 @@ try {
     isPaused   = false;
     pauseBtn.innerHTML = pauseIconHTML;
     pauseBtn.classList.remove('paused');
-
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
     incRunning('gallery-dl');
 
+    let urlIdx = 0;
+    if (urls.length > 1) appendLog(log, `▶ [1/${urls.length}] ${urls[0]}`, 'info');
+
     window.api.removeAllListeners('gallery-dl-output');
     window.api.onGalleryDlOutput((data) => {
       if (data.type === 'pid') { currentPid = data.pid; return; }
-      handleOutput(log, data, () => {
-        runBtn.classList.remove('hidden');
-        pauseBtn.classList.add('hidden');
-        stopBtn.classList.add('hidden');
-        pauseBtn.innerHTML = pauseIconHTML;
-        pauseBtn.classList.remove('paused');
-        isPaused = false;
-        decRunning('gallery-dl');
-      });
+      // Intermediate exit: log status and start next URL without collapsing
+      if (data.type === 'exit' && urlIdx < urls.length - 1) {
+        const failed = data.code !== 0 || !!log._hasError;
+        log._hasError = false;
+        if (failed) appendLog(log, `✖ URL ${urlIdx + 1}/${urls.length} failed (code ${data.code})`, 'error');
+        else        appendLog(log, `✔ URL ${urlIdx + 1}/${urls.length} complete.`, 'success');
+        urlIdx++;
+        currentPid = null;
+        appendLog(log, `▶ [${urlIdx + 1}/${urls.length}] ${urls[urlIdx]}`, 'info');
+        window.api.runGalleryDl({ url: urls[urlIdx], outputDir, filetypes, metadata, cookiesPath, installGdl });
+      } else {
+        // Last URL (or single): normal handler which collapses on finish
+        handleOutput(log, data, () => {
+          runBtn.classList.remove('hidden');
+          pauseBtn.classList.add('hidden');
+          stopBtn.classList.add('hidden');
+          pauseBtn.innerHTML = pauseIconHTML;
+          pauseBtn.classList.remove('paused');
+          isPaused = false;
+          decRunning('gallery-dl');
+        });
+      }
     });
 
-    const installGdl = getSetting('dep-install-gdl') ? 'y' : 'n';
-    window.api.runGalleryDl({ url, outputDir, filetypes, metadata, cookiesPath, installGdl });
+    window.api.runGalleryDl({ url: urls[0], outputDir, filetypes, metadata, cookiesPath, installGdl });
   });
 })()
 } catch (e) {
@@ -1344,6 +1652,8 @@ const diskSpace = (() => {
     batch:      'batch-output',
     m3u8:       'm3-output',
     gallery:    'gdl-output',
+    splitter:   'sp-output',
+    concatenator: 'concat-output-dir',
   };
 
   const pill      = document.getElementById('diskSpacePill');
@@ -1437,3 +1747,167 @@ const diskSpace = (() => {
 
 // Apply disk-space setting now that the module is initialized
 applySetting('show-disk-space', getSetting('show-disk-space'));
+
+// ── Video Splitter Logic ───────────────────────────────────────────────────────
+const spSelect = document.getElementById('sp-parts-select');
+const spCustomGrp = document.getElementById('sp-parts-custom-group');
+if (spSelect && spCustomGrp) {
+  spSelect.addEventListener('change', () => {
+    if (spSelect.value === 'custom') spCustomGrp.classList.remove('hidden');
+    else spCustomGrp.classList.add('hidden');
+  });
+}
+
+let spPid = null;
+const spRunBtn   = document.getElementById('sp-run');
+const spStopBtn  = document.getElementById('sp-stop');
+const spPauseBtn = document.getElementById('sp-pause');
+const spClearBtn = document.getElementById('sp-clear');
+const spLog      = document.getElementById('sp-log');
+
+if (spClearBtn) spClearBtn.addEventListener('click', () => clearLog(spLog));
+
+if (spRunBtn) {
+  spRunBtn.addEventListener('click', async () => {
+    const file = document.getElementById('sp-file').value.trim();
+    const outputDir = document.getElementById('sp-output').value.trim();
+    let partsStr = spSelect.value;
+    if (partsStr === 'custom') {
+      partsStr = document.getElementById('sp-parts-custom').value.trim();
+    }
+    const parts = parseInt(partsStr, 10);
+
+    if (!file) {
+      alert('Please select an input video file.');
+      return;
+    }
+    if (isNaN(parts) || parts < 2) {
+      alert('Please specify a valid number of parts (at least 2).');
+      return;
+    }
+
+    clearLog(spLog);
+    markBodyStart(spLog);
+    appendLog(spLog, `> Splitting ${file} into ${parts} parts...`, 'input');
+
+    spRunBtn.disabled = true;
+    spStopBtn.classList.remove('hidden');
+    spPauseBtn.classList.remove('hidden');
+    spPauseBtn.classList.remove('paused');
+    spPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
+    incRunning('Video Splitter');
+
+    window.api.runSplitter({ file, parts, outputDir });
+  });
+}
+
+window.api.onSplitterOutput((data) => {
+  if (data.type === 'pid') { spPid = data.pid; return; }
+  handleOutput(spLog, data, () => {
+    spPid = null;
+    spRunBtn.disabled = false;
+    spStopBtn.classList.add('hidden');
+    spPauseBtn.classList.add('hidden');
+    decRunning('Video Splitter');
+  });
+});
+
+if (spStopBtn) {
+  spStopBtn.addEventListener('click', () => {
+    if (spPid) {
+      window.api.stopScript(spPid);
+      appendLog(spLog, '⚠ Stopping script...', 'warning');
+    }
+  });
+}
+
+if (spPauseBtn) {
+  spPauseBtn.addEventListener('click', () => {
+    if (!spPid) return;
+    const isPaused = spPauseBtn.classList.toggle('paused');
+    if (isPaused) {
+      window.api.pauseScript(spPid);
+      spPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume';
+      appendLog(spLog, '⏸ Process paused.', 'warning');
+    } else {
+      window.api.resumeScript(spPid);
+      spPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
+      appendLog(spLog, '▶ Process resumed.', 'warning');
+    }
+  });
+}
+
+// ── Video Concatenator Logic ───────────────────────────────────────────────────
+let concatPid = null;
+const concatRunBtn   = document.getElementById('concat-run');
+const concatStopBtn  = document.getElementById('concat-stop');
+const concatPauseBtn = document.getElementById('concat-pause');
+const concatClearBtn = document.getElementById('concat-clear');
+const concatLog      = document.getElementById('concat-log');
+
+if (concatClearBtn) concatClearBtn.addEventListener('click', () => clearLog(concatLog));
+
+if (concatRunBtn) {
+  concatRunBtn.addEventListener('click', async () => {
+    const list = document.getElementById('concat-file-list');
+    const items = list.querySelectorAll('.sortable-item');
+    const files = Array.from(items).map(item => item.dataset.path);
+    const outputName = document.getElementById('concat-output-name').value.trim() || 'merged_video.mp4';
+    const outputDir = document.getElementById('concat-output-dir').value.trim();
+    const forceEncode = document.getElementById('concat-force').checked;
+
+    if (files.length < 2) {
+      alert('Please select at least two video files to concatenate.');
+      return;
+    }
+
+    clearLog(concatLog);
+    markBodyStart(concatLog);
+    appendLog(concatLog, `> Merging ${files.length} videos into ${outputName}...`, 'input');
+
+    concatRunBtn.disabled = true;
+    concatStopBtn.classList.remove('hidden');
+    concatPauseBtn.classList.remove('hidden');
+    concatPauseBtn.classList.remove('paused');
+    concatPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
+    incRunning('Video Concatenator');
+
+    window.api.runConcatenator({ files, output: outputName, forceEncode, outputDir });
+  });
+}
+
+window.api.onConcatenatorOutput((data) => {
+  if (data.type === 'pid') { concatPid = data.pid; return; }
+  handleOutput(concatLog, data, () => {
+    concatPid = null;
+    concatRunBtn.disabled = false;
+    concatStopBtn.classList.add('hidden');
+    concatPauseBtn.classList.add('hidden');
+    decRunning('Video Concatenator');
+  });
+});
+
+if (concatStopBtn) {
+  concatStopBtn.addEventListener('click', () => {
+    if (concatPid) {
+      window.api.stopScript(concatPid);
+      appendLog(concatLog, '⚠ Stopping script...', 'warning');
+    }
+  });
+}
+
+if (concatPauseBtn) {
+  concatPauseBtn.addEventListener('click', () => {
+    if (!concatPid) return;
+    const isPaused = concatPauseBtn.classList.toggle('paused');
+    if (isPaused) {
+      window.api.pauseScript(concatPid);
+      concatPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume';
+      appendLog(concatLog, '⏸ Process paused.', 'warning');
+    } else {
+      window.api.resumeScript(concatPid);
+      concatPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
+      appendLog(concatLog, '▶ Process resumed.', 'warning');
+    }
+  });
+}
