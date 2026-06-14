@@ -96,6 +96,16 @@ ipcMain.handle('pick-file', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
+// Video picker (for Splitter)
+ipcMain.handle('pick-video', async () => {
+  mainWindow.focus();
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'Video Files', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm', 'ts', 'flv'] }, { name: 'All Files', extensions: ['*'] }]
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
 // Multi-file picker
 ipcMain.handle('pick-files', async () => {
   mainWindow.focus();

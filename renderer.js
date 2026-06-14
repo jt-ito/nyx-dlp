@@ -48,6 +48,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     const panel = document.getElementById('tab-' + btn.dataset.tab);
     if (panel) {
       panel.classList.add('active');
+      updateAllOpts();
       if (panel._savedScroll !== undefined) {
         const contentEl = document.querySelector('.content');
         if (contentEl) contentEl.scrollTop = panel._savedScroll;
@@ -73,8 +74,10 @@ document.querySelectorAll('.btn-folder').forEach(btn => {
     const type = btn.dataset.pickType;
     let res;
     if (type === 'file') {
-      res = await window.api.pickFile();
-    } else if (type === 'multi-file') {
+        res = await window.api.pickFile();
+      } else if (type === 'video') {
+        res = await window.api.pickVideo();
+      } else if (type === 'multi-file') {
       res = await window.api.pickFiles();
     } else {
       res = await window.api.pickFolder();
@@ -498,6 +501,7 @@ function getBatchExtraArgs()  { return getExtraArgs('batch-opt:'); }
         group.className = 'form-group';
         group.style.borderLeft = '3px solid var(--accent-color)';
         group.style.paddingLeft = '8px';
+        group.style.marginLeft = '-11px';
         
         const label = document.createElement('label');
         label.className = 'form-label';
@@ -505,8 +509,13 @@ function getBatchExtraArgs()  { return getExtraArgs('batch-opt:'); }
         group.appendChild(label);
         
         const onChange = (val) => {
-          if (val === null || val === false || val === '') localStorage.removeItem(prefix + opt.key);
-          else localStorage.setItem(prefix + opt.key, val);
+          if (val === null || val === false || val === '') {
+            localStorage.removeItem(prefix + opt.key);
+            // Immediately remove from the DOM so it disappears from "More Options"
+            group.remove();
+          } else {
+            localStorage.setItem(prefix + opt.key, val);
+          }
           
           // Re-render settings page only so we don't lose focus in current view
           if (prefix === 'ytdlp-opt:') renderYtdlpOpts('');
