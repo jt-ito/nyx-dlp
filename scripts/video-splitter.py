@@ -6,6 +6,12 @@ from pathlib import Path
 
 import argparse
 
+if sys.stdout and getattr(sys.stdout, 'encoding', '').lower() != 'utf-8':
+    try: sys.stdout.reconfigure(encoding='utf-8')
+    except: pass
+if sys.stderr and getattr(sys.stderr, 'encoding', '').lower() != 'utf-8':
+    try: sys.stderr.reconfigure(encoding='utf-8')
+    except: pass
 def split_video(input_file, num_parts, custom_output_dir=None, force_ext=None):
     safe_path = Path(input_file).resolve()
     

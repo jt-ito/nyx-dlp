@@ -664,14 +664,14 @@ function appendLog(logEl, text, cls) {
   const pLen = logEl._pendingLines.length;
   if (pLen > 0) {
       const last = logEl._pendingLines[pLen - 1];
-      if (last.text === text && last.cls === cls && !last.isProgress) {
+      if (last.text === text && last.cls === cls && !last.isProgress && text.trim() !== '') {
           last.count = (last.count || 1) + 1;
           if (!logEl._rafPending) triggerRaf(logEl);
           return;
       }
   } else if (logEl._lastRenderedLine) {
       const last = logEl._lastRenderedLine;
-      if (last.text === text && last.cls === cls && !last.isProgress) {
+      if (last.text === text && last.cls === cls && !last.isProgress && text.trim() !== '') {
           last.count = (last.count || 1) + 1;
           if (last.badge) {
               last.badge.textContent = ` (${last.count})`;

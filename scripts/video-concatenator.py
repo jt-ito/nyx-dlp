@@ -3,6 +3,13 @@ from pathlib import Path
 import logging
 import time
 
+if sys.stdout and getattr(sys.stdout, 'encoding', '').lower() != 'utf-8':
+    try: sys.stdout.reconfigure(encoding='utf-8')
+    except: pass
+if sys.stderr and getattr(sys.stderr, 'encoding', '').lower() != 'utf-8':
+    try: sys.stderr.reconfigure(encoding='utf-8')
+    except: pass
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 

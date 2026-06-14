@@ -168,7 +168,7 @@ function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines
   const proc = spawn(pythonCmd, ['-u', scriptPath, ...args], {
     cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONUNBUFFERED: '1' }
+    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }
   });
 
   event.sender.send(replyChannel, { type: 'pid', pid: proc.pid });
