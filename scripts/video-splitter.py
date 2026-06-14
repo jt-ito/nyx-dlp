@@ -4,7 +4,9 @@ import datetime
 import re
 from pathlib import Path
 
-def split_video(input_file, num_parts, custom_output_dir=None):
+import argparse
+
+def split_video(input_file, num_parts, custom_output_dir=None, force_ext=None):
     safe_path = Path(input_file).resolve()
     
     if not safe_path.is_file():
@@ -53,7 +55,11 @@ def split_video(input_file, num_parts, custom_output_dir=None):
         base_name = clean_title if clean_title else safe_path.stem
     else:
         base_name = safe_path.stem
-    ext = safe_path.suffix
+        
+    if force_ext:
+        ext = f".{force_ext.lstrip('.')}"
+    else:
+        ext = safe_path.suffix
     
     txt_path = output_dir / f"{base_name}_durations.txt"
     try:
@@ -69,11 +75,15 @@ def split_video(input_file, num_parts, custom_output_dir=None):
         out_name = output_dir / f"{base_name} pt{i+1}{ext}"
         print(f"Processing pt{i+1}/{num_parts} -> {out_name.name} ...")
         try:
+            output_kwargs = {'c': 'copy'}
+            if ext.lower() in ['.mp4', '.mov', '.m4v']:
+                output_kwargs['movflags'] = '+faststart'
+                
             if i < num_parts - 1:
                 (
                     ffmpeg
                     .input(str(safe_path), ss=start_sec)
-                    .output(str(out_name), t=dur_sec, c='copy')
+                    .output(str(out_name), t=dur_sec, **output_kwargs)
                     .global_args('-loglevel', 'warning')
                     .run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
                 )
@@ -81,7 +91,7 @@ def split_video(input_file, num_parts, custom_output_dir=None):
                 (
                     ffmpeg
                     .input(str(safe_path), ss=start_sec)
-                    .output(str(out_name), c='copy')
+                    .output(str(out_name), **output_kwargs)
                     .global_args('-loglevel', 'warning')
                     .run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
                 )
@@ -93,20 +103,16 @@ def split_video(input_file, num_parts, custom_output_dir=None):
             sys.exit(1)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("error: Usage: python video-splitter.py <input_file> <num_parts> [output_dir]", file=sys.stderr)
-        sys.exit(1)
-        
-    input_file = sys.argv[1]
-    try:
-        num_parts = int(sys.argv[2])
-    except ValueError:
-        print("error: number of parts must be an integer.", file=sys.stderr)
-        sys.exit(1)
-        
-    if num_parts < 2:
+    parser = argparse.ArgumentParser(description="Video Splitter")
+    parser.add_argument("input_file", help="Path to input video file")
+    parser.add_argument("num_parts", type=int, help="Number of parts to split into")
+    parser.add_argument("output_dir", nargs="?", default=None, help="Output directory")
+    parser.add_argument("--format", dest="format", default=None, help="Output container format")
+    
+    args = parser.parse_args()
+    
+    if args.num_parts < 2:
         print("error: number of parts must be at least 2.", file=sys.stderr)
         sys.exit(1)
         
-    output_dir = sys.argv[3] if len(sys.argv) > 3 else None
-    split_video(input_file, num_parts, output_dir)
+    split_video(args.input_file, args.num_parts, args.output_dir, args.format)

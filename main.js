@@ -284,12 +284,16 @@ ipcMain.on('run-gallery-dl', (event, { url, outputDir, filetypes, metadata, cook
 
 // ── Tool 6: Video Splitter ──────────────────────────────────────────────────────────
 // video-splitter.py: sys.argv[1]=file  sys.argv[2]=parts  sys.argv[3]=outputDir
-ipcMain.on('run-splitter', (event, { file, parts, outputDir }) => {
+ipcMain.on('run-splitter', (event, { file, parts, outputDir, containerFormat }) => {
   const scriptPath = path.join(scriptsDir, 'video-splitter.py');
   const targetDir = outputDir || path.dirname(file);
+  const args = [file, String(parts), targetDir];
+  if (containerFormat) {
+    args.push('--format', containerFormat);
+  }
   runScript(event, 'splitter-output', scriptPath, {
     cwd: targetDir,
-    args: [file, String(parts), targetDir]
+    args: args
   });
 });
 

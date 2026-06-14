@@ -31,6 +31,14 @@ document.getElementById('btnClose').addEventListener('click', () => window.api.c
 // ── Tab Navigation ─────────────────────────────────────────────
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
+    // Only process nav items that actually have data-tab to avoid issues with other nav buttons
+    if (!btn.dataset.tab) return;
+    
+    const activePanel = document.querySelector('.tab-panel.active');
+    if (activePanel) {
+      const contentEl = document.querySelector('.content');
+      if (contentEl) activePanel._savedScroll = contentEl.scrollTop;
+    }
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => {
       p.classList.remove('active');
@@ -38,8 +46,14 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     });
     btn.classList.add('active');
     const panel = document.getElementById('tab-' + btn.dataset.tab);
-    panel.classList.add('active');
-    panel.querySelectorAll('.terminal-body').forEach(t => t._updateScrollBtn?.());
+    if (panel) {
+      panel.classList.add('active');
+      if (panel._savedScroll !== undefined) {
+        const contentEl = document.querySelector('.content');
+        if (contentEl) contentEl.scrollTop = panel._savedScroll;
+      }
+      panel.querySelectorAll('.terminal-body').forEach(t => t._updateScrollBtn?.());
+    }
   });
 });
 
@@ -339,116 +353,209 @@ function getExtraArgs(prefix) {
 function getExtraYtdlpArgs() { return getExtraArgs('ytdlp-opt:'); }
 function getBatchExtraArgs()  { return getExtraArgs('batch-opt:'); }
 
-function renderOpts(containerId, prefix, filter) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  const q = (filter || '').toLowerCase().trim();
 
-  // Group options by category
-  const cats = {};
-  YTDLP_OPTS.forEach(opt => { (cats[opt.cat] = cats[opt.cat] || []).push(opt); });
+  function updateAllOpts() {
+    renderYtdlpOpts();
+    renderBatchOpts();
+    renderModifiedOpts('yd-modified-opts', 'ytdlp-opt:');
+    renderModifiedOpts('batch-modified-opts', 'batch-opt:');
+  }
 
-  container.innerHTML = '';
-  let anyVisible = false;
+  function createOptRow(opt, prefix, isModifiedView = false) {
+    const row = document.createElement('div');
+    row.className = 'ytdlp-opt-row';
+    if (isModifiedView) {
+      row.style.background = 'rgba(0,0,0,0.15)';
+      row.style.borderLeft = '3px solid var(--accent-color)';
+    }
 
-  Object.entries(cats).forEach(([catName, opts]) => {
-    let catVisible = false;
-    const group = document.createElement('div');
-    group.className = 'ytdlp-opts-group';
+    const flagEl = document.createElement('span');
+    flagEl.className = 'ytdlp-opt-flag';
+    flagEl.title = opt.flag;
+    flagEl.textContent = opt.flag;
 
-    const title = document.createElement('div');
-    title.className = 'ytdlp-opts-group-title';
-    title.textContent = catName;
-    group.appendChild(title);
+    const textEl = document.createElement('div');
+    textEl.className = 'ytdlp-opt-text';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'ytdlp-opt-label';
+    labelEl.textContent = opt.label;
+    const descEl = document.createElement('div');
+    descEl.className = 'ytdlp-opt-desc';
+    descEl.textContent = opt.desc;
+    textEl.appendChild(labelEl);
+    textEl.appendChild(descEl);
 
-    opts.forEach(opt => {
-      const match = !q || opt.flag.includes(q) || opt.label.toLowerCase().includes(q) || opt.desc.toLowerCase().includes(q);
-      if (match) { catVisible = anyVisible = true; }
+    const ctrlEl = document.createElement('div');
+    ctrlEl.className = 'ytdlp-opt-ctrl';
+    const stored = localStorage.getItem(prefix + opt.key);
 
-      const row = document.createElement('div');
-      row.className = 'ytdlp-opt-row' + (match ? '' : ' opt-hidden');
+    const onChange = (val) => {
+      if (val === null) localStorage.removeItem(prefix + opt.key);
+      else localStorage.setItem(prefix + opt.key, val);
+      if (isModifiedView) updateAllOpts();
+    };
 
-      const flagEl = document.createElement('span');
-      flagEl.className = 'ytdlp-opt-flag';
-      flagEl.title = opt.flag;
-      flagEl.textContent = opt.flag;
+    if (opt.type === 'toggle') {
+      const lbl = document.createElement('label');
+      lbl.className = 'toggle-switch';
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.checked = stored === 'true';
+      chk.addEventListener('change', () => onChange(chk.checked));
+      const track = document.createElement('span');
+      track.className = 'toggle-track';
+      const thumb = document.createElement('span');
+      thumb.className = 'toggle-thumb';
+      track.appendChild(thumb);
+      lbl.appendChild(chk);
+      lbl.appendChild(track);
+      ctrlEl.appendChild(lbl);
+    } else if (opt.type === 'select') {
+      const sel = document.createElement('select');
+      sel.className = 'form-select';
+      opt.opts.forEach(o => {
+        const option = document.createElement('option');
+        option.value = o.value;
+        option.textContent = o.label;
+        if (stored === o.value) option.selected = true;
+        sel.appendChild(option);
+      });
+      sel.addEventListener('change', () => onChange(sel.value || null));
+      ctrlEl.appendChild(sel);
+    } else {
+      const inp = document.createElement('input');
+      inp.type = opt.type === 'number' ? 'number' : opt.type === 'password' ? 'password' : 'text';
+      inp.className = 'form-input';
+      inp.placeholder = opt.placeholder || '';
+      inp.value = stored || '';
+      inp.addEventListener('input', () => onChange(inp.value.trim() || null));
+      ctrlEl.appendChild(inp);
+    }
 
-      const textEl = document.createElement('div');
-      textEl.className = 'ytdlp-opt-text';
-      const labelEl = document.createElement('div');
-      labelEl.className = 'ytdlp-opt-label';
-      labelEl.textContent = opt.label;
-      const descEl = document.createElement('div');
-      descEl.className = 'ytdlp-opt-desc';
-      descEl.textContent = opt.desc;
-      textEl.appendChild(labelEl);
-      textEl.appendChild(descEl);
+    row.appendChild(flagEl);
+    row.appendChild(textEl);
+    row.appendChild(ctrlEl);
+    return row;
+  }
 
-      const ctrlEl = document.createElement('div');
-      ctrlEl.className = 'ytdlp-opt-ctrl';
-      const stored = localStorage.getItem(prefix + opt.key);
+  function renderOpts(containerId, prefix, filter) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const q = (filter || '').toLowerCase().trim();
 
-      if (opt.type === 'toggle') {
-        const lbl = document.createElement('label');
-        lbl.className = 'toggle-switch';
-        const chk = document.createElement('input');
-        chk.type = 'checkbox';
-        chk.checked = stored === 'true';
-        chk.addEventListener('change', () => localStorage.setItem(prefix + opt.key, chk.checked));
-        const track = document.createElement('span');
-        track.className = 'toggle-track';
-        const thumb = document.createElement('span');
-        thumb.className = 'toggle-thumb';
-        track.appendChild(thumb);
-        lbl.appendChild(chk);
-        lbl.appendChild(track);
-        ctrlEl.appendChild(lbl);
-      } else if (opt.type === 'select') {
-        const sel = document.createElement('select');
-        sel.className = 'form-select';
-        opt.opts.forEach(o => {
-          const option = document.createElement('option');
-          option.value = o.value;
-          option.textContent = o.label;
-          if (stored === o.value) option.selected = true;
-          sel.appendChild(option);
-        });
-        sel.addEventListener('change', () => {
-          if (sel.value) localStorage.setItem(prefix + opt.key, sel.value);
-          else           localStorage.removeItem(prefix + opt.key);
-        });
-        ctrlEl.appendChild(sel);
-      } else {
-        const inp = document.createElement('input');
-        inp.type = opt.type === 'number' ? 'number' : opt.type === 'password' ? 'password' : 'text';
-        inp.className = 'form-input';
-        inp.placeholder = opt.placeholder || '';
-        inp.value = stored || '';
-        inp.addEventListener('input', () => {
-          if (inp.value.trim()) localStorage.setItem(prefix + opt.key, inp.value.trim());
-          else                  localStorage.removeItem(prefix + opt.key);
-        });
-        ctrlEl.appendChild(inp);
-      }
+    // Group options by category
+    const cats = {};
+    YTDLP_OPTS.forEach(opt => { (cats[opt.cat] = cats[opt.cat] || []).push(opt); });
 
-      row.appendChild(flagEl);
-      row.appendChild(textEl);
-      row.appendChild(ctrlEl);
-      group.appendChild(row);
+    // Save scroll position
+    const scrollPos = container.scrollTop;
+    container.innerHTML = '';
+    let anyVisible = false;
+
+    Object.entries(cats).forEach(([catName, opts]) => {
+      let catVisible = false;
+      const group = document.createElement('div');
+      group.className = 'ytdlp-opts-group';
+
+      const title = document.createElement('div');
+      title.className = 'ytdlp-opts-group-title';
+      title.textContent = catName;
+      group.appendChild(title);
+
+      opts.forEach(opt => {
+        const match = !q || opt.flag.includes(q) || opt.label.toLowerCase().includes(q) || opt.desc.toLowerCase().includes(q);
+        if (match) { catVisible = anyVisible = true; }
+
+        const row = createOptRow(opt, prefix, false);
+        if (!match) row.classList.add('opt-hidden');
+        group.appendChild(row);
+      });
+
+      if (!catVisible) group.classList.add('opt-hidden');
+      container.appendChild(group);
     });
 
-    if (!catVisible) group.classList.add('opt-hidden');
-    container.appendChild(group);
-  });
-
-  if (!anyVisible) {
-    const msg = document.createElement('div');
-    msg.className = 'ytdlp-no-results';
-    msg.textContent = 'No options match "' + filter + '"';
-    container.appendChild(msg);
+    if (!anyVisible && q) {
+      container.innerHTML = '<div class="ytdlp-opts-empty">No advanced options match your search.</div>';
+    }
+    
+    // Restore scroll
+    container.scrollTop = scrollPos;
   }
-}
-function renderYtdlpOpts(filter) { renderOpts('ytdlp-opts-container', 'ytdlp-opt:', filter); }
+
+  function renderModifiedOpts(containerId, prefix) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+      let hasModified = false;
+    
+    YTDLP_OPTS.forEach(opt => {
+      const stored = localStorage.getItem(prefix + opt.key);
+      const isModified = opt.type === 'toggle' ? stored === 'true' : stored !== null;
+      if (isModified) {
+          hasModified = true;
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        group.style.borderLeft = '3px solid var(--accent-color)';
+        group.style.paddingLeft = '8px';
+        
+        const label = document.createElement('label');
+        label.className = 'form-label';
+        label.innerHTML = opt.label;
+        group.appendChild(label);
+        
+        const onChange = (val) => {
+          if (val === null || val === false || val === '') localStorage.removeItem(prefix + opt.key);
+          else localStorage.setItem(prefix + opt.key, val);
+          
+          // Re-render settings page only so we don't lose focus in current view
+          if (prefix === 'ytdlp-opt:') renderYtdlpOpts('');
+          if (prefix === 'batch-opt:') renderBatchOpts('');
+        };
+
+        if (opt.type === 'toggle') {
+          const lbl = document.createElement('label');
+          lbl.className = 'toggle-switch';
+          lbl.style.marginTop = '8px';
+          const chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.checked = stored === 'true';
+          chk.addEventListener('change', () => onChange(chk.checked));
+          const track = document.createElement('span');
+          track.className = 'toggle-track';
+          const thumb = document.createElement('span');
+          thumb.className = 'toggle-thumb';
+          track.appendChild(thumb);
+          lbl.appendChild(chk);
+          lbl.appendChild(track);
+          group.appendChild(lbl);
+        } else if (opt.type === 'select') {
+          const sel = document.createElement('select');
+          sel.className = 'form-select';
+          opt.opts.forEach(o => {
+            const option = document.createElement('option');
+            option.value = o.value;
+            option.textContent = o.label;
+            if (stored === o.value) option.selected = true;
+            sel.appendChild(option);
+          });
+          sel.addEventListener('change', () => onChange(sel.value || null));
+          group.appendChild(sel);
+        } else {
+          const inp = document.createElement('input');
+          inp.type = opt.type === 'number' ? 'number' : opt.type === 'password' ? 'password' : 'text';
+          inp.className = 'form-input';
+          inp.placeholder = opt.placeholder || '';
+          inp.value = stored || '';
+          inp.addEventListener('input', () => onChange(inp.value.trim() || null));
+          group.appendChild(inp);
+        }
+        
+        container.appendChild(group);
+      }
+    });
+  }
+  function renderYtdlpOpts(filter) { renderOpts('ytdlp-opts-container', 'ytdlp-opt:', filter); }
 function renderBatchOpts(filter) { renderOpts('batch-opts-container', 'batch-opt:', filter); }
 
 function getSetting(key) {
@@ -513,7 +620,7 @@ function isProtectedPath(p) {
   return null; // safe
 }
 
-// ── Terminal helpers ───────────────────────────────────────────
+// ΓöÇΓöÇ Terminal helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function classifyLine(text, streamType) {
   const t = text.trimStart();
   if (/^\[debug\]/i.test(t))                    return 'debug';
@@ -527,64 +634,135 @@ function classifyLine(text, streamType) {
   return streamType; // 'stdout' or 'stderr'
 }
 
-// ── Line buffer for batched DOM appends ──────────────────────────
+// ΓöÇΓöÇ Line buffer for batched DOM appends ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // Instead of one appendChild per line, we collect lines into a buffer and
 // flush them all at once via a DocumentFragment on the next RAF tick.
 // This dramatically reduces layout thrashing when hundreds of lines arrive
 // per second (e.g. during a large batch download).
 function appendLog(logEl, text, cls) {
-  // Only flag critical failure on Python tracebacks
-  const t = text.trimStart();
+  let t = text.trimStart();
   if (/^Traceback \(most recent call last\)/i.test(t) || /^\s+File ".*\.py"/.test(text)) {
     logEl._hasError = true;
   }
-
-  // Accumulate into a pending buffer
-  if (!logEl._pendingLines) logEl._pendingLines = [];
-  logEl._pendingLines.push({ text, cls });
-
-  // Schedule a single flush per animation frame
-  if (!logEl._rafPending) {
-    logEl._rafPending = true;
-    requestAnimationFrame(() => {
-      logEl._rafPending = false;
-
-      // Flush all buffered lines into a DocumentFragment
-      const frag = document.createDocumentFragment();
-      const lines = logEl._pendingLines || [];
-      logEl._pendingLines = [];
-      logEl._lineCount = (logEl._lineCount || 0) + lines.length;
-
-      for (const { text: t2, cls: c } of lines) {
-        const div = document.createElement('div');
-        div.className = 'line-' + c;
-        div.textContent = t2;
-        frag.appendChild(div);
-      }
-      logEl.appendChild(frag);
-
-      // Cap log DOM at 800 lines; trim 200 at a time to keep layout cheap
-      if (logEl._lineCount > 800) {
-        let removed = 0;
-        while (removed < 200 && logEl.firstChild) {
-          const first = logEl.firstChild;
-          if (first.classList.contains('log-body-start') ||
-              first.classList.contains('log-detail') ||
-              first.classList.contains('log-expand-arrow')) break;
-          logEl.removeChild(first);
-          removed++;
-        }
-        logEl._lineCount -= removed;
-      }
-
-      // Auto-scroll only when the tab is active and follow-mode is on
-      if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
-        const scrollEl = logEl._scrollEl || logEl;
-        scrollEl.scrollTop = scrollEl.scrollHeight;
-      }
-      logEl._updateScrollBtn?.();
-    });
+  
+  const lastCrIdx = text.lastIndexOf('\r');
+  if (lastCrIdx !== -1) {
+      text = text.substring(lastCrIdx + 1);
   }
+  
+  if (!logEl._pendingLines) logEl._pendingLines = []; logEl._lastRenderedLine = null;
+  
+  const pLen = logEl._pendingLines.length;
+  if (pLen > 0) {
+      const last = logEl._pendingLines[pLen - 1];
+      if (last.text === text && last.cls === cls && !last.isProgress) {
+          last.count = (last.count || 1) + 1;
+          if (!logEl._rafPending) triggerRaf(logEl);
+          return;
+      }
+  } else if (logEl._lastRenderedLine) {
+      const last = logEl._lastRenderedLine;
+      if (last.text === text && last.cls === cls && !last.isProgress) {
+          last.count = (last.count || 1) + 1;
+          if (last.badge) {
+              last.badge.textContent = ` (${last.count})`;
+          } else {
+              const badge = document.createElement('span');
+              badge.className = 'log-badge';
+              badge.style.color = '#888';
+              badge.style.marginLeft = '8px';
+              badge.textContent = ` (${last.count})`;
+              last.el.appendChild(badge);
+              last.badge = badge;
+          }
+          if (!logEl._rafPending) triggerRaf(logEl);
+          return;
+      }
+  }
+
+  const isProgress = /^\s*\[download\]\s+\d+\.\d+%/.test(text) || /^\s*\[download\]\s+Destination:/.test(text);
+    if (isProgress) cls += ' line-progress';
+  
+  if (isProgress && pLen > 0) {
+      const last = logEl._pendingLines[pLen - 1];
+      if (last.isProgress) {
+          last.text = text;
+          if (!logEl._rafPending) triggerRaf(logEl);
+          return;
+      }
+  } else if (isProgress && logEl._lastRenderedLine && logEl._lastRenderedLine.isProgress) {
+      logEl._lastRenderedLine.text = text;
+      logEl._lastRenderedLine.el.textContent = text;
+      if (!logEl._rafPending) triggerRaf(logEl);
+      return;
+  }
+
+  logEl._pendingLines.push({ text, cls, count: 1, isProgress });
+  if (!logEl._rafPending) triggerRaf(logEl);
+}
+
+function triggerRaf(logEl) {
+    logEl._rafPending = true;
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        logEl._rafPending = false;
+        const lines = logEl._pendingLines || [];
+        logEl._pendingLines = []; logEl._lastRenderedLine = null;
+        if (lines.length === 0) {
+          if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
+            const scrollEl = logEl._scrollEl || logEl;
+            const target = scrollEl.scrollHeight - scrollEl.clientHeight;
+            if (Math.abs(scrollEl.scrollTop - target) > 1) {
+              scrollEl.scrollTo({ top: target, behavior: 'auto' });
+            }
+          }
+          return;
+        }
+
+    logEl._lineCount = (logEl._lineCount || 0) + lines.length;
+    const frag = document.createDocumentFragment();
+
+    for (const item of lines) {
+      const div = document.createElement('div');
+      div.className = 'line-' + item.cls;
+      div.textContent = item.text;
+      if (item.count > 1) {
+          const badge = document.createElement('span');
+          badge.className = 'log-badge';
+          badge.style.color = '#888';
+          badge.style.marginLeft = '8px';
+          badge.textContent = ` (${item.count})`;
+          div.appendChild(badge);
+          item.badge = badge;
+      }
+      item.el = div;
+      frag.appendChild(div);
+      logEl._lastRenderedLine = item;
+    }
+    logEl.appendChild(frag);
+
+    if (logEl._lineCount > 5000) {
+      let removed = 0;
+      while (removed < 1000 && logEl.firstChild) {
+        const first = logEl.firstChild;
+        if (first.classList.contains('log-body-start') ||
+            first.classList.contains('log-detail') ||
+            first.classList.contains('log-expand-arrow')) break;
+        if (first === logEl._lastRenderedLine?.el) logEl._lastRenderedLine = null;
+        logEl.removeChild(first);
+        removed++;
+      }
+      logEl._lineCount -= removed;
+      logEl._lastScrollTop = (logEl._scrollEl || logEl).scrollTop;
+    }
+
+    if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
+      const scrollEl = logEl._scrollEl || logEl;
+      scrollEl.scrollTop = scrollEl.scrollHeight;
+    }
+    logEl._updateScrollBtn?.();
+  });
+}, 0);
 }
 function clearLog(logEl) {
   if (logEl._scrollBtnHandler) {
@@ -598,7 +776,7 @@ function clearLog(logEl) {
   logEl._lineCount = 0;
   logEl._hasError = false;
   logEl._autoFollow = true;
-  logEl._pendingLines = [];  // discard any buffered lines not yet flushed
+  logEl._pendingLines = []; logEl._lastRenderedLine = null;  // discard any buffered lines not yet flushed
   logEl._rafPending = false;
   logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
 }
@@ -618,11 +796,11 @@ function markBodyStart(logEl) {
   // Clean up any previous button for this logEl
   logEl._scrollBtn?.remove();
 
-  // Single toggle button: ↑ scroll-to-top (pauses auto-scroll) / ↓ scroll-to-bottom (resumes)
+  // Single toggle button: Γåæ scroll-to-top (pauses auto-scroll) / Γåô scroll-to-bottom (resumes)
   const btn = document.createElement('div');
   btn.className = 'log-scroll-btn';
   btn.style.display = 'none';
-  document.body.appendChild(btn);
+  logEl.closest('.terminal-wrap').appendChild(btn);
   logEl._scrollBtn = btn;
 
   logEl._autoFollow = true;
@@ -638,46 +816,55 @@ function markBodyStart(logEl) {
     btn.style.display = 'flex';
     if (logEl._autoFollow) {
       btn.innerHTML = svgUp;
-      btn.title = 'Scroll to top — pauses auto-scroll';
+      btn.title = 'Scroll to top - pauses auto-scroll';
     } else {
       btn.innerHTML = svgDown;
-      btn.title = 'Scroll to bottom — resumes auto-scroll';
+      btn.title = 'Scroll to bottom - resumes auto-scroll';
     }
   };
   logEl._updateScrollBtn = updateBtn;
 
-  // Button click: ↑ = go to top + pause; ↓ = go to bottom + resume
+  // Button click: Γåæ = go to top + pause; Γåô = go to bottom + resume
   btn.addEventListener('click', () => {
-    if (logEl._autoFollow) {
-      // Auto ON → pause and jump to very top of page
+    const target = scrollEl.scrollHeight - scrollEl.clientHeight;
+    const atBottom = scrollEl.scrollTop >= target - 60;
+    
+    if (atBottom) {
       logEl._autoFollow = false;
-      logEl._ignoreScroll = true;
-      updateBtn();
-      scrollEl.scrollTop = 0;
+      if (scrollEl.scrollTop > 0) {
+        scrollEl.scrollTo({ top: 0, behavior: 'auto' });
+      }
     } else {
-      // Auto OFF → jump to bottom AND resume auto-scroll
       logEl._autoFollow = true;
-      logEl._ignoreScroll = true;
-      updateBtn();
-      scrollEl.scrollTop = scrollEl.scrollHeight;
+      if (Math.abs(scrollEl.scrollTop - target) > 1) {
+        scrollEl.scrollTo({ top: target, behavior: 'auto' });
+      }
     }
+    updateBtn();
   });
 
   logEl._scrollBtnHandler = () => {
-    // Ignore scroll events triggered programmatically
-    if (logEl._ignoreScroll) { logEl._ignoreScroll = false; updateBtn(); return; }
-    const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 30;
-    if (atBottom) {
-      // Reached bottom manually — silently re-engage auto-follow
-      logEl._autoFollow = true;
-    } else if (logEl._autoFollow) {
-      // Scrolled away from bottom — pause auto-follow
+    const currentScrollTop = scrollEl.scrollTop;
+    const isScrollingUp = currentScrollTop < (logEl._lastScrollTop || 0);
+    logEl._lastScrollTop = currentScrollTop;
+
+    const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 60;
+    
+    if (isScrollingUp) {
       logEl._autoFollow = false;
+    } else if (atBottom) {
+      logEl._autoFollow = true;
     }
     updateBtn();
   };
 
-  scrollEl.addEventListener('scroll', logEl._scrollBtnHandler);
+  if (!logEl._hasScrollListener) {
+    logEl._hasScrollListener = true;
+    scrollEl.addEventListener('scroll', () => {
+      if (!logEl.closest('.tab-panel')?.classList.contains('active')) return;
+      logEl._scrollBtnHandler();
+    });
+  }
 }
 
 function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
@@ -750,6 +937,10 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
 
   // Shrink the terminal wrap to fit collapsed content
   logEl.closest('.terminal-wrap')?.classList.add('collapsed');
+    setTimeout(() => {
+        const scrollEl = logEl.closest('.content');
+        if (scrollEl) scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+    }, 260);
 
   // Trigger button visibility update now that content has collapsed
   logEl._scrollBtnHandler?.();

@@ -209,11 +209,17 @@ def main():
         "-i", str(list_file),
         "-c", "copy",
         "-bsf:a", "aac_adtstoasc",
-        "-movflags", "+faststart",
+    ]
+    
+    if output.suffix.lower() in [".mp4", ".mov", ".m4v"]:
+        final_cmd.extend(["-movflags", "+faststart"])
+        
+    final_cmd.extend([
         "-progress", "pipe:1", "-nostats",
         str(output)
-    ]
-    print("\n--- Muxing final MP4 ---")
+    ])
+    
+    print(f"\n--- Muxing final {output.suffix.upper()[1:]} ---")
     try:
         run_ffmpeg_progress(final_cmd, total_sec, "Finalizing")
     except subprocess.CalledProcessError:
