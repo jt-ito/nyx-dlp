@@ -310,6 +310,7 @@
             </select>
           </div>
 
+
           <div class="adv-wrapper" style="grid-column: 1 / -1;">
             <div class="adv-wrapper" style="grid-column: 1 / -1;">
           <div class="adv-toggle-wrap">
@@ -322,6 +323,16 @@
           </div>
           <div class="adv-body" id="yd-adv">
             <div class="adv-grid">
+              <div class="form-group" id="yd-client-group">
+                <label class="form-label">Player Client</label>
+                <select id="yd-client" class="form-select">
+                  <option value="default">Default</option>
+                  <option value="tv">TV (Bypass 360p limits)</option>
+                  <option value="web">Web</option>
+                  <option value="android">Android</option>
+                  <option value="ios">iOS</option>
+                </select>
+              </div>
               <div class="form-group" id="yd-container-group">
                 <label class="form-label">Container</label>
                 <select id="yd-container" class="form-select">
@@ -435,6 +446,7 @@
             </select>
           </div>
 
+
           <div class="form-group" id="batch-rest-group">
             <div class="toggle-card" id="batch-rest-toggle">
               <div class="toggle-card-left">
@@ -462,6 +474,16 @@
           </div>
           <div class="adv-body" id="batch-adv">
             <div class="adv-grid">
+              <div class="form-group" id="batch-client-group">
+                <label class="form-label">Player Client</label>
+                <select id="batch-client" class="form-select">
+                  <option value="default">Default</option>
+                  <option value="tv">TV (Bypass 360p limits)</option>
+                  <option value="web">Web</option>
+                  <option value="android">Android</option>
+                  <option value="ios">iOS</option>
+                </select>
+              </div>
               <div class="form-group" id="batch-container-group">
                 <label class="form-label">Container</label>
                 <select id="batch-container" class="form-select">
@@ -1147,6 +1169,16 @@
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
+                <div class="toggle-label">Player client selector</div>
+                <div class="toggle-desc">Show the player client dropdown</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-batch-client" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
                 <div class="toggle-label">Rest between downloads</div>
                 <div class="toggle-desc">Show the rest-between-downloads toggle</div>
               </div>
@@ -1228,6 +1260,16 @@
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" data-setting="show-yd-format" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Player client selector</div>
+                <div class="toggle-desc">Show the player client dropdown</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-yd-client" checked />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
