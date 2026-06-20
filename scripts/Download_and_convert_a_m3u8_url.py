@@ -1,3 +1,9 @@
+try:
+    import ensure_ffmpeg
+    ensure_ffmpeg.run()
+except Exception:
+    pass
+
 import os
 import sys
 import subprocess

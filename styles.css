@@ -671,9 +671,29 @@ html, body {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+  transition: background var(--transition), color var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition);
   user-select: none;
   white-space: nowrap;
+}
+
+.btn-icon {
+  background: transparent;
+  color: var(--text-subtle);
+  border: none;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), color var(--transition);
+}
+.btn-icon:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+.btn-sm {
+  padding: 4px;
 }
 .btn:active { transform: scale(0.98); }
 .btn-primary {
@@ -801,9 +821,9 @@ html, body {
 
 /* ── Collapsible log body ─────────────────────────────────────── */
 .terminal-body .log-body-start { display: none; }
-.terminal-body .log-detail { display: none; }
-.terminal-body .log-detail.open { display: block; }
-.terminal-body .log-expand-arrow {
+.terminal-body .log-detail, .log-body .log-detail { display: none; }
+.terminal-body .log-detail.open, .log-body .log-detail.open { display: block; }
+.terminal-body .log-expand-arrow, .log-body .log-expand-arrow {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -814,9 +834,9 @@ html, body {
   opacity: 0.55;
   transition: opacity 0.15s, color 0.15s;
 }
-.terminal-body .log-expand-arrow:hover { opacity: 1; color: var(--accent); }
-.terminal-body .log-expand-arrow svg { transition: transform 0.2s; }
-.terminal-body .log-expand-arrow.open svg { transform: rotate(180deg); }
+.terminal-body .log-expand-arrow, .log-body .log-expand-arrow:hover { opacity: 1; color: var(--accent); }
+.terminal-body .log-expand-arrow, .log-body .log-expand-arrow svg { transition: transform 0.2s; }
+.terminal-body .log-expand-arrow, .log-body .log-expand-arrow.open svg { transform: rotate(180deg); }
 .terminal-body .log-view-errors-btn {
   display: block;
   background: none;

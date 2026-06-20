@@ -250,6 +250,8 @@ const SETTINGS_DEFAULTS = {
 
 // ── yt-dlp Advanced Options definition ────────────────────────
 const YTDLP_OPTS = [
+  // Workarounds
+  { cat:'Workarounds', key:'player-client', flag:'--extractor-args', hasVal:true, label:'Player client', desc:'Select the YouTube player client (tv bypasses 360p limits)', type:'select', opts:[{value:'', label:'Default'},{value:'youtube:player_client=tv', label:'TV'},{value:'youtube:player_client=web', label:'Web'},{value:'youtube:player_client=android', label:'Android'},{value:'youtube:player_client=ios', label:'iOS'}]},
   // File & Naming
   { cat:'File & Naming', key:'output',              flag:'--output',               hasVal:true,  label:'Output template',          desc:'Filename template, e.g. %(title)s.%(ext)s',               type:'text',   placeholder:'%(title)s.%(ext)s' },
   { cat:'File & Naming', key:'restrict-filenames',  flag:'--restrict-filenames',   hasVal:false, label:'Restrict filenames',       desc:'ASCII-only filenames, no & or spaces',                    type:'toggle' },
@@ -353,8 +355,16 @@ function getExtraArgs(prefix) {
   });
   return args;
 }
-function getExtraYtdlpArgs() { return getExtraArgs('ytdlp-opt:'); }
-function getBatchExtraArgs()  { return getExtraArgs('batch-opt:'); }
+function getExtraYtdlpArgs() {
+    let extraArgs = getExtraArgs('ytdlp-opt:');
+    if (getSetting('yd-retry-ssl')) extraArgs.push('--auto-retry-errors');
+    return extraArgs;
+}
+function getBatchExtraArgs() {
+    let extraArgs = getExtraArgs('batch-opt:');
+    if (getSetting('yd-retry-ssl')) extraArgs.push('--auto-retry-errors');
+    return extraArgs;
+}
 
 
   function updateAllOpts() {
@@ -710,23 +720,10 @@ function appendLog(logEl, text, cls) {
   if (!logEl._rafPending) triggerRaf(logEl);
 }
 
-function triggerRaf(logEl) {
-    logEl._rafPending = true;
-    setTimeout(() => {
-      requestAnimationFrame(() => {
-        logEl._rafPending = false;
-        const lines = logEl._pendingLines || [];
-        logEl._pendingLines = []; logEl._lastRenderedLine = null;
-        if (lines.length === 0) {
-          if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
-            const scrollEl = logEl._scrollEl || logEl;
-            const target = scrollEl.scrollHeight - scrollEl.clientHeight;
-            if (Math.abs(scrollEl.scrollTop - target) > 1) {
-              scrollEl.scrollTo({ top: target, behavior: 'auto' });
-            }
-          }
-          return;
-        }
+function flushPendingLogsSync(logEl) {
+    const lines = logEl._pendingLines || [];
+    if (lines.length === 0) return 0;
+    logEl._pendingLines = []; logEl._lastRenderedLine = null;
 
     logEl._lineCount = (logEl._lineCount || 0) + lines.length;
     const frag = document.createDocumentFragment();
@@ -764,14 +761,33 @@ function triggerRaf(logEl) {
       logEl._lineCount -= removed;
       logEl._lastScrollTop = (logEl._scrollEl || logEl).scrollTop;
     }
+    return lines.length;
+}
 
-    if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
-      const scrollEl = logEl._scrollEl || logEl;
-      scrollEl.scrollTop = scrollEl.scrollHeight;
-    }
-    logEl._updateScrollBtn?.();
-  });
-}, 0);
+function triggerRaf(logEl) {
+    logEl._rafPending = true;
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        logEl._rafPending = false;
+        const count = flushPendingLogsSync(logEl);
+        if (count === 0) {
+          if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
+            const scrollEl = logEl._scrollEl || logEl;
+            const target = scrollEl.scrollHeight - scrollEl.clientHeight;
+            if (Math.abs(scrollEl.scrollTop - target) > 1) {
+              scrollEl.scrollTo({ top: target, behavior: 'auto' });
+            }
+          }
+          return;
+        }
+
+        if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
+          const scrollEl = logEl._scrollEl || logEl;
+          scrollEl.scrollTop = scrollEl.scrollHeight;
+        }
+        logEl._updateScrollBtn?.();
+      });
+    }, 0);
 }
 function clearLog(logEl) {
   if (logEl._scrollBtnHandler) {

@@ -1,10 +1,70 @@
+try:
+    import ensure_ffmpeg
+    ensure_ffmpeg.run()
+except Exception:
+    pass
+
 import sys
-import ffmpeg
+import json
+import shutil
 import datetime
 import re
 from pathlib import Path
+import subprocess
+import time
+
+def run_ffmpeg_progress(cmd: list, total_sec: float, desc: str):
+    print(f"> {desc} (Total duration: {total_sec:.2f}s)")
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, bufsize=1,
+                            encoding="utf-8", errors="replace")
+    
+    last_print = time.time()
+    for line in proc.stdout:
+        line = line.strip()
+        if not line:
+            continue
+        if "=" in line:
+            k, v = line.split("=", 1)
+            if k == "out_time_ms":
+                try:
+                    current_sec = int(v) / 1_000_000
+                    now = time.time()
+                    if now - last_print > 2.0: # Print update every 2 seconds
+                        pct = (current_sec / total_sec) * 100
+                        if pct > 100: pct = 100
+                        print(f"[download] {pct:.1f}% ({current_sec:.2f}s / {total_sec:.2f}s) - {desc}")
+                        last_print = now
+                except ValueError:
+                    pass
+        elif line.startswith("error") or "Failed" in line or "Error" in line:
+            print(f"warning: ffmpeg: {line}")
+            
+    proc.wait()
+    if proc.returncode != 0:
+        print(f"error: ffmpeg exited with code {proc.returncode}", file=sys.stderr)
+        raise subprocess.CalledProcessError(proc.returncode, cmd)
 
 import argparse
+
+def find_or_exit(cmd: str) -> str:
+    p = shutil.which(cmd)
+    if not p:
+        print(f"error: '{cmd}' not found on PATH.", file=sys.stderr)
+        sys.exit(1)
+    return p
+
+def probe(ffprobe: str, path: Path) -> dict:
+    try:
+        raw = subprocess.check_output([
+            ffprobe, "-v", "error",
+            "-print_format", "json",
+            "-show_format", "-show_streams", str(path)
+        ], stderr=subprocess.STDOUT)
+        return json.loads(raw)
+    except subprocess.CalledProcessError as e:
+        print(f"error: ffprobe failed on {path.name}: {e.output.decode().strip() if hasattr(e, 'output') and e.output else str(e)}", file=sys.stderr)
+        sys.exit(1)
 
 if sys.stdout and getattr(sys.stdout, 'encoding', '').lower() != 'utf-8':
     try: sys.stdout.reconfigure(encoding='utf-8')
@@ -19,16 +79,18 @@ def split_video(input_file, num_parts, custom_output_dir=None, force_ext=None):
         print(f"error: File not found: {safe_path}", file=sys.stderr)
         sys.exit(1)
         
+    ffmpeg_cmd = find_or_exit("ffmpeg")
+    ffprobe_cmd = find_or_exit("ffprobe")
+
     try:
         print(f"Probing {safe_path.name}...")
-        probe = ffmpeg.probe(str(safe_path))
-    except ffmpeg.Error as e:
+        probe_data = probe(ffprobe_cmd, safe_path)
+    except Exception as e:
         print("error: FFmpeg failed to probe file", file=sys.stderr)
-        if e.stderr:
-            print(e.stderr.decode('utf8'), file=sys.stderr)
+        print(str(e), file=sys.stderr)
         sys.exit(1)
         
-    video_info = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+    video_info = next((stream for stream in probe_data.get('streams', []) if stream.get('codec_type') == 'video'), None)
     if not video_info:
         print("error: No video stream found.", file=sys.stderr)
         sys.exit(1)
@@ -55,7 +117,7 @@ def split_video(input_file, num_parts, custom_output_dir=None, force_ext=None):
     else:
         output_dir = safe_path.parent
         
-    metadata_title = probe.get('format', {}).get('tags', {}).get('title')
+    metadata_title = probe_data.get('format', {}).get('tags', {}).get('title')
     if metadata_title:
         clean_title = re.sub(r'[\\/:*?"<>|]', '', metadata_title).strip(' .')
         base_name = clean_title if clean_title else safe_path.stem
@@ -70,10 +132,9 @@ def split_video(input_file, num_parts, custom_output_dir=None, force_ext=None):
     txt_path = output_dir / f"{base_name}_durations.txt"
     try:
         with open(txt_path, 'w', encoding='utf-8') as f:
-            for i, (start_str, end_str, _, _) in enumerate(ranges):
-                line = f'{start_str} - {end_str} pt{i+1}'
-                print(line)
-                f.write(line + '\n')
+            lines = [f'{start_str} - {end_str} Part {i+1}' for i, (start_str, end_str, _, _) in enumerate(ranges)]
+            for line in lines: print(line)
+            f.write('\n'.join(lines))
     except Exception as e:
         print(f"warning: Could not write durations file: {e}")
             
@@ -81,31 +142,26 @@ def split_video(input_file, num_parts, custom_output_dir=None, force_ext=None):
         out_name = output_dir / f"{base_name} pt{i+1}{ext}"
         print(f"Processing pt{i+1}/{num_parts} -> {out_name.name} ...")
         try:
-            output_kwargs = {'c': 'copy'}
-            if ext.lower() in ['.mp4', '.mov', '.m4v']:
-                output_kwargs['movflags'] = '+faststart'
-                
+            cmd = [
+                ffmpeg_cmd, '-y', '-nostats', '-progress', 'pipe:1',
+                '-ss', str(start_sec),
+                '-i', str(safe_path)
+            ]
             if i < num_parts - 1:
-                (
-                    ffmpeg
-                    .input(str(safe_path), ss=start_sec)
-                    .output(str(out_name), t=dur_sec, **output_kwargs)
-                    .global_args('-loglevel', 'warning')
-                    .run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
-                )
-            else:
-                (
-                    ffmpeg
-                    .input(str(safe_path), ss=start_sec)
-                    .output(str(out_name), **output_kwargs)
-                    .global_args('-loglevel', 'warning')
-                    .run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
-                )
+                cmd.extend(['-t', str(dur_sec)])
+            
+            if ext.lower() in ['.mp4', '.mov', '.m4v']:
+                cmd.extend(['-movflags', '+faststart'])
+                
+            cmd.extend(['-c', 'copy', str(out_name)])
+
+            try:
+                run_ffmpeg_progress(cmd, dur_sec, f"Part {i+1}")
+            except subprocess.CalledProcessError:
+                sys.exit(1)
             print(f"Finished Part {i+1}.")
-        except ffmpeg.Error as e:
-            print(f"error: FFmpeg error processing part {i+1}:", file=sys.stderr)
-            if e.stderr:
-                print(e.stderr.decode('utf8'), file=sys.stderr)
+        except Exception as e:
+            print(f"error: FFmpeg error processing part {i+1}: {e}", file=sys.stderr)
             sys.exit(1)
 
 if __name__ == "__main__":

@@ -1,3 +1,9 @@
+try:
+    import ensure_ffmpeg
+    ensure_ffmpeg.run()
+except Exception:
+    pass
+
 """
 Multi-URL yt-dlp Batch Downloader Script
 
@@ -176,14 +182,13 @@ signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 # ——— Configuration ——————————————————————————————————————
 COOKIE_FILE = sys.argv[3] if len(sys.argv) > 3 else ''
 EXTRA_ARGS  = json.loads(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else []
+AUTO_RETRY_ERRORS = False
+if '--auto-retry-errors' in EXTRA_ARGS:
+    EXTRA_ARGS.remove('--auto-retry-errors')
+    AUTO_RETRY_ERRORS = True
 CONTAINER   = sys.argv[5] if len(sys.argv) > 5 else 'mp4'
 BGUTIL_URL  = sys.argv[6] if len(sys.argv) > 6 else ''
 USE_DENO    = sys.argv[7].lower() == 'y' if len(sys.argv) > 7 else True
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/136.0.0.0 Safari/537.36"
-)
 
 # Bootstrap optional dependencies
 if USE_DENO:
@@ -310,15 +315,14 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
         "--ignore-errors",
         # Enable automatic EJS script downloads from GitHub
         "--remote-components", "ejs:github",
-        "--user-agent", USER_AGENT,
     ]
     if COOKIE_FILE and os.path.isfile(COOKIE_FILE):
         cmd += ["--cookies", COOKIE_FILE]
-    if EXTRA_ARGS:
-        cmd.extend(EXTRA_ARGS)
     if BGUTIL_URL and BGUTIL_URL != 'local':
         cmd += ['--extractor-args', 'youtube:player_client=web',
                 '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+    if EXTRA_ARGS:
+        cmd.extend(EXTRA_ARGS)
     cmd.append(url)
     for attempt in range(1, retries + 1):
         logger.info(f" [default downloader] attempt {attempt}/{retries}")
@@ -342,7 +346,10 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
         if proc.returncode == 0 and is_download_successful():
             return True
         if is_unrecoverable_error(err_accum):
-            logger.warning(" Unrecoverable error detected – skipping retries.")
+            logger.warning(" Unrecoverable error detected — skipping retries.")
+            return False
+        if not AUTO_RETRY_ERRORS:
+            logger.warning(" Auto-retry is disabled. Skipping retries.")
             return False
         logger.warning(f" attempt {attempt} failed (exit code {proc.returncode})")
         time.sleep(1 + attempt * 0.5)
@@ -368,18 +375,16 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
         "--external-downloader-args", aria_args,
         # Enable automatic EJS script downloads from GitHub
         "--remote-components", "ejs:github",
-        "--user-agent", USER_AGENT,
     ]
     if COOKIE_FILE and os.path.isfile(COOKIE_FILE):
         cmd += ["--cookies", COOKIE_FILE]
-    if EXTRA_ARGS:
-        cmd.extend(EXTRA_ARGS)
-    # Add output template for Twitch links to keep naming format but limit length
     if "twitch.tv" in url:
         cmd += ["-o", "%(title).100s [%(id)s].%(ext)s"]
     if BGUTIL_URL and BGUTIL_URL != 'local':
         cmd += ['--extractor-args', 'youtube:player_client=web',
                 '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+    if EXTRA_ARGS:
+        cmd.extend(EXTRA_ARGS)
     cmd.append(url)
 
     _INIT_FRAG_ERR = "initialization fragment found after media fragments"
@@ -405,7 +410,10 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
         if proc.returncode == 0 and is_download_successful():
             return True
         if is_unrecoverable_error(err_accum):
-            logger.warning(" Unrecoverable error detected – skipping retries.")
+            logger.warning(" Unrecoverable error detected — skipping retries.")
+            return False
+        if not AUTO_RETRY_ERRORS:
+            logger.warning(" Auto-retry is disabled. Skipping retries.")
             return False
         if _INIT_FRAG_ERR in err_accum.lower():
             init_frag_fail_count += 1
@@ -425,17 +433,16 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
             "--embed-subs", "--add-metadata",
             "--downloader", "ffmpeg",
             "--remote-components", "ejs:github",
-            "--user-agent", USER_AGENT,
         ]
         if "twitch.tv" in url:
             ffmpeg_cmd += ["-o", "%(title).100s [%(id)s].%(ext)s"]
         if COOKIE_FILE and os.path.isfile(COOKIE_FILE):
             ffmpeg_cmd += ["--cookies", COOKIE_FILE]
-        if EXTRA_ARGS:
-            ffmpeg_cmd.extend(EXTRA_ARGS)
         if BGUTIL_URL and BGUTIL_URL != 'local':
             ffmpeg_cmd += ['--extractor-args', 'youtube:player_client=web',
                            '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+        if EXTRA_ARGS:
+            ffmpeg_cmd.extend(EXTRA_ARGS)
         ffmpeg_cmd.append(url)
         logger.info(" [ffmpeg fallback] attempt 1/1")
         try:
@@ -458,7 +465,7 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
     return False
 
 # ——— Folder naming via metadata dump (silent) —————————————
-def create_folder_for_url(url: str) -> str:
+def create_folder_for_url(url: str):
     """Create a folder for the URL using yt-dlp metadata."""
     def sanitize_name(name: str, max_len: int = 50) -> str:
         """Return a filesystem-safe ASCII-only folder name.
@@ -496,6 +503,11 @@ def create_folder_for_url(url: str) -> str:
         )
         import json
         data = json.loads(info.stdout or '{}')
+        reqs = data.get('requested_downloads', [])
+        if reqs:
+            expected_height = max([r.get('height') or 0 for r in reqs])
+        else:
+            expected_height = data.get('height')
         title = data.get("title", url)
         # For Twitch links, use only the video id as the folder name
         if "twitch.tv" in url:
@@ -505,9 +517,10 @@ def create_folder_for_url(url: str) -> str:
     except Exception as e:
         logger.warning(f"Failed to get metadata for folder naming: {safe_text(e)}")
         raw = url.split("/")[-1].split("?")[0]
+        expected_height = None
 
     slug = sanitize_name(raw)
-    return create_folder(slug)
+    return create_folder(slug), expected_height
 
 # ——— Main Flow ——————————————————————————————————————————
 def main() -> None:
@@ -530,7 +543,7 @@ def main() -> None:
         _current_url = url
         logger.info(f"\n[{idx}/{total}] Processing: {url}")
         try:
-            folder = create_folder_for_url(url)
+            folder, expected_height = create_folder_for_url(url)
         except Exception as e:
             logger.error(f"Failed to create folder for URL {url}: {safe_text(e)}")
             failed.append(url)
@@ -563,6 +576,11 @@ def main() -> None:
                         try:
                             shutil.move(src, dst)
                             logger.info(f" Moved '{f}' from '{folder}'")
+                            try:
+                                import check_res
+                                check_res.check_resolution(dst, expected_height)
+                            except Exception:
+                                pass
                         except shutil.Error as e:
                             if "already exists" in str(e).lower():
                                 logger.info(f" File '{f}' already exists in '{base_dir}', skipping move.")

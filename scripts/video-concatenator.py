@@ -1,3 +1,9 @@
+try:
+    import ensure_ffmpeg
+    ensure_ffmpeg.run()
+except Exception:
+    pass
+
 import sys, json, shutil, tempfile, subprocess, argparse
 from pathlib import Path
 import logging
@@ -64,7 +70,7 @@ def run_ffmpeg_progress(cmd: list, total_sec: float, desc: str):
                     now = time.time()
                     if now - last_print > 2.0: # Print update every 2 seconds
                         pct = (current_sec / total_sec) * 100
-                        print(f"[progress] {desc}: {pct:.1f}% ({current_sec:.2f}s / {total_sec:.2f}s)")
+                        print(f"[download] {pct:.1f}% ({current_sec:.2f}s / {total_sec:.2f}s) - {desc}")
                         last_print = now
                 except ValueError:
                     pass
@@ -127,10 +133,12 @@ def save_timestamps(durations, output_txt):
     try:
         with open(output_txt, "w", encoding='utf-8') as f:
             start_time = 0
+            lines = []
             for idx, duration in enumerate(durations):
                 end_time = start_time + duration
-                f.write(f"{format_hms(start_time)} - {format_hms(end_time)} Part {idx + 1}\n")
+                lines.append(f"{format_hms(start_time)} - {format_hms(end_time)} Part {idx + 1}")
                 start_time = end_time
+            f.write('\n'.join(lines))
     except Exception as e:
         print(f"warning: Could not write timestamps file: {e}")
 

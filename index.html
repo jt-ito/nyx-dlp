@@ -1155,6 +1155,7 @@
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
+            <div id="batch-modified-opts"></div>
             <button class="ytdlp-advanced-toggle" id="batch-advanced-toggle" aria-expanded="false">
               <span>Advanced Options</span>
               <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -1212,6 +1213,16 @@
             <div class="settings-section-title">yt-dlp Downloader</div>
             <div class="toggle-card">
               <div class="toggle-card-left">
+                <div class="toggle-label">Auto-retry SSL errors</div>
+                <div class="toggle-desc">Automatically retry the download if a transient network/SSL error occurs</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="yd-retry-ssl" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
                 <div class="toggle-label">Format selector</div>
                 <div class="toggle-desc">Show the format/quality dropdown</div>
               </div>
@@ -1220,6 +1231,7 @@
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
+            <div id="yd-modified-opts"></div>
             <button class="ytdlp-advanced-toggle" id="ytdlp-advanced-toggle" aria-expanded="false">
               <span>Advanced Options</span>
               <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -1270,6 +1282,16 @@
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" data-setting="dep-install-gdl" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Auto-install ffmpeg</div>
+                <div class="toggle-desc">Automatically install a static ffmpeg build if it's missing from the system</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="dep-install-ffmpeg" checked />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>

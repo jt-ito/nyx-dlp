@@ -145,7 +145,7 @@ function isProtectedPath(p) {
 }
 
 // Script runner — passes argv args, optionally pipes stdin, sets cwd, streams output
-function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines = [] }) {
+function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines = [], env = {} }) {
   const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
 
   // Reject protected output directories before touching the filesystem
@@ -168,7 +168,7 @@ function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines
   const proc = spawn(pythonCmd, ['-u', scriptPath, ...args], {
     cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }
+    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8', ...env }
   });
 
   event.sender.send(replyChannel, { type: 'pid', pid: proc.pid });
@@ -243,58 +243,63 @@ ipcMain.on('resume-script', (event, { pid }) => suspendResumeTree(pid, 'resume')
 
 // ── Tool 1: YouTube Live Stream Archiver ──────────────────────────────────────
 // yt-archiver.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=container
-ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container, bgutilUrl, useDeno }) => {
+ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container, bgutilUrl, useDeno, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'yt-archiver.py');
   runScript(event, 'livestream-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || 'local', useDeno || 'n']
+    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || 'local', useDeno || 'n'],
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });
 
 // ── Tool 2: yt-dlp Single Download ───────────────────────────────────────────
 // yt-dlp.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  sys.argv[6]=startTime  sys.argv[7]=endTime
-ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs, container, startTime, endTime, bgutilUrl, useDeno }) => {
+ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs, container, startTime, endTime, bgutilUrl, useDeno, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'yt-dlp.py');
   runScript(event, 'ytdlp-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '', bgutilUrl || 'local', useDeno || 'n']
+    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '', bgutilUrl || 'local', useDeno || 'n'],
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });
 
 // ── Tool 3: Batch Downloader ──────────────────────────────────────────────────
 // yt-dlp_multi.py: sys.argv[1]=format  sys.argv[2]=rest  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  stdin=URLs
-ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, extraArgs, container, bgutilUrl, useDeno }) => {
+ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, extraArgs, container, bgutilUrl, useDeno, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'yt-dlp_multi.py');
   runScript(event, 'batch-output', scriptPath, {
     cwd: outputDir,
     args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', bgutilUrl || 'local', useDeno || 'n'],
-    stdinLines: [...urls, '']
+    stdinLines: [...urls, ''],
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });
 
 // ── Tool 4: M3U8 Downloader/Encoder ──────────────────────────────────────────
 // Download_and_convert_a_m3u8_url.py:
 //   sys.argv[1]=url  [2]=encode(y/n)  [3]=codec  [4]=bitrate  [5]=resolution  [6]=fps  [7]=audioBitrate  [8]=cookiesPath
-ipcMain.on('run-m3u8', (event, { url, outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath }) => {
+ipcMain.on('run-m3u8', (event, { url, outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'Download_and_convert_a_m3u8_url.py');
   runScript(event, 'm3u8-output', scriptPath, {
     cwd: outputDir,
-    args: [url, encode ? 'y' : 'n', codec, bitrate, resolution, fps, audioBitrate, container || 'mp4', cookiesPath || '']
+    args: [url, encode ? 'y' : 'n', codec, bitrate, resolution, fps, audioBitrate, container || 'mp4', cookiesPath || ''],
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });
 // ── Tool 5: gallery-dl ────────────────────────────────────────────────────────────
 // gallery-dl.py: sys.argv[1]=url  [2]=filetypes  [3]=metadata(y/n)  [4]=cookiesPath
-ipcMain.on('run-gallery-dl', (event, { url, outputDir, filetypes, metadata, cookiesPath, installGdl }) => {
+ipcMain.on('run-gallery-dl', (event, { url, outputDir, filetypes, metadata, cookiesPath, installGdl, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'gallery-dl.py');
   runScript(event, 'gallery-dl-output', scriptPath, {
     cwd: outputDir,
-    args: [url, filetypes, metadata ? 'y' : 'n', cookiesPath || '', installGdl || 'y']
+    args: [url, filetypes, metadata ? 'y' : 'n', cookiesPath || '', installGdl || 'y'],
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });
 
 // ── Tool 6: Video Splitter ──────────────────────────────────────────────────────────
 // video-splitter.py: sys.argv[1]=file  sys.argv[2]=parts  sys.argv[3]=outputDir
-ipcMain.on('run-splitter', (event, { file, parts, outputDir, containerFormat }) => {
+ipcMain.on('run-splitter', (event, { file, parts, outputDir, containerFormat, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'video-splitter.py');
   const targetDir = outputDir || path.dirname(file);
   const args = [file, String(parts), targetDir];
@@ -303,13 +308,14 @@ ipcMain.on('run-splitter', (event, { file, parts, outputDir, containerFormat }) 
   }
   runScript(event, 'splitter-output', scriptPath, {
     cwd: targetDir,
-    args: args
+    args: args,
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });
 
 // ── Tool 7: Video Concatenator ──────────────────────────────────────────────────────
 // video-concatenator.py: --output output.mp4 [--force-encode] file1 file2 ...
-ipcMain.on('run-concatenator', (event, { files, output, forceEncode, outputDir }) => {
+ipcMain.on('run-concatenator', (event, { files, output, forceEncode, outputDir, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'video-concatenator.py');
   const targetDir = outputDir || path.dirname(files[0]);
   
@@ -319,6 +325,7 @@ ipcMain.on('run-concatenator', (event, { files, output, forceEncode, outputDir }
   
   runScript(event, 'concatenator-output', scriptPath, {
     cwd: targetDir,
-    args: args
+    args: args,
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });

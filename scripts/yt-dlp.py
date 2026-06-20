@@ -173,6 +173,7 @@ def _apply_extra_args(opts: dict, extra: list) -> dict:
         elif f == '--split-chapters':           opts['split_chapters'] = True
         elif f == '--force-keyframes-at-cuts':  opts['force_keyframes_at_cuts'] = True
         elif f == '--xattrs':                   opts['xattrs'] = True
+        elif f == '--auto-retry-errors':        opts['auto_retry_errors'] = True
         elif f == '--extract-audio':
             ep = _pp('FFmpegExtractAudio')
             ep.setdefault('preferredcodec', 'best')
@@ -352,20 +353,31 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
     for attempt in range(retries):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
-                ydl.download([url])
-                if os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
+                retcode = ydl.download([url])
+                if retcode != 0 or os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
                     os.path.exists('.part') or os.path.exists('.ytdlp') or \
                     any(file.endswith('.vtt') for file in os.listdir()) or \
                     any('.f' in file and file.split('.f')[1].isdigit() for file in os.listdir()):
                     print("Download was not successful.")
                 else:
                     success = True
-                break  # Exit the loop if download is successful
+                
+                if success:
+                    break
+                elif not ydl_opts.get('auto_retry_errors'):
+                    break
+                else:
+                    if attempt == retries - 1:
+                        print("Max retries reached. Download failed.")
+                    else:
+                        print(f"Retrying (attempt {attempt + 2})...")
             except Exception as e:
                 err_str = str(e)
                 print(f"Attempt {attempt + 1} failed: {err_str}")
                 if _INIT_FRAG_ERR in err_str.lower():
                     init_frag_fail_count += 1
+                if not ydl_opts.get('auto_retry_errors') and not (_INIT_FRAG_ERR in err_str.lower()):
+                    break
                 if attempt == retries - 1:
                     print("Max retries reached. Download failed.")
                 else:
@@ -417,17 +429,28 @@ def download_with_ffmpeg(url, folder_name, fmt='bestvideo+bestaudio/best', retri
     for attempt in range(retries):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
-                ydl.download([url])
-                if os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
+                retcode = ydl.download([url])
+                if retcode != 0 or os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
                     os.path.exists('.part') or os.path.exists('.ytdlp') or \
                     any(file.endswith('.vtt') for file in os.listdir()) or \
                     any('.f' in file and file.split('.f')[1].isdigit() for file in os.listdir()):
                     print("Download was not successful.")
                 else:
                     success = True
-                break
+                
+                if success:
+                    break
+                elif not ydl_opts.get('auto_retry_errors'):
+                    break
+                else:
+                    if attempt == retries - 1:
+                        print("[ffmpeg fallback] Max retries reached. Download failed.")
+                    else:
+                        print(f"[ffmpeg fallback] Retrying (attempt {attempt + 2})...")
             except Exception as e:
                 print(f"[ffmpeg fallback] Attempt {attempt + 1} failed: {e}")
+                if not ydl_opts.get('auto_retry_errors'):
+                    break
                 if attempt == retries - 1:
                     print("[ffmpeg fallback] Max retries reached. Download failed.")
                 else:
@@ -475,17 +498,28 @@ def download_without_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retr
     for attempt in range(retries):
         with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
             try:
-                ydl.download([url])
-                if os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
+                retcode = ydl.download([url])
+                if retcode != 0 or os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
                     os.path.exists('.part') or os.path.exists('.ytdlp') or \
                     any(file.endswith('.vtt') for file in os.listdir()) or \
                     any('.f' in file and file.split('.f')[1].isdigit() for file in os.listdir()):
                     print("Download was not successful.")
                 else:
                     success = True
-                break  # Exit the loop if download is successful
+                
+                if success:
+                    break
+                elif not ytdl_opts.get('auto_retry_errors'):
+                    break
+                else:
+                    if attempt == retries - 1:
+                        print("Max retries reached. Download failed.")
+                    else:
+                        print(f"Retrying (attempt {attempt + 2})...")
             except Exception as e:
                 print(f"Attempt {attempt + 1} failed: {e}")
+                if not ytdl_opts.get('auto_retry_errors'):
+                    break
                 if attempt == retries - 1:
                     print("Max retries reached. Download failed.")
                 else:
