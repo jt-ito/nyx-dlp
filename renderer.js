@@ -2187,3 +2187,6 @@ if (concatPauseBtn) {
     }
   });
 }
+
+// Initialize options on startup
+updateAllOpts();

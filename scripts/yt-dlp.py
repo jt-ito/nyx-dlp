@@ -262,6 +262,14 @@ def _apply_extra_args(opts: dict, extra: list) -> dict:
             # SponsorBlock
             elif f == '--sponsorblock-remove': opts['sponsorblock_remove'] = [c.strip() for c in nv.split(',')]; i += 1
             elif f == '--sponsorblock-mark':   opts['sponsorblock_mark']   = [c.strip() for c in nv.split(',')]; i += 1
+            elif f == '--extractor-args':
+                if nv and ':' in nv and '=' in nv:
+                    ie, rest = nv.split(':', 1)
+                    for pair in rest.split(';'):
+                        if '=' in pair:
+                            k, v = pair.split('=', 1)
+                            opts.setdefault('extractor_args', {}).setdefault(ie, {})[k] = [x.strip() for x in v.split(',')]
+                i += 1
         elif f == '--netrc':                    opts['usenetrc'] = True
         # Network & Proxy (no-value flags)
         elif f == '--force-ipv4':              opts['source_address'] = '0.0.0.0'
