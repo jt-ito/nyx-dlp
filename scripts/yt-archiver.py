@@ -77,6 +77,9 @@ cookies_path = sys.argv[3] if len(sys.argv) > 3 else ''
 container    = sys.argv[4] if len(sys.argv) > 4 else 'mp4'
 bgutil_url   = sys.argv[5] if len(sys.argv) > 5 else ''
 use_deno     = sys.argv[6].lower() == 'y' if len(sys.argv) > 6 else True
+client       = sys.argv[7] if len(sys.argv) > 7 else 'default'
+from_start   = sys.argv[8].lower() == 'y' if len(sys.argv) > 8 else True
+concurrent   = int(sys.argv[9]) if len(sys.argv) > 9 else 5
 
 # Bootstrap optional dependencies
 if use_deno:
@@ -88,13 +91,14 @@ if bgutil_url:
 # In local/deno mode we install the plugin + deno and let yt-dlp use whichever client works
 # best — we do NOT force player_client=web because that hard-requires a PO token, and if
 # deno is unavailable the download would stall or skip formats. Only force web when an
-# explicit HTTP server URL is provided and known to be reachable.
+# Only force web when an explicit HTTP server URL is provided and known to be reachable.
 _extractor_args: dict = {}
+if client and client != 'default':
+    _extractor_args.setdefault('youtube', {})['player_client'] = [client]
+
 if bgutil_url and bgutil_url != 'local':
-    _extractor_args = {
-        'youtube': {'player_client': ['web']},
-        'youtubepot-bgutilhttp': {'base_url': [bgutil_url]},
-    }
+    # Do not force 'web' client here because it lacks live_from_start support and causes infinite wait_for_video loops
+    _extractor_args['youtubepot-bgutilhttp'] = {'base_url': [bgutil_url]}
     print(f'[bgutil] Using HTTP server at {bgutil_url}', flush=True)
 elif bgutil_url == 'local':
     print('[bgutil] Local deno mode — plugin will provide PO tokens via deno', flush=True)
@@ -164,7 +168,6 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
     # Configure yt-dlp options (optimized for stability)
     ydl_opts = {
         'format': fmt,
-        'live_from_start': True,
         # Metadata
         'writethumbnail': True,
         'embedthumbnail': True,
@@ -185,12 +188,9 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
         'ignoreerrors': 'only_download',
         'extractor_retries': 20,
         'file_access_retries': 10,
-        # Connection settings (optimized for slow/unstable connections)
-        'http_chunk_size': 1048576,  # 1MB (smaller chunks for stability)
-        'concurrent_fragment_downloads': 1,  # Single download to avoid overwhelming connection
+        # Connection settings (optimized for speed)
+        'concurrent_fragment_downloads': concurrent,  # Configurable concurrency
         'retries': 30,
-        'socket_timeout': 30,  # 30 second timeout
-        'source_address': '0.0.0.0',  # Bind to default interface
         # Livestream specific — retry every 30-60 s while waiting for stream to go live
         'wait_for_video': (30, 60),
         'noprogress': False,
@@ -203,6 +203,9 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
         'quiet': False,
         'no_warnings': False,
     }
+    
+    if from_start:
+        ydl_opts['live_from_start'] = True
     
     if _extractor_args:
         ydl_opts['extractor_args'] = _extractor_args
@@ -224,6 +227,14 @@ run_ytdlp(url, fmt)
 
 # Move the downloaded file back to the original directory
 try:
+    try:
+        import check_res
+        for file in os.listdir():
+            if os.path.isfile(file) and file.lower().endswith(('.mp4', '.mkv', '.webm')):
+                check_res.check_resolution(file)
+    except Exception:
+        pass
+
     for file in os.listdir():
         os.rename(file, os.path.join("..", file))
 except OSError as e:

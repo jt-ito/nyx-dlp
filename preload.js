@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close:    () => ipcRenderer.send('window-close'),
+  setMinimizeToTray: (val) => ipcRenderer.send('set-minimize-to-tray', val),
 
   // Folder picker
   pickFolder: () => ipcRenderer.invoke('pick-folder'),

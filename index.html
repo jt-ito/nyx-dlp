@@ -200,6 +200,16 @@
           </div>
           <div class="adv-body" id="ls-adv">
             <div class="adv-grid">
+              <div class="form-group" id="ls-client-group">
+                <label class="form-label">Player Client</label>
+                <select id="ls-client" class="form-select">
+                  <option value="default">Default</option>
+                  <option value="tv">TV (Bypass 360p limits)</option>
+                  <option value="web">Web</option>
+                  <option value="android">Android</option>
+                  <option value="ios">iOS</option>
+                </select>
+              </div>
               <div class="form-group">
                 <label class="form-label">Container</label>
                 <select id="ls-container" class="form-select">
@@ -209,6 +219,10 @@
                   <option value="ts">MPEG-TS (.ts)</option>
                   <option value="avi">AVI</option>
                 </select>
+              </div>
+              <div class="form-group" id="ls-concurrent-group">
+                <label class="form-label">Concurrent Fragments <span class="label-optional">(optional)</span></label>
+                <input type="number" id="ls-concurrent" class="form-input" placeholder="5" min="1" max="20" />
               </div>
               <div class="form-group full-width" id="ls-cookies-group">
                 <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
@@ -221,10 +235,20 @@
                     </svg>
                   </button>
                 </div>
-        </div>
-        </div>
-        </div>
+              </div>
+            </div>
+            
+            <div class="adv-grid" style="margin-top: 16px;">
+              <div class="form-group full-width">
+                <label class="form-label">Download from start (DVR) <span class="label-optional" style="color: var(--warning-color);">(may fail with cookies)</span></label>
+                <label class="toggle-switch" style="justify-content: flex-start;">
+                  <input type="checkbox" id="ls-from-start" checked />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+              </div>
+            </div>
           </div>
+        </div>
         </div>
 
         <div class="action-row">
@@ -1153,6 +1177,16 @@
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Player client selector</div>
+                <div class="toggle-desc">Show the player client dropdown</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-ls-client" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
           </div>
 
           <div class="settings-section">
@@ -1188,18 +1222,20 @@
               </label>
             </div>
             <div id="batch-modified-opts"></div>
-            <button class="ytdlp-advanced-toggle" id="batch-advanced-toggle" aria-expanded="false">
-              <span>Advanced Options</span>
-              <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <div class="ytdlp-advanced-body" id="batch-advanced-body">
-              <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to Batch Downloader runs only</p>
-              <div class="ytdlp-opts-search-wrap">
-                <input type="text" id="batch-opts-search" class="form-input" placeholder="Search options…" />
+            <div class="ytdlp-adv-wrapper">
+              <button class="ytdlp-advanced-toggle" id="batch-advanced-toggle" aria-expanded="false">
+                <span>Advanced Options</span>
+                <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div class="ytdlp-advanced-body" id="batch-advanced-body">
+                <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to Batch Downloader runs only</p>
+                <div class="ytdlp-opts-search-wrap">
+                  <input type="text" id="batch-opts-search" class="form-input" placeholder="Search options…" />
+                </div>
+                <div class="ytdlp-opts-container" id="batch-opts-container"></div>
               </div>
-              <div class="ytdlp-opts-container" id="batch-opts-container"></div>
             </div>
           </div>
 
@@ -1274,18 +1310,20 @@
               </label>
             </div>
             <div id="yd-modified-opts"></div>
-            <button class="ytdlp-advanced-toggle" id="ytdlp-advanced-toggle" aria-expanded="false">
-              <span>Advanced Options</span>
-              <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <div class="ytdlp-advanced-body" id="ytdlp-advanced-body">
-              <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to yt-dlp Downloader runs only</p>
-              <div class="ytdlp-opts-search-wrap">
-                <input type="text" id="ytdlp-opts-search" class="form-input" placeholder="Search options…" />
+            <div class="ytdlp-adv-wrapper">
+              <button class="ytdlp-advanced-toggle" id="ytdlp-advanced-toggle" aria-expanded="false">
+                <span>Advanced Options</span>
+                <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div class="ytdlp-advanced-body" id="ytdlp-advanced-body">
+                <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to yt-dlp Downloader runs only</p>
+                <div class="ytdlp-opts-search-wrap">
+                  <input type="text" id="ytdlp-opts-search" class="form-input" placeholder="Search options…" />
+                </div>
+                <div class="ytdlp-opts-container" id="ytdlp-opts-container"></div>
               </div>
-              <div class="ytdlp-opts-container" id="ytdlp-opts-container"></div>
             </div>
           </div>
 
@@ -1368,6 +1406,20 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Window</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Minimize to Tray</div>
+                <div class="toggle-desc">When closing the app, hide it to the system tray instead of exiting</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="minimize-to-tray" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
             </div>
           </div>
 

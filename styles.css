@@ -932,8 +932,25 @@ html, body {
   transition: border-color var(--transition), box-shadow var(--transition);
   user-select: none;
 }
-.ytdlp-advanced-toggle:hover { border-color: var(--border-focus); }
-.ytdlp-advanced-toggle:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow); outline: none; }
+.ytdlp-advanced-toggle:focus { outline: none; }
+
+.ytdlp-adv-wrapper {
+  margin: 4px 16px 16px;
+  border-radius: var(--radius-sm);
+  transition: box-shadow var(--transition);
+}
+.ytdlp-adv-wrapper:focus-within {
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.ytdlp-adv-wrapper:hover .ytdlp-advanced-toggle,
+.ytdlp-adv-wrapper:focus-within .ytdlp-advanced-toggle {
+  border-color: var(--border-focus);
+}
+.ytdlp-adv-wrapper:hover .ytdlp-advanced-body.open,
+.ytdlp-adv-wrapper:focus-within .ytdlp-advanced-body.open {
+  border-color: var(--border-focus);
+  border-top-color: transparent;
+}
 .ytdlp-chevron {
   flex-shrink: 0;
   transition: transform 200ms ease;
@@ -991,18 +1008,9 @@ html, body {
   z-index: 1;
 }
 .ytdlp-opts-group.opt-hidden { display: none; }
-.ytdlp-opt-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
-  transition: background var(--transition);
-}
-.ytdlp-opt-row:hover { background: var(--bg-hover); }
-.ytdlp-opt-row.opt-hidden { display: none; }
+.opt-hidden { display: none !important; }
+
 .ytdlp-opt-flag {
-  flex-shrink: 0;
-  width: 168px;
   font-family: 'Cascadia Code', 'Consolas', monospace;
   font-size: 10px;
   color: var(--terminal-info);
@@ -1010,37 +1018,29 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 2px 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ytdlp-opt-text {
-  flex: 1;
-  min-width: 0;
-}
-.ytdlp-opt-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text);
-}
-.ytdlp-opt-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-.ytdlp-opt-ctrl { flex-shrink: 0; }
-.ytdlp-opt-ctrl .form-input,
-.ytdlp-opt-ctrl .form-select {
-  width: 148px;
-  font-size: 12px;
-  padding: 4px 8px;
-  height: 30px;
+  text-transform: none;
 }
 .ytdlp-no-results {
   padding: 24px;
   text-align: center;
   color: var(--text-muted);
   font-size: 13px;
+}
+
+.ytdlp-opt-pin {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ytdlp-opt-pin svg {
+  width: 16px;
+  height: 16px;
+}
+.ytdlp-opt-pin.pinned {
+  color: var(--accent);
 }
 
 /* ── Responsive / overflow ────────────────────────────────────── */

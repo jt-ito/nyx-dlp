@@ -2,7 +2,7 @@
 Unicode True
 
 !define APP_NAME     "nyx-dlp"
-!define APP_VERSION  "1.27.0"
+!define APP_VERSION  "1.28.0"
 !define APP_EXE      "nyx-dlp.exe"
 !define REG_KEY      "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 

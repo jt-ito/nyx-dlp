@@ -574,13 +574,13 @@ def main() -> None:
                         src = os.path.join(folder, f)
                         dst = os.path.join(base_dir, f)
                         try:
-                            shutil.move(src, dst)
-                            logger.info(f" Moved '{f}' from '{folder}'")
                             try:
                                 import check_res
-                                check_res.check_resolution(dst, expected_height)
+                                check_res.check_resolution(src, expected_height)
                             except Exception:
                                 pass
+                            shutil.move(src, dst)
+                            logger.info(f" Moved '{f}' from '{folder}'")
                         except shutil.Error as e:
                             if "already exists" in str(e).lower():
                                 logger.info(f" File '{f}' already exists in '{base_dir}', skipping move.")

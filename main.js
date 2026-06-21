@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu } = require('electron');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
@@ -31,6 +31,26 @@ if (!gotLock) {
 let mainWindow;
 const activeProcs = new Map(); // pid → ChildProcess
 
+let tray = null;
+let isQuitting = false;
+let minimizeToTray = false;
+
+ipcMain.on('set-minimize-to-tray', (e, val) => {
+  minimizeToTray = val;
+});
+
+function createTray() {
+  if (tray) return;
+  tray = new Tray(path.join(__dirname, 'assets', 'icon.ico'));
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Show', click: () => { mainWindow.show(); mainWindow.focus(); } },
+    { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
+  ]);
+  tray.setToolTip('nyx-dlp');
+  tray.setContextMenu(contextMenu);
+  tray.on('click', () => { mainWindow.show(); mainWindow.focus(); });
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
@@ -50,6 +70,14 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+
+  mainWindow.on('close', (e) => {
+    if (minimizeToTray && !isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+      createTray();
+    }
+  });
 }
 
 app.whenReady().then(() => {
@@ -242,12 +270,12 @@ ipcMain.on('pause-script',  (event, { pid }) => suspendResumeTree(pid, 'suspend'
 ipcMain.on('resume-script', (event, { pid }) => suspendResumeTree(pid, 'resume'));
 
 // ── Tool 1: YouTube Live Stream Archiver ──────────────────────────────────────
-// yt-archiver.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=container
-ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container, bgutilUrl, useDeno, installFfmpeg }) => {
+// yt-archiver.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=container  sys.argv[5]=bgutilUrl  sys.argv[6]=useDeno  sys.argv[7]=client  sys.argv[8]=fromStart  sys.argv[9]=concurrent
+ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container, client, fromStart, concurrent, bgutilUrl, useDeno, installFfmpeg }) => {
   const scriptPath = path.join(scriptsDir, 'yt-archiver.py');
   runScript(event, 'livestream-output', scriptPath, {
     cwd: outputDir,
-    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || 'local', useDeno || 'n'],
+    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || 'local', useDeno || 'n', client || 'default', fromStart || 'y', concurrent || '5'],
     env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
 });

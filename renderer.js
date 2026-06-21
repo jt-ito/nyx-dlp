@@ -219,13 +219,17 @@ const SETTINGS_MAP = {
   'show-tool-concatenator': { navTab: 'concatenator' },
   'show-ls-quality':      { el: 'ls-quality-group' },
   'show-yd-format':       { el: 'yd-format-group' },
+  'show-yd-client':       { el: 'yd-client-group' },
   'show-batch-format':    { el: 'batch-format-group' },
+  'show-batch-client':    { el: 'batch-client-group' },
   'show-batch-rest':      { el: 'batch-rest-group' },
   'show-m3-encode':       { el: 'm3-encode-group' },
   'show-gdl-filetypes':   { el: 'gdl-filetypes-group' },
   'show-gdl-meta':        { el: 'gdl-meta-group' },
+  'show-ls-client':       { el: 'ls-client-group' },
   'dep-use-bgutil':       { el: 'dep-bgutil-url-group' },
   'show-disk-space':      { custom: 'disk-space' },
+  'minimize-to-tray':     { custom: 'tray' },
 };
 const SETTINGS_DEFAULTS = {
   'show-tool-livestream': true,
@@ -237,21 +241,23 @@ const SETTINGS_DEFAULTS = {
   'show-tool-concatenator': true,
   'show-ls-quality':      true,
   'show-yd-format':       true,
+  'show-yd-client':       true,
   'show-batch-format':    true,
+  'show-batch-client':    true,
   'show-batch-rest':      true,
   'show-m3-encode':       true,
   'show-gdl-filetypes':   true,
   'show-gdl-meta':        true,
+  'show-ls-client':       true,
   'dep-use-bgutil':       true,
   'dep-use-deno':         true,
   'dep-install-gdl':      true,
   'show-disk-space':      false,
+  'minimize-to-tray':     false,
 };
 
 // ── yt-dlp Advanced Options definition ────────────────────────
 const YTDLP_OPTS = [
-  // Workarounds
-  { cat:'Workarounds', key:'player-client', flag:'--extractor-args', hasVal:true, label:'Player client', desc:'Select the YouTube player client (tv bypasses 360p limits)', type:'select', opts:[{value:'', label:'Default'},{value:'youtube:player_client=tv', label:'TV'},{value:'youtube:player_client=web', label:'Web'},{value:'youtube:player_client=android', label:'Android'},{value:'youtube:player_client=ios', label:'iOS'}]},
   // File & Naming
   { cat:'File & Naming', key:'output',              flag:'--output',               hasVal:true,  label:'Output template',          desc:'Filename template, e.g. %(title)s.%(ext)s',               type:'text',   placeholder:'%(title)s.%(ext)s' },
   { cat:'File & Naming', key:'restrict-filenames',  flag:'--restrict-filenames',   hasVal:false, label:'Restrict filenames',       desc:'ASCII-only filenames, no & or spaces',                    type:'toggle' },
@@ -358,11 +364,15 @@ function getExtraArgs(prefix) {
 function getExtraYtdlpArgs() {
     let extraArgs = getExtraArgs('ytdlp-opt:');
     if (getSetting('yd-retry-ssl')) extraArgs.push('--auto-retry-errors');
+    const client = document.getElementById('yd-client').value;
+    if (client && client !== 'default') extraArgs.push('--extractor-args', 'youtube:player_client=' + client);
     return extraArgs;
 }
 function getBatchExtraArgs() {
     let extraArgs = getExtraArgs('batch-opt:');
     if (getSetting('yd-retry-ssl')) extraArgs.push('--auto-retry-errors');
+    const client = document.getElementById('batch-client').value;
+    if (client && client !== 'default') extraArgs.push('--extractor-args', 'youtube:player_client=' + client);
     return extraArgs;
 }
 
@@ -376,30 +386,70 @@ function getBatchExtraArgs() {
 
   function createOptRow(opt, prefix, isModifiedView = false) {
     const row = document.createElement('div');
-    row.className = 'ytdlp-opt-row';
+    row.className = 'form-group';
     if (isModifiedView) {
-      row.style.background = 'rgba(0,0,0,0.15)';
       row.style.borderLeft = '3px solid var(--accent-color)';
+      row.style.paddingLeft = '8px';
+      row.style.marginLeft = '-11px';
     }
 
-    const flagEl = document.createElement('span');
-    flagEl.className = 'ytdlp-opt-flag';
-    flagEl.title = opt.flag;
-    flagEl.textContent = opt.flag;
+    const labelRow = document.createElement('div');
+    labelRow.className = 'form-label-row';
+    labelRow.style.justifyContent = 'space-between';
+    labelRow.style.alignItems = 'flex-start';
 
-    const textEl = document.createElement('div');
-    textEl.className = 'ytdlp-opt-text';
-    const labelEl = document.createElement('div');
-    labelEl.className = 'ytdlp-opt-label';
-    labelEl.textContent = opt.label;
-    const descEl = document.createElement('div');
-    descEl.className = 'ytdlp-opt-desc';
-    descEl.textContent = opt.desc;
-    textEl.appendChild(labelEl);
-    textEl.appendChild(descEl);
+    const labelWrap = document.createElement('div');
+    
+    const labelEl = document.createElement('label');
+    labelEl.className = 'form-label';
+    labelEl.style.marginBottom = '2px';
+    labelEl.innerHTML = `${opt.label} <span class="ytdlp-opt-flag" style="margin-left: 6px;">${opt.flag}</span>`;
+    labelWrap.appendChild(labelEl);
+
+    if (opt.desc) {
+      const descEl = document.createElement('div');
+      descEl.className = 'toggle-desc';
+      descEl.style.marginTop = '2px';
+      descEl.style.marginBottom = '6px';
+      descEl.textContent = opt.desc;
+      labelWrap.appendChild(descEl);
+    }
+    labelRow.appendChild(labelWrap);
+
+    if (!isModifiedView) {
+      const pinBtn = document.createElement('button');
+      pinBtn.className = 'btn-icon ytdlp-opt-pin';
+      pinBtn.style.marginTop = '-4px';
+      const isPinned = localStorage.getItem('pin:' + prefix + opt.key) === 'true';
+      const pinIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 11.24V6a3 3 0 0 0-6 0v5.24a2 2 0 0 1-1.11 1.31l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>';
+      const pinOffIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"></line><line x1="12" y1="17" x2="12" y2="22"></line><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h11"></path><path d="M15 9.34V6a3 3 0 0 0-5.68-1.33"></path></svg>';
+      
+      pinBtn.innerHTML = isPinned ? pinOffIcon : pinIcon;
+      pinBtn.title = isPinned ? 'Unpin from More Options' : 'Pin to More Options';
+      if (isPinned) pinBtn.classList.add('pinned');
+      
+      pinBtn.onclick = () => {
+        const currentlyPinned = localStorage.getItem('pin:' + prefix + opt.key) === 'true';
+        if (currentlyPinned) {
+          localStorage.removeItem('pin:' + prefix + opt.key);
+          pinBtn.classList.remove('pinned');
+          pinBtn.innerHTML = pinIcon;
+          pinBtn.title = 'Pin to More Options';
+        } else {
+          localStorage.setItem('pin:' + prefix + opt.key, 'true');
+          pinBtn.classList.add('pinned');
+          pinBtn.innerHTML = pinOffIcon;
+          pinBtn.title = 'Unpin from More Options';
+        }
+        renderModifiedOpts('yd-modified-opts', 'ytdlp-opt:');
+        renderModifiedOpts('batch-modified-opts', 'batch-opt:');
+      };
+      labelRow.appendChild(pinBtn);
+    }
+    
+    row.appendChild(labelRow);
 
     const ctrlEl = document.createElement('div');
-    ctrlEl.className = 'ytdlp-opt-ctrl';
     const stored = localStorage.getItem(prefix + opt.key);
 
     const onChange = (val) => {
@@ -445,8 +495,6 @@ function getBatchExtraArgs() {
       ctrlEl.appendChild(inp);
     }
 
-    row.appendChild(flagEl);
-    row.appendChild(textEl);
     row.appendChild(ctrlEl);
     return row;
   }
@@ -468,10 +516,14 @@ function getBatchExtraArgs() {
     Object.entries(cats).forEach(([catName, opts]) => {
       let catVisible = false;
       const group = document.createElement('div');
-      group.className = 'ytdlp-opts-group';
+      group.className = 'ytdlp-opts-group adv-grid';
+      group.style.paddingTop = '0';
+      group.style.rowGap = '24px';
 
       const title = document.createElement('div');
       title.className = 'ytdlp-opts-group-title';
+      title.style.gridColumn = '1 / -1';
+      title.style.margin = '0 -12px 0';
       title.textContent = catName;
       group.appendChild(title);
 
@@ -503,10 +555,10 @@ function getBatchExtraArgs() {
       let hasModified = false;
     
     YTDLP_OPTS.forEach(opt => {
-      const stored = localStorage.getItem(prefix + opt.key);
-      const isModified = opt.type === 'toggle' ? stored === 'true' : stored !== null;
-      if (isModified) {
+      const isPinned = localStorage.getItem('pin:' + prefix + opt.key) === 'true';
+      if (isPinned) {
           hasModified = true;
+        const stored = localStorage.getItem(prefix + opt.key);
         const group = document.createElement('div');
         group.className = 'form-group';
         group.style.borderLeft = '3px solid var(--accent-color)';
@@ -521,8 +573,6 @@ function getBatchExtraArgs() {
         const onChange = (val) => {
           if (val === null || val === false || val === '') {
             localStorage.removeItem(prefix + opt.key);
-            // Immediately remove from the DOM so it disappears from "More Options"
-            group.remove();
           } else {
             localStorage.setItem(prefix + opt.key, val);
           }
@@ -599,6 +649,10 @@ function applySetting(key, value) {
     if (el) el.style.display = value ? '' : 'none';
   } else if (cfg.custom === 'disk-space') {
     diskSpace.setEnabled(value);
+  } else if (cfg.custom === 'tray') {
+    if (window.api && window.api.setMinimizeToTray) {
+      window.api.setMinimizeToTray(value);
+    }
   }
 }
 
@@ -893,6 +947,7 @@ function markBodyStart(logEl) {
 }
 
 function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
+  flushPendingLogsSync(logEl);
   trailingCount = trailingCount || 1;
   const sentinel = logEl.querySelector('.log-body-start');
   if (!sentinel) return;
@@ -976,7 +1031,8 @@ function handleOutput(logEl, data, onExit) {
     case 'stdout':
     case 'stderr': {
       const stream = data.type;
-      data.text.trimEnd().split('\n').forEach(line => {
+      const cleanText = data.text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\[A\[K/g, '');
+      cleanText.trimEnd().split('\n').forEach(line => {
         if (line === '') return;
         appendLog(logEl, line, classifyLine(line, stream));
       });
@@ -1099,7 +1155,10 @@ function handleOutput(logEl, data, onExit) {
 
     const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
-    window.api.runLivestream({ url, outputDir, format, cookiesPath, container, bgutilUrl, useDeno });
+    const client = document.getElementById('ls-client')?.value || 'default';
+    const fromStart = document.getElementById('ls-from-start')?.checked ? 'y' : 'n';
+    const concurrent = document.getElementById('ls-concurrent')?.value || '5';
+    window.api.runLivestream({ url, outputDir, format, cookiesPath, container, client, fromStart, concurrent, bgutilUrl, useDeno });
   });
 })();
 
@@ -1814,7 +1873,7 @@ try {
   const SELECT_IDS = [
     'ls-quality',
     'yd-format',
-    'batch-format',
+    'batch-format', 'yd-client', 'batch-client',
     'm3-codec', 'm3-bitrate', 'm3-resolution', 'm3-fps', 'm3-audio-bitrate', 'm3-container',
     'gdl-filetypes',
   ];
@@ -1963,6 +2022,7 @@ const diskSpace = (() => {
 
 // Apply disk-space setting now that the module is initialized
 applySetting('show-disk-space', getSetting('show-disk-space'));
+applySetting('minimize-to-tray', getSetting('minimize-to-tray'));
 
 // ── Video Splitter Logic ───────────────────────────────────────────────────────
 const spSelect = document.getElementById('sp-parts-select');

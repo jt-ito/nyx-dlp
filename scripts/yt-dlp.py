@@ -296,6 +296,14 @@ def move(folder_name, success):
     _download_active = False  # clear before handling to prevent atexit double-write
     # Move the downloaded files back to the original directory
     if success:
+        try:
+            import check_res
+            for file in os.listdir():
+                if os.path.isfile(file) and file.lower().endswith(('.mp4', '.mkv', '.webm')):
+                    check_res.check_resolution(file)
+        except Exception:
+            pass
+
         for file in os.listdir():
             if os.path.isfile(file):  # Check if it's a file before renaming
                 os.rename(file, os.path.join("..", file))
