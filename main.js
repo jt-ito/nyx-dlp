@@ -172,6 +172,16 @@ function isProtectedPath(p) {
   return null;
 }
 
+function broadcastIPC(channel, data) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    if (w && !w.isDestroyed()) w.webContents.send(channel, data);
+  });
+  const remoteServer = require('./server.js');
+  if (remoteServer.broadcast) {
+    remoteServer.broadcast(channel, data);
+  }
+}
+
 // Script runner — passes argv args, optionally pipes stdin, sets cwd, streams output
 function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines = [], env = {} }) {
   const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
@@ -179,8 +189,8 @@ function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines
   // Reject protected output directories before touching the filesystem
   const pathErr = isProtectedPath(cwd);
   if (pathErr) {
-    event.sender.send(replyChannel, { type: 'error', text: pathErr });
-    event.sender.send(replyChannel, { type: 'exit', code: 1 });
+    broadcastIPC(replyChannel, { type: 'error', text: pathErr });
+    broadcastIPC(replyChannel, { type: 'exit', code: 1 });
     return null;
   }
 
@@ -188,8 +198,8 @@ function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines
   try {
     fs.mkdirSync(cwd, { recursive: true });
   } catch (err) {
-    event.sender.send(replyChannel, { type: 'error', text: `Cannot create output directory: ${err.message}` });
-    event.sender.send(replyChannel, { type: 'exit', code: 1 });
+    broadcastIPC(replyChannel, { type: 'error', text: `Cannot create output directory: ${err.message}` });
+    broadcastIPC(replyChannel, { type: 'exit', code: 1 });
     return null;
   }
 
@@ -199,7 +209,7 @@ function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines
     env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8', ...env }
   });
 
-  event.sender.send(replyChannel, { type: 'pid', pid: proc.pid });
+  broadcastIPC(replyChannel, { type: 'pid', pid: proc.pid });
 
   activeProcs.set(proc.pid, proc);
 
@@ -210,17 +220,17 @@ function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines
   proc.stdin.end();
 
   proc.stdout.on('data', (data) => {
-    event.sender.send(replyChannel, { type: 'stdout', text: data.toString() });
+    broadcastIPC(replyChannel, { type: 'stdout', text: data.toString() });
   });
   proc.stderr.on('data', (data) => {
-    event.sender.send(replyChannel, { type: 'stderr', text: data.toString() });
+    broadcastIPC(replyChannel, { type: 'stderr', text: data.toString() });
   });
   proc.on('close', (code) => {
     activeProcs.delete(proc.pid);
-    event.sender.send(replyChannel, { type: 'exit', code });
+    broadcastIPC(replyChannel, { type: 'exit', code });
   });
   proc.on('error', (err) => {
-    event.sender.send(replyChannel, { type: 'error', text: err.message });
+    broadcastIPC(replyChannel, { type: 'error', text: err.message });
   });
 
   return proc.pid;
@@ -303,6 +313,15 @@ ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, ex
   });
 });
 
+ipcMain.on('append-batch-queue', (event, { outputDir, newUrls }) => {
+  try {
+    const queueFile = path.join(outputDir, 'queue_additions.txt');
+    fs.appendFileSync(queueFile, newUrls.join('\n') + '\n', 'utf-8');
+  } catch (err) {
+    console.error('Failed to append to batch queue:', err);
+  }
+});
+
 // ── Tool 4: M3U8 Downloader/Encoder ──────────────────────────────────────────
 // Download_and_convert_a_m3u8_url.py:
 //   sys.argv[1]=url  [2]=encode(y/n)  [3]=codec  [4]=bitrate  [5]=resolution  [6]=fps  [7]=audioBitrate  [8]=cookiesPath
@@ -356,4 +375,34 @@ ipcMain.on('run-concatenator', (event, { files, output, forceEncode, outputDir, 
     args: args,
     env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
+});
+
+// ── Remote Server ────────────────────────────────────────────────────────────
+const remoteServer = require('./server.js');
+
+ipcMain.on('start-remote-server', (event, options) => {
+  try {
+    remoteServer.startServer(options, __dirname);
+  } catch (e) {
+    console.error('Failed to start remote server:', e);
+  }
+});
+
+ipcMain.on('stop-remote-server', () => {
+  remoteServer.stopServer();
+});
+
+// ── State Synchronization ──────────────────────────────────────────────────
+let fullUiState = {};
+
+ipcMain.on('sync-ui-state', (event, data) => {
+  if (data && data.id) {
+    if (data.type === 'checkbox') fullUiState[data.id] = { type: data.type, checked: data.checked };
+    else fullUiState[data.id] = { type: data.type, value: data.value };
+  }
+  broadcastIPC('sync-ui-state', data);
+});
+
+ipcMain.on('request-full-state', (event) => {
+  event.sender.send('full-state', fullUiState);
 });

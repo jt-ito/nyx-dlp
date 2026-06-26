@@ -186,6 +186,27 @@ AUTO_RETRY_ERRORS = False
 if '--auto-retry-errors' in EXTRA_ARGS:
     EXTRA_ARGS.remove('--auto-retry-errors')
     AUTO_RETRY_ERRORS = True
+
+DEFAULT_CONCURRENT_FRAGMENTS = None
+if '--concurrent-fragments' in EXTRA_ARGS:
+    idx = EXTRA_ARGS.index('--concurrent-fragments')
+    EXTRA_ARGS.pop(idx)
+    DEFAULT_CONCURRENT_FRAGMENTS = int(EXTRA_ARGS.pop(idx))
+
+SITE_CONCURRENT_FRAGMENTS = {}
+if '--site-concurrent-fragments' in EXTRA_ARGS:
+    idx = EXTRA_ARGS.index('--site-concurrent-fragments')
+    EXTRA_ARGS.pop(idx)
+    val = EXTRA_ARGS.pop(idx)
+    try:
+        for pair in val.split(','):
+            if '=' in pair or ':' in pair:
+                sep = '=' if '=' in pair else ':'
+                domain, count = pair.split(sep, 1)
+                SITE_CONCURRENT_FRAGMENTS[domain.strip()] = int(count.strip())
+    except Exception as e:
+        logger.error(f"Error parsing --site-concurrent-fragments: {e}")
+
 CONTAINER   = sys.argv[5] if len(sys.argv) > 5 else 'mp4'
 BGUTIL_URL  = sys.argv[6] if len(sys.argv) > 6 else ''
 USE_DENO    = sys.argv[7].lower() == 'y' if len(sys.argv) > 7 else True
@@ -233,6 +254,11 @@ def update_failed_downloads(url: str, dest: str) -> None:
     """Append a failed URL to the failed_downloads.txt file."""
     path = os.path.join(dest, "failed_downloads.txt")
     try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f]
+                if url in lines:
+                    return
         with open(path, "a", encoding="utf-8") as f:
             f.write(url + "\n")
     except Exception as e:
@@ -303,7 +329,7 @@ def get_urls() -> List[str]:
     return urls
 
 # ——— Downloaders (live progress + stderr capture) ———————————
-def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', retries: int = 3) -> bool:
+def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', retries: int = 3, concurrent_fragments: int = None) -> bool:
     """Download using yt-dlp's default downloader."""
     cmd = [
         sys.executable, "-m", "yt_dlp", "-v",
@@ -318,11 +344,14 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
     ]
     if COOKIE_FILE and os.path.isfile(COOKIE_FILE):
         cmd += ["--cookies", COOKIE_FILE]
-    if BGUTIL_URL and BGUTIL_URL != 'local':
-        cmd += ['--extractor-args', 'youtube:player_client=web',
-                '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+# --- OLD BGUTIL CODE (Commented out) ---
+#     if BGUTIL_URL and BGUTIL_URL != 'local':
+#         cmd += ['--extractor-args', 'youtube:player_client=web',
+#                 '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
     if EXTRA_ARGS:
         cmd.extend(EXTRA_ARGS)
+    if concurrent_fragments is not None:
+        cmd.extend(["--concurrent-fragments", str(concurrent_fragments)])
     cmd.append(url)
     for attempt in range(1, retries + 1):
         logger.info(f" [default downloader] attempt {attempt}/{retries}")
@@ -355,7 +384,7 @@ def download_without_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best',
         time.sleep(1 + attempt * 0.5)
     return False
 
-def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', retries: int = 3) -> bool:
+def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', retries: int = 3, concurrent_fragments: int = None) -> bool:
     """Download using yt-dlp with aria2c as external downloader.
 
     If every retry fails with 'Initialization fragment found after media
@@ -380,11 +409,14 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
         cmd += ["--cookies", COOKIE_FILE]
     if "twitch.tv" in url:
         cmd += ["-o", "%(title).100s [%(id)s].%(ext)s"]
-    if BGUTIL_URL and BGUTIL_URL != 'local':
-        cmd += ['--extractor-args', 'youtube:player_client=web',
-                '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+# --- OLD BGUTIL CODE (Commented out) ---
+#     if BGUTIL_URL and BGUTIL_URL != 'local':
+#         cmd += ['--extractor-args', 'youtube:player_client=web',
+#                 '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
     if EXTRA_ARGS:
         cmd.extend(EXTRA_ARGS)
+    if concurrent_fragments is not None:
+        cmd.extend(["--concurrent-fragments", str(concurrent_fragments)])
     cmd.append(url)
 
     _INIT_FRAG_ERR = "initialization fragment found after media fragments"
@@ -438,11 +470,14 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
             ffmpeg_cmd += ["-o", "%(title).100s [%(id)s].%(ext)s"]
         if COOKIE_FILE and os.path.isfile(COOKIE_FILE):
             ffmpeg_cmd += ["--cookies", COOKIE_FILE]
-        if BGUTIL_URL and BGUTIL_URL != 'local':
-            ffmpeg_cmd += ['--extractor-args', 'youtube:player_client=web',
-                           '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
+# --- OLD BGUTIL CODE (Commented out) ---
+#         if BGUTIL_URL and BGUTIL_URL != 'local':
+#             ffmpeg_cmd += ['--extractor-args', 'youtube:player_client=web',
+#                            '--extractor-args', f'youtubepot-bgutilhttp:base_url={BGUTIL_URL}']
         if EXTRA_ARGS:
             ffmpeg_cmd.extend(EXTRA_ARGS)
+        if concurrent_fragments is not None:
+            ffmpeg_cmd.extend(["--concurrent-fragments", str(concurrent_fragments)])
         ffmpeg_cmd.append(url)
         logger.info(" [ffmpeg fallback] attempt 1/1")
         try:
@@ -538,7 +573,9 @@ def main() -> None:
     _base_dir_recovery = base_dir
     failed = []
     total = len(urls)
-    for idx, url in enumerate(urls, 1):
+    idx = 1
+    while idx <= total:
+        url = urls[idx - 1]
         _pending_urls.remove(url)
         _current_url = url
         logger.info(f"\n[{idx}/{total}] Processing: {url}")
@@ -552,10 +589,17 @@ def main() -> None:
             continue
         try:
             with change_dir(folder):
+                concurrent = DEFAULT_CONCURRENT_FRAGMENTS
+                for domain, count in SITE_CONCURRENT_FRAGMENTS.items():
+                    if domain in url:
+                        concurrent = count
+                        logger.info(f" Using site-specific concurrent fragments ({count}) for {domain}")
+                        break
+
                 if "youtube.com" in url or "youtu.be" in url or "." not in url:
-                    success = download_without_aria(url, fmt=fmt)
+                    success = download_without_aria(url, fmt=fmt, concurrent_fragments=concurrent)
                 else:
-                    success = download_with_aria(url, fmt=fmt)
+                    success = download_with_aria(url, fmt=fmt, concurrent_fragments=concurrent)
         except Exception as e:
             logger.error(f"Error during download for {url}: {safe_text(e)}")
             failed.append(url)
@@ -597,6 +641,21 @@ def main() -> None:
             update_failed_downloads(url, base_dir)
         _current_url = ''
         remove_empty_folder(folder)
+        # Check for dynamically added URLs
+        queue_file = os.path.join(base_dir, 'queue_additions.txt')
+        if os.path.exists(queue_file):
+            try:
+                with open(queue_file, 'r', encoding='utf-8') as f:
+                    new_urls = [line.strip() for line in f if line.strip()]
+                if new_urls:
+                    urls.extend(new_urls)
+                    _pending_urls.extend(new_urls)
+                    total += len(new_urls)
+                    logger.info(f" Added {len(new_urls)} new URLs to the queue.")
+                os.remove(queue_file)
+            except Exception as e:
+                logger.error(f"Failed to read queue additions: {safe_text(e)}")
+
         # Existing rest logic
         if rest and idx < total:
             logger.info(" Pausing 5 minutes before next download…")
@@ -605,6 +664,8 @@ def main() -> None:
         if total > 30 and idx % 30 == 0 and idx < total:
             logger.info(f" Batch limit reached ({idx} downloads). Pausing 30 minutes before continuing…")
             time.sleep(30 * 60)
+            
+        idx += 1
     if failed:
         logger.warning(f"\n{len(failed)} downloads failed. See failed_downloads.txt")
     else:

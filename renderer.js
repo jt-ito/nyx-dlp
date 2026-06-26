@@ -1,5 +1,83 @@
 /* ── renderer.js ─ UI logic ─────────────────────────────────── */
 
+// ── Remote API Mocking (for browsers) ─────────────────────────
+if (typeof window.api === 'undefined') {
+  console.log("No window.api found. Initializing remote WebSocket connection...");
+  
+  // Hide window controls for remote clients
+  const controls = document.querySelector('.titlebar-controls');
+  if (controls) controls.style.display = 'none';
+
+  const ws = new WebSocket(`ws://${window.location.host}`);
+  const pendingRequests = new Map();
+  let nextReqId = 1;
+
+  window.api = {
+    appVersion: 'remote',
+    minimize: () => {}, maximize: () => {}, close: () => {}, setMinimizeToTray: () => {},
+    pickFolder: () => new Promise(r => r(null)),
+    pickFile: () => new Promise(r => r(null)),
+    pickVideo: () => new Promise(r => r(null)),
+    pickFiles: () => new Promise(r => r(null)),
+    getDiskSpace: (path) => new Promise(resolve => {
+      const id = nextReqId++;
+      pendingRequests.set(id, resolve);
+      ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'get-disk-space', id, data: path }));
+    }),
+    
+    // Script runners
+    runLivestream: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-livestream', data: opts })),
+    runYtdlp:      (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-ytdlp', data: opts })),
+    runBatch:      (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-batch', data: opts })),
+    runM3u8:       (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-m3u8', data: opts })),
+    runGalleryDl:  (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-gallery-dl', data: opts })),
+    runSplitter:   (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-splitter', data: opts })),
+    runConcatenator: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-concatenator', data: opts })),
+
+    // Output listeners
+    _listeners: {},
+    _addListener(channel, cb) {
+      if (!this._listeners[channel]) this._listeners[channel] = [];
+      this._listeners[channel].push(cb);
+    },
+    onLivestreamOutput: function(cb) { this._addListener('livestream-output', cb) },
+    onYtdlpOutput:      function(cb) { this._addListener('ytdlp-output', cb) },
+    onBatchOutput:      function(cb) { this._addListener('batch-output', cb) },
+    onM3u8Output:       function(cb) { this._addListener('m3u8-output', cb) },
+    onGalleryDlOutput:  function(cb) { this._addListener('gallery-dl-output', cb) },
+    onSplitterOutput:   function(cb) { this._addListener('splitter-output', cb) },
+    onConcatenatorOutput: function(cb) { this._addListener('concatenator-output', cb) },
+    onSyncUiState:      function(cb) { this._addListener('sync-ui-state', cb) },
+    onFullState:        function(cb) { this._addListener('full-state', cb) },
+
+    stopScript:   (pid) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'stop-script', data: { pid } })),
+    pauseScript:  (pid) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'pause-script', data: { pid } })),
+    resumeScript: (pid) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'resume-script', data: { pid } })),
+    syncUiState:  (data) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'sync-ui-state', data })),
+    requestFullState: () => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'request-full-state' })),
+
+    removeAllListeners: function(channel) {
+       this._listeners[channel] = [];
+    },
+    
+    startRemoteServer: () => {},
+    stopRemoteServer: () => {}
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'ipc-reply' && window.api._listeners[msg.channel]) {
+      window.api._listeners[msg.channel].forEach(cb => cb(msg.data));
+    } else if (msg.type === 'ipc-invoke-reply') {
+      const resolve = pendingRequests.get(msg.id);
+      if (resolve) {
+        resolve(msg.result);
+        pendingRequests.delete(msg.id);
+      }
+    }
+  };
+}
+
 const html = document.documentElement;
 
 // ── Theme ──────────────────────────────────────────────────────
@@ -230,6 +308,7 @@ const SETTINGS_MAP = {
   'dep-use-bgutil':       { el: 'dep-bgutil-url-group' },
   'show-disk-space':      { custom: 'disk-space' },
   'minimize-to-tray':     { custom: 'tray' },
+  'remote-access':        { custom: 'remote-access' },
 };
 const SETTINGS_DEFAULTS = {
   'show-tool-livestream': true,
@@ -254,6 +333,7 @@ const SETTINGS_DEFAULTS = {
   'dep-install-gdl':      true,
   'show-disk-space':      false,
   'minimize-to-tray':     false,
+  'remote-access':        false,
 };
 
 // ── yt-dlp Advanced Options definition ────────────────────────
@@ -322,6 +402,7 @@ const YTDLP_OPTS = [
   { cat:'Download Tuning', key:'retries',               flag:'--retries',               hasVal:true,  label:'Retries',                     desc:'Number of retries before giving up (default 10; "infinite" accepted)', type:'number', placeholder:'10' },
   { cat:'Download Tuning', key:'fragment-retries',      flag:'--fragment-retries',      hasVal:true,  label:'Fragment retries',            desc:'Retries per HLS/DASH fragment (default 10; "infinite" accepted)',     type:'number', placeholder:'10' },
   { cat:'Download Tuning', key:'concurrent-fragments',  flag:'--concurrent-fragments',  hasVal:true,  label:'Concurrent fragments',        desc:'Number of HLS/DASH fragments to download simultaneously (default 1)', type:'number', placeholder:'1' },
+  { cat:'Download Tuning', key:'site-concurrent-fragments', flag:'--site-concurrent-fragments', hasVal:true, label:'Site-specific concurrent fragments', desc:'Override concurrent fragments by domain (e.g. youtube.com=5, twitch.tv=10)', type:'text', placeholder:'youtube.com=5, twitch.tv=10' },
   { cat:'Download Tuning', key:'rate-limit',            flag:'--rate-limit',            hasVal:true,  label:'Max download rate',           desc:'Maximum download speed, e.g. 500K or 2.5M',                           type:'text',   placeholder:'2M' },
   { cat:'Download Tuning', key:'throttled-rate',        flag:'--throttled-rate',        hasVal:true,  label:'Throttle detection rate',     desc:'Re-extract video URL if download speed drops below this (e.g. 100K)', type:'text',   placeholder:'100K' },
   { cat:'Download Tuning', key:'sleep-interval',        flag:'--sleep-interval',        hasVal:true,  label:'Sleep between downloads (s)', desc:'Wait at least this many seconds before each download',                type:'number', placeholder:'3' },
@@ -653,8 +734,76 @@ function applySetting(key, value) {
     if (window.api && window.api.setMinimizeToTray) {
       window.api.setMinimizeToTray(value);
     }
+  } else if (cfg.custom === 'remote-access') {
+    const portGroup = document.getElementById('remote-access-port-group');
+    if (portGroup) portGroup.style.display = value ? 'flex' : 'none';
+    
+    if (value) {
+      const portInput = document.getElementById('remote-access-port');
+      const userInput = document.getElementById('remote-access-user');
+      const passInput = document.getElementById('remote-access-pass');
+      const pinInput = document.getElementById('remote-access-pin');
+      
+      const port = parseInt(portInput?.value) || 3000;
+      const user = userInput?.value || 'admin';
+      const pass = passInput?.value || 'secret';
+      const pin = pinInput?.value || '';
+      
+      if (window.api && window.api.startRemoteServer) {
+        window.api.startRemoteServer({ port, user, pass, pin });
+      }
+    } else {
+      if (window.api && window.api.stopRemoteServer) window.api.stopRemoteServer();
+    }
   }
 }
+
+// Ensure remote access reacts to changes
+const remotePortInput = document.getElementById('remote-access-port');
+const remoteUserInput = document.getElementById('remote-access-user');
+const remotePassInput = document.getElementById('remote-access-pass');
+const remotePinInput = document.getElementById('remote-access-pin');
+
+function restartRemoteServer() {
+  if (getSetting('remote-access')) {
+    if (window.api && window.api.stopRemoteServer) window.api.stopRemoteServer();
+    const port = parseInt(remotePortInput?.value) || 3000;
+    const user = remoteUserInput?.value || 'admin';
+    const pass = remotePassInput?.value || 'secret';
+    const pin = remotePinInput?.value || '';
+    setTimeout(() => {
+      if (window.api && window.api.startRemoteServer) window.api.startRemoteServer({ port, user, pass, pin });
+    }, 200);
+  }
+}
+
+if (remotePortInput) remotePortInput.addEventListener('change', restartRemoteServer);
+if (remoteUserInput) remoteUserInput.addEventListener('change', restartRemoteServer);
+if (remotePassInput) remotePassInput.addEventListener('change', restartRemoteServer);
+if (remotePinInput) remotePinInput.addEventListener('change', restartRemoteServer);
+
+// Initialize settings correctly on startup
+document.addEventListener('DOMContentLoaded', () => {
+  if (remotePortInput) {
+    remotePortInput.value = localStorage.getItem('remote-access-port') || '3000';
+    remotePortInput.addEventListener('input', e => localStorage.setItem('remote-access-port', e.target.value));
+  }
+  if (remoteUserInput) {
+    remoteUserInput.value = localStorage.getItem('remote-access-user') || 'admin';
+    remoteUserInput.addEventListener('input', e => localStorage.setItem('remote-access-user', e.target.value));
+  }
+  if (remotePassInput) {
+    remotePassInput.value = localStorage.getItem('remote-access-pass') || 'secret';
+    remotePassInput.addEventListener('input', e => localStorage.setItem('remote-access-pass', e.target.value));
+  }
+
+  if (getSetting('remote-access')) {
+    const port = parseInt(remotePortInput?.value) || 3000;
+    const user = remoteUserInput?.value || 'admin';
+    const pass = remotePassInput?.value || 'secret';
+    if (window.api && window.api.startRemoteServer) window.api.startRemoteServer({ port, user, pass });
+  }
+});
 
 // ── Protected-path guard ──────────────────────────────────────
 /**
@@ -1092,6 +1241,18 @@ function handleOutput(logEl, data, onExit) {
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
+    if (pauseBtn.classList.contains('btn-add-queue')) {
+      const newUrls = pauseBtn._newUrls;
+      if (newUrls && newUrls.length > 0) {
+        activeUrls.push(...newUrls);
+        pauseBtn._newUrls = null;
+        pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
+        pauseBtn.classList.remove('btn-add-queue');
+        pauseBtn.classList.toggle('paused', isPaused);
+        appendLog(log, '✔ Added ' + newUrls.length + ' new URL(s) to the queue.', 'success');
+      }
+      return;
+    }
     if (!isPaused) {
       isPaused = true;
       window.api.pauseScript(currentPid);
@@ -1111,7 +1272,7 @@ function handleOutput(logEl, data, onExit) {
     const url         = document.getElementById('ls-url').value.trim();
     const outputDir   = document.getElementById('ls-output').value.trim();
     const format      = document.getElementById('ls-quality').value;
-    const cookiesPath = document.getElementById('ls-cookies').value.trim();
+    const cookiesPath = (document.getElementById('ls-use-cookies').checked ? document.getElementById('ls-cookies').value.trim() : '');
     const container   = document.getElementById('ls-container').value;
 
     if (!url)       { appendLog(log, '⚠ Please enter a stream URL.', 'error'); return; }
@@ -1184,6 +1345,18 @@ function handleOutput(logEl, data, onExit) {
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
+    if (pauseBtn.classList.contains('btn-add-queue')) {
+      const newUrls = pauseBtn._newUrls;
+      if (newUrls && newUrls.length > 0) {
+        activeUrls.push(...newUrls);
+        pauseBtn._newUrls = null;
+        pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
+        pauseBtn.classList.remove('btn-add-queue');
+        pauseBtn.classList.toggle('paused', isPaused);
+        appendLog(log, '✔ Added ' + newUrls.length + ' new URL(s) to the queue.', 'success');
+      }
+      return;
+    }
     if (!isPaused) {
       isPaused = true;
       window.api.pauseScript(currentPid);
@@ -1203,7 +1376,7 @@ function handleOutput(logEl, data, onExit) {
     const url         = document.getElementById('yd-url').value.trim();
     const outputDir   = document.getElementById('yd-output').value.trim();
     const format      = document.getElementById('yd-format').value;
-    const cookiesPath = document.getElementById('yd-cookies').value.trim();
+    const cookiesPath = (document.getElementById('yd-use-cookies').checked ? document.getElementById('yd-cookies').value.trim() : '');
     const container   = document.getElementById('yd-container').value;
     const startTime   = document.getElementById('yd-start').value.trim();
     const endTime     = document.getElementById('yd-end').value.trim();
@@ -1273,6 +1446,7 @@ function handleOutput(logEl, data, onExit) {
   let isPaused   = false;
   let countdownTimer = null;
   let lastProgressText = '0 / 0';
+  let activeUrls = [];
 
   function startRestCountdown(seconds) {
     clearInterval(countdownTimer);
@@ -1331,6 +1505,18 @@ function handleOutput(logEl, data, onExit) {
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
+    if (pauseBtn.classList.contains('btn-add-queue')) {
+      const newUrls = pauseBtn._newUrls;
+      if (newUrls && newUrls.length > 0) {
+        activeUrls.push(...newUrls);
+        pauseBtn._newUrls = null;
+        pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
+        pauseBtn.classList.remove('btn-add-queue');
+        pauseBtn.classList.toggle('paused', isPaused);
+        appendLog(log, '✔ Added ' + newUrls.length + ' new URL(s) to the queue.', 'success');
+      }
+      return;
+    }
     if (!isPaused) {
       isPaused = true;
       window.api.pauseScript(currentPid);
@@ -1351,7 +1537,7 @@ function handleOutput(logEl, data, onExit) {
     const outputDir   = document.getElementById('batch-output').value.trim();
     const format      = document.getElementById('batch-format').value;
     const rest        = document.getElementById('batch-rest').checked;
-    const cookiesPath = document.getElementById('batch-cookies').value.trim();
+    const cookiesPath = (document.getElementById('batch-use-cookies').checked ? document.getElementById('batch-cookies').value.trim() : '');
     const container   = document.getElementById('batch-container').value;
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter at least one valid URL.', 'error'); return; }
@@ -1468,6 +1654,7 @@ function handleOutput(logEl, data, onExit) {
   let currentPid  = null;
   let isPaused    = false;
   let m3MultiMode = false;
+  let activeUrls  = [];
 
   const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
@@ -1525,6 +1712,18 @@ function handleOutput(logEl, data, onExit) {
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
+    if (pauseBtn.classList.contains('btn-add-queue')) {
+      const newUrls = pauseBtn._newUrls;
+      if (newUrls && newUrls.length > 0) {
+        activeUrls.push(...newUrls);
+        pauseBtn._newUrls = null;
+        pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
+        pauseBtn.classList.remove('btn-add-queue');
+        pauseBtn.classList.toggle('paused', isPaused);
+        appendLog(log, '✔ Added ' + newUrls.length + ' new URL(s) to the queue.', 'success');
+      }
+      return;
+    }
     if (!isPaused) {
       isPaused = true;
       window.api.pauseScript(currentPid);
@@ -1541,7 +1740,8 @@ function handleOutput(logEl, data, onExit) {
   });
 
   runBtn.addEventListener('click', () => {
-    const urls         = getM3Urls();
+    activeUrls         = getM3Urls();
+    const urls         = activeUrls;
     const outputDir    = document.getElementById('m3-output').value.trim();
     const encode       = encodeChk.checked;
     const container    = document.getElementById('m3-container').value;
@@ -1550,7 +1750,7 @@ function handleOutput(logEl, data, onExit) {
     const resolution   = document.getElementById('m3-resolution').value;
     const fps          = document.getElementById('m3-fps').value;
     const audioBitrate = document.getElementById('m3-audio-bitrate').value;
-    const cookiesPath  = document.getElementById('m3-cookies').value.trim();
+    const cookiesPath  = (document.getElementById('m3-use-cookies').checked ? document.getElementById('m3-cookies').value.trim() : '');
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter an M3U8 URL.', 'error'); return; }
     if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -1641,15 +1841,34 @@ try {
   let currentPid   = null;
   let isPaused     = false;
   let gdlMultiMode = false;
+  let activeUrls   = [];
 
   const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
   // ── URL mode toggle ──────────────────────────────────────────
   const gdlTextarea = document.getElementById('gdl-urls');
+  function checkAddQueue() {
+    if (!currentPid || !gdlMultiMode) return;
+    const currentInputUrls = getGdlUrls();
+    const newUrls = currentInputUrls.filter(u => !activeUrls.includes(u));
+    if (newUrls.length > 0) {
+      pauseBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg> Add to Queue`;
+      pauseBtn.classList.add('btn-add-queue');
+      pauseBtn.classList.remove('paused');
+      pauseBtn._newUrls = newUrls;
+    } else {
+      pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
+      pauseBtn.classList.remove('btn-add-queue');
+      pauseBtn.classList.toggle('paused', isPaused);
+      pauseBtn._newUrls = null;
+    }
+  }
+
   function updateGdlCount() {
     const n = getGdlUrls().length;
     countBadge.textContent = n + (n === 1 ? ' URL' : ' URLs');
+    checkAddQueue();
   }
   gdlTextarea.addEventListener('input', updateGdlCount);
   gdlTextarea.addEventListener('paste', (e) => {
@@ -1688,6 +1907,18 @@ try {
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
+    if (pauseBtn.classList.contains('btn-add-queue')) {
+      const newUrls = pauseBtn._newUrls;
+      if (newUrls && newUrls.length > 0) {
+        activeUrls.push(...newUrls);
+        pauseBtn._newUrls = null;
+        pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
+        pauseBtn.classList.remove('btn-add-queue');
+        pauseBtn.classList.toggle('paused', isPaused);
+        appendLog(log, '✔ Added ' + newUrls.length + ' new URL(s) to the queue.', 'success');
+      }
+      return;
+    }
     if (!isPaused) {
       isPaused = true;
       window.api.pauseScript(currentPid);
@@ -1704,11 +1935,12 @@ try {
   });
 
   runBtn.addEventListener('click', () => {
-    const urls        = getGdlUrls();
+    activeUrls        = getGdlUrls();
+    const urls        = activeUrls;
     const outputDir   = document.getElementById('gdl-output').value.trim();
     const filetypes   = document.getElementById('gdl-filetypes').value;
     const metadata    = document.getElementById('gdl-meta').checked;
-    const cookiesPath = document.getElementById('gdl-cookies').value.trim();
+    const cookiesPath = (document.getElementById('gdl-use-cookies').checked ? document.getElementById('gdl-cookies').value.trim() : '');
     const installGdl  = getSetting('dep-install-gdl') ? 'y' : 'n';
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
@@ -2190,3 +2422,94 @@ if (concatPauseBtn) {
 
 // Initialize options on startup
 updateAllOpts();
+
+// ── UI State Synchronization ────────────────────────────────────
+let isSyncingState = false;
+
+function broadcastState(el) {
+  if (isSyncingState || !window.api || !window.api.syncUiState) return;
+  const id = el.id || el.dataset?.setting;
+  if (!id) return;
+  window.api.syncUiState({
+    id,
+    type: el.type,
+    value: el.value,
+    checked: el.checked
+  });
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target && e.target.matches && e.target.matches('.form-input, .form-textarea, .form-select')) {
+    broadcastState(e.target);
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.matches && e.target.matches('.toggle-switch input, input[type="radio"], input[type="checkbox"], .form-select')) {
+    broadcastState(e.target);
+  }
+});
+
+if (window.api) {
+  if (window.api.onSyncUiState) {
+    window.api.onSyncUiState((data) => {
+      isSyncingState = true;
+      const el = document.getElementById(data.id) || document.querySelector(`[data-setting="${data.id}"]`);
+      if (el) {
+        if (data.type === 'checkbox' || data.type === 'radio') {
+          if (el.checked !== data.checked) {
+             el.checked = data.checked;
+             el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        } else {
+          if (el.value !== data.value) {
+             el.value = data.value;
+             el.dispatchEvent(new Event('input', { bubbles: true }));
+             el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      }
+      isSyncingState = false;
+    });
+  }
+
+  if (window.api.onFullState) {
+    window.api.onFullState((state) => {
+      isSyncingState = true;
+      Object.keys(state).forEach(id => {
+        const data = state[id];
+        const el = document.getElementById(id) || document.querySelector(`[data-setting="${id}"]`);
+        if (el) {
+          if (data.type === 'checkbox' || data.type === 'radio') {
+            if (el.checked !== data.checked) {
+               el.checked = data.checked;
+               el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          } else {
+            if (el.value !== data.value) {
+               el.value = data.value;
+               el.dispatchEvent(new Event('input', { bubbles: true }));
+               el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          }
+        }
+      });
+      isSyncingState = false;
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.api) {
+    if (window.api.appVersion !== 'remote') {
+      setTimeout(() => {
+        const inputs = document.querySelectorAll('.form-input, .form-select, .form-textarea, .toggle-switch input, input[type="radio"]');
+        inputs.forEach(el => broadcastState(el));
+      }, 500);
+    } else {
+      setTimeout(() => {
+        if (window.api.requestFullState) window.api.requestFullState();
+      }, 500);
+    }
+  }
+});

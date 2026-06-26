@@ -497,7 +497,7 @@ html, body {
 .form-textarea::-webkit-resizer { background: var(--bg-input); }
 
 /* Folder picker group */
-.input-folder-group { display: flex; gap: 6px; }
+.input-folder-group { display: flex; gap: 6px; align-items: center; }
 .input-folder-group .form-input { flex: 1; }
 .btn-folder {
   flex-shrink: 0;

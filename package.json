@@ -1,6 +1,6 @@
 {
   "name": "nyx-dlp",
-  "version": "1.29.0",
+  "version": "2.0.0",
   "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
   "main": "main.js",
   "scripts": {
@@ -51,5 +51,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "ws": "^8.21.0"
   }
 }

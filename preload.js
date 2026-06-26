@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('api', {
   runLivestream: (opts) => ipcRenderer.send('run-livestream', opts),
   runYtdlp:      (opts) => ipcRenderer.send('run-ytdlp', opts),
   runBatch:      (opts) => ipcRenderer.send('run-batch', opts),
+  appendBatchQueue: (opts) => ipcRenderer.send('append-batch-queue', opts),
   runM3u8:       (opts) => ipcRenderer.send('run-m3u8', opts),
   runGalleryDl:  (opts) => ipcRenderer.send('run-gallery-dl', opts),
   runSplitter:   (opts) => ipcRenderer.send('run-splitter', opts),
@@ -38,6 +39,16 @@ contextBridge.exposeInMainWorld('api', {
   stopScript:   (pid) => ipcRenderer.send('stop-script',   { pid }),
   pauseScript:  (pid) => ipcRenderer.send('pause-script',  { pid }),
   resumeScript: (pid) => ipcRenderer.send('resume-script', { pid }),
+
+  // Remote server
+  startRemoteServer: (port) => ipcRenderer.send('start-remote-server', { port }),
+  stopRemoteServer:  () => ipcRenderer.send('stop-remote-server'),
+
+  // State synchronization
+  syncUiState: (data) => ipcRenderer.send('sync-ui-state', data),
+  requestFullState: () => ipcRenderer.send('request-full-state'),
+  onSyncUiState: (cb) => ipcRenderer.on('sync-ui-state', (_e, d) => cb(d)),
+  onFullState: (cb) => ipcRenderer.on('full-state', (_e, d) => cb(d)),
 
   // Remove listeners
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),

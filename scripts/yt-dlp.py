@@ -74,34 +74,38 @@ extra_args   = _json.loads(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] els
 container    = sys.argv[5] if len(sys.argv) > 5 else 'mp4'
 start_time   = sys.argv[6] if len(sys.argv) > 6 else ''
 end_time     = sys.argv[7] if len(sys.argv) > 7 else ''
-bgutil_url   = sys.argv[8] if len(sys.argv) > 8 else ''
+bgutil_url   = sys.argv[8] if len(sys.argv) > 8 and sys.argv[8].strip() else 'local'
 use_deno     = sys.argv[9].lower() == 'y' if len(sys.argv) > 9 else True
 
-# Bootstrap optional dependencies
-if use_deno:
-    _ensure_deno()
-if bgutil_url:
-    _ensure_bgutil()
-
-# Extractor args for bgutil PO token provider (applied in ydl_opts below)
-# In local/deno mode we install the plugin + deno and let yt-dlp use whichever client works
-# best — we do NOT force player_client=web because that hard-requires a PO token, and if
-# deno is unavailable the download would stall or skip formats. Only force web when an
-# explicit HTTP server URL is provided and known to be reachable.
+# ponytail: Using UI options for extractor args. 
 _extractor_args: dict = {}
-if bgutil_url and bgutil_url != 'local':
-    # HTTP server mode: ensure we use the web client (full format list) and route PO tokens
-    # through the user-configured server.
-    _extractor_args = {
-        'youtube': {'player_client': ['web']},
-        'youtubepot-bgutilhttp': {'base_url': [bgutil_url]},
-    }
-    print(f'[bgutil] Using HTTP server at {bgutil_url}', flush=True)
-elif bgutil_url == 'local':
-    # Local deno mode: package + deno are installed; the plugin registers itself and
-    # supplies PO tokens automatically when yt-dlp needs them. The HTTP provider will
-    # emit a warning that 127.0.0.1:4416 is unreachable — that is expected and harmless.
-    print('[bgutil] Local deno mode — plugin will provide PO tokens via deno', flush=True)
+
+# --- OLD BGUTIL CODE (Commented out) ---
+# # Bootstrap optional dependencies
+# if use_deno:
+#     _ensure_deno()
+# if bgutil_url:
+#     _ensure_bgutil()
+# 
+# # Extractor args for bgutil PO token provider (applied in ydl_opts below)
+# # In local/deno mode we install the plugin + deno and let yt-dlp use whichever client works
+# # best — we do NOT force player_client=web because that hard-requires a PO token, and if
+# # deno is unavailable the download would stall or skip formats. Only force web when an
+# # explicit HTTP server URL is provided and known to be reachable.
+# # _extractor_args: dict = {}
+# if bgutil_url and bgutil_url != 'local':
+#     # HTTP server mode: ensure we use the web client (full format list) and route PO tokens
+#     # through the user-configured server.
+#     _extractor_args = {
+#         'youtube': {'player_client': ['web']},
+#         'youtubepot-bgutilhttp': {'base_url': [bgutil_url]},
+#     }
+#     print(f'[bgutil] Using HTTP server at {bgutil_url}', flush=True)
+# elif bgutil_url == 'local':
+#     # Local deno mode: package + deno are installed; the plugin registers itself and
+#     # supplies PO tokens automatically when yt-dlp needs them. The HTTP provider will
+#     # emit a warning that 127.0.0.1:4416 is unreachable — that is expected and harmless.
+#     print('[bgutil] Local deno mode — plugin will provide PO tokens via deno', flush=True)
 
 def _hms_to_secs(ts: str) -> float:
     """Convert HH:MM:SS (or MM:SS) timestamp string to total seconds."""
@@ -128,6 +132,11 @@ _download_active = False
 def _write_failed(u: str) -> None:
     path = os.path.join(_original_dir, 'failed_downloads.txt')
     try:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                lines = [line.strip() for line in f]
+                if u in lines:
+                    return
         with open(path, 'a', encoding='utf-8') as f:
             f.write(u + '\n')
         print(f"Saved to failed_downloads.txt: {u}")
@@ -141,7 +150,7 @@ def _on_exit() -> None:
 atexit.register(_on_exit)
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 
-def _apply_extra_args(opts: dict, extra: list) -> dict:
+def _apply_extra_args(opts: dict, extra: list, url: str) -> dict:
     """Merge extra CLI-style flags from the UI into a ydl_opts dict."""
     pps = opts.setdefault('postprocessors', [])
     def _pp(key: str) -> dict:
@@ -228,6 +237,18 @@ def _apply_extra_args(opts: dict, extra: list) -> dict:
                 try: opts['concurrent_fragment_downloads'] = int(nv)
                 except ValueError: pass
                 i += 1
+            elif f == '--site-concurrent-fragments':
+                try:
+                    site_map = {}
+                    for pair in nv.split(','):
+                        if '=' in pair or ':' in pair:
+                            sep = '=' if '=' in pair else ':'
+                            domain, count = pair.split(sep, 1)
+                            site_map[domain.strip()] = int(count.strip())
+                    opts['_site_concurrent_fragments'] = site_map
+                except Exception as e:
+                    print(f"Error parsing --site-concurrent-fragments: {e}")
+                i += 1
             elif f == '--rate-limit':        opts['ratelimit'] = nv;                                       i += 1
             elif f == '--throttled-rate':    opts['throttledratelimit'] = nv;                              i += 1
             elif f == '--sleep-interval':
@@ -288,6 +309,16 @@ def _apply_extra_args(opts: dict, extra: list) -> dict:
         # SponsorBlock (no-value flags)
         elif f == '--no-sponsorblock':         opts['no_sponsorblock'] = True
         i += 1
+    
+    # Apply site-specific concurrent fragments
+    site_map = opts.pop('_site_concurrent_fragments', None)
+    if site_map and url:
+        for domain, count in site_map.items():
+            if domain in url:
+                opts['concurrent_fragment_downloads'] = count
+                print(f"Applied site-specific concurrent fragments ({count}) for domain {domain}")
+                break
+
     return opts
 
 def folder(title):
@@ -324,8 +355,6 @@ def move(folder_name, success):
     else:
         print("Download failed or stopped. Files will not be moved.")
         _write_failed(url)
-        print("Press enter to continue...")
-        input()  # Wait for user input
         os.chdir("..")  # Change back to the original directory
 
 def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries=3):
@@ -355,7 +384,7 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
     if cookies_path and os.path.isfile(cookies_path):
         ydl_opts['cookiefile'] = cookies_path
     if extra_args:
-        _apply_extra_args(ydl_opts, extra_args)
+        _apply_extra_args(ydl_opts, extra_args, url)
     if start_time or end_time:
         from yt_dlp.utils import download_range_func
         s = _hms_to_secs(start_time) if start_time else 0.0
@@ -370,9 +399,7 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
                 retcode = ydl.download([url])
-                if retcode != 0 or os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
-                    os.path.exists('.part') or os.path.exists('.ytdlp') or \
-                    any(file.endswith('.vtt') for file in os.listdir()) or \
+                if retcode != 0 or any(file.endswith(('.part', '.ytdlp', '.vtt')) for file in os.listdir()) or \
                     any('.f' in file and file.split('.f')[1].isdigit() for file in os.listdir()):
                     print("Download was not successful.")
                 else:
@@ -433,7 +460,7 @@ def download_with_ffmpeg(url, folder_name, fmt='bestvideo+bestaudio/best', retri
     if cookies_path and os.path.isfile(cookies_path):
         ydl_opts['cookiefile'] = cookies_path
     if extra_args:
-        _apply_extra_args(ydl_opts, extra_args)
+        _apply_extra_args(ydl_opts, extra_args, url)
     if start_time or end_time:
         from yt_dlp.utils import download_range_func
         s = _hms_to_secs(start_time) if start_time else 0.0
@@ -446,9 +473,7 @@ def download_with_ffmpeg(url, folder_name, fmt='bestvideo+bestaudio/best', retri
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
                 retcode = ydl.download([url])
-                if retcode != 0 or os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
-                    os.path.exists('.part') or os.path.exists('.ytdlp') or \
-                    any(file.endswith('.vtt') for file in os.listdir()) or \
+                if retcode != 0 or any(file.endswith(('.part', '.ytdlp', '.vtt')) for file in os.listdir()) or \
                     any('.f' in file and file.split('.f')[1].isdigit() for file in os.listdir()):
                     print("Download was not successful.")
                 else:
@@ -502,7 +527,7 @@ def download_without_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retr
     if cookies_path and os.path.isfile(cookies_path):
         ytdl_opts['cookiefile'] = cookies_path
     if extra_args:
-        _apply_extra_args(ytdl_opts, extra_args)
+        _apply_extra_args(ytdl_opts, extra_args, url)
     if start_time or end_time:
         from yt_dlp.utils import download_range_func
         s = _hms_to_secs(start_time) if start_time else 0.0
@@ -515,9 +540,7 @@ def download_without_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retr
         with yt_dlp.YoutubeDL(ytdl_opts) as ydl:
             try:
                 retcode = ydl.download([url])
-                if retcode != 0 or os.path.exists('video.mp4.part') or os.path.exists('video.mkv.part') or \
-                    os.path.exists('.part') or os.path.exists('.ytdlp') or \
-                    any(file.endswith('.vtt') for file in os.listdir()) or \
+                if retcode != 0 or any(file.endswith(('.part', '.ytdlp', '.vtt')) for file in os.listdir()) or \
                     any('.f' in file and file.split('.f')[1].isdigit() for file in os.listdir()):
                     print("Download was not successful.")
                 else:
