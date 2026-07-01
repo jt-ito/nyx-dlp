@@ -1,5 +1,6 @@
 const { packager } = require('@electron/packager');
 const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
 
 const target = process.argv[2]; // 'portable' or 'installer'
@@ -45,7 +46,22 @@ async function build() {
         if (/\.log$/.test(normalized)) return true;
         
         return false;
-      }
+      },
+      afterPrune: [
+        (buildPath, electronVersion, pPlatform, pArch, callback) => {
+          try {
+            console.log('Repairing pruned node_modules in temp directory...');
+            const nodeModulesPath = path.join(buildPath, 'node_modules');
+            if (fs.existsSync(nodeModulesPath)) {
+              fs.rmSync(nodeModulesPath, { recursive: true, force: true });
+            }
+            execSync('npm install --omit=dev', { cwd: buildPath, stdio: 'inherit' });
+          } catch (e) {
+            console.error('Repair failed:', e);
+          }
+          callback();
+        }
+      ]
     });
 
     const version = require('./package.json').version;
