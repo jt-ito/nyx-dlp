@@ -48,7 +48,7 @@ async function build() {
         return false;
       },
       afterPrune: [
-        (buildPath, electronVersion, pPlatform, pArch, callback) => {
+        async (buildPath, electronVersion, pPlatform, pArch) => {
           try {
             console.log('Repairing pruned node_modules in temp directory...');
             const nodeModulesPath = path.join(buildPath, 'node_modules');
@@ -59,7 +59,6 @@ async function build() {
           } catch (e) {
             console.error('Repair failed:', e);
           }
-          callback();
         }
       ]
     });
