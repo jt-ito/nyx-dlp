@@ -9,8 +9,30 @@ import sys
 import time
 import importlib
 import subprocess
+import atexit
+import signal
 from pathlib import Path
 from typing import Dict, Any
+
+_download_active = True
+
+def _write_stopped(u: str) -> None:
+    try:
+        if os.path.exists('stopped_downloads.txt'):
+            with open('stopped_downloads.txt', 'r', encoding='utf-8') as f:
+                if u in [line.strip() for line in f]:
+                    return
+        with open('stopped_downloads.txt', 'a', encoding='utf-8') as f:
+            f.write(u + '\n')
+    except Exception:
+        pass
+
+def _on_exit() -> None:
+    if _download_active and 'url' in globals():
+        _write_stopped(url)
+
+atexit.register(_on_exit)
+signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 
 def _ensure(pip_pkg, import_name=None):
     try:
@@ -212,10 +234,13 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
     if cookies_path and os.path.isfile(cookies_path):
         ydl_opts['cookiefile'] = cookies_path
     
+    global _download_active
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
+        _download_active = False
     except Exception as e:
+        _download_active = False
         print(f"yt-dlp failed: {e}")
         with open("failed_download.txt", 'w') as f:
             f.write(f"Failed to download video {url}")

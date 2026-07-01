@@ -160,19 +160,19 @@ _base_dir_recovery: str = ''
 _current_url: str = ''
 
 def _save_incomplete_on_exit() -> None:
-    """On exit, append any in-progress + not-yet-started URLs to failed_downloads.txt."""
+    """On exit, append any in-progress + not-yet-started URLs to stopped_downloads.txt."""
     urls_to_save = []
     if _current_url:
         urls_to_save.append(_current_url)
     urls_to_save.extend(_pending_urls)
     if not urls_to_save or not _base_dir_recovery:
         return
-    path = os.path.join(_base_dir_recovery, 'failed_downloads.txt')
+    path = os.path.join(_base_dir_recovery, 'stopped_downloads.txt')
     try:
         with open(path, 'a', encoding='utf-8') as f:
             for u in urls_to_save:
                 f.write(u + '\n')
-        logger.info(f"Saved {len(urls_to_save)} incomplete/pending URL(s) to failed_downloads.txt")
+        logger.info(f"Saved {len(urls_to_save)} incomplete/pending URL(s) to stopped_downloads.txt")
     except Exception as e:
         logger.error(f"Failed to save incomplete URLs: {safe_text(e)}")
 

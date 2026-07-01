@@ -1454,7 +1454,7 @@ function handleOutput(logEl, data, onExit) {
     const tick = () => {
       const m = Math.floor(rem / 60);
       const s = rem % 60;
-      progressLbl.textContent = `Resting… ${m}:${s.toString().padStart(2, '0')}`;
+      progressLbl.textContent = `Resting… ${m}:${s.toString().padStart(2, '0')} (${lastProgressText})`;
       if (rem <= 0) clearInterval(countdownTimer);
       rem--;
     };

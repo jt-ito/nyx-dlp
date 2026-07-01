@@ -23,12 +23,13 @@ async function build() {
         // Normalize slashes for comparison
         const normalized = filePath.replace(/\\/g, '/');
         
-        // Ignore root dist folder
-        if (normalized === '/dist' || normalized.startsWith('/dist/')) return true;
-        
-        // Ignore other root folders/files
-        if (normalized === '/temp_dl' || normalized.startsWith('/temp_dl/')) return true;
-        if (normalized === '/scripts' || normalized.startsWith('/scripts/')) return true;
+        // Ignore specific folders
+        if (normalized.includes('/.git/') || normalized.endsWith('/.git')) return true;
+        if (normalized.includes('/.github/') || normalized.endsWith('/.github')) return true;
+        if (normalized.includes('/.gemini/') || normalized.endsWith('/.gemini')) return true;
+        if (normalized.includes('/dist/') || normalized.endsWith('/dist')) return true;
+        if (normalized.includes('/temp_dl/') || normalized.endsWith('/temp_dl')) return true;
+        if (normalized.includes('/scripts/') || normalized.endsWith('/scripts')) return true;
         
         // Ignore specific files and patterns
         if (normalized.includes('__pycache__')) return true;

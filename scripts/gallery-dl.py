@@ -8,6 +8,28 @@ import os
 import sys
 import subprocess
 import importlib
+import atexit
+import signal
+
+_download_active = True
+
+def _write_stopped(u: str) -> None:
+    try:
+        if os.path.exists('stopped_downloads.txt'):
+            with open('stopped_downloads.txt', 'r', encoding='utf-8') as f:
+                if u in [line.strip() for line in f]:
+                    return
+        with open('stopped_downloads.txt', 'a', encoding='utf-8') as f:
+            f.write(u + '\n')
+    except Exception:
+        pass
+
+def _on_exit() -> None:
+    if _download_active and 'url' in globals():
+        _write_stopped(url)
+
+atexit.register(_on_exit)
+signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 
 # Force both stdout and stderr to be unbuffered/line-buffered
 sys.stdout.reconfigure(line_buffering=True)
@@ -70,6 +92,13 @@ for line in proc.stdout:
     print(line, end='', flush=True)
 
 rc = proc.wait()
+_download_active = False
+if rc != 0:
+    try:
+        with open('failed_downloads.txt', 'a', encoding='utf-8') as f:
+            f.write(url + '\n')
+    except Exception:
+        pass
 print(f'[gallery-dl] exited with code {rc}', flush=True)
 
 sys.exit(rc)

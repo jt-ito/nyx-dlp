@@ -251,29 +251,54 @@ function suspendResumeTree(rootPid, action) {
     try { process.kill(rootPid, action === 'suspend' ? 'SIGSTOP' : 'SIGCONT'); } catch (_) {}
     return;
   }
-  const script = [
-    'Add-Type -TypeDefinition @\'',
-    'using System;',
-    'using System.Runtime.InteropServices;',
-    'public class PC {',
-    '  [DllImport("ntdll.dll")] public static extern int NtSuspendProcess(IntPtr h);',
-    '  [DllImport("ntdll.dll")] public static extern int NtResumeProcess(IntPtr h);',
-    '}',
-    '\'@',
-    'function Get-Tree([int]$p) {',
-    '  (Get-CimInstance Win32_Process -Filter "ParentProcessId=$p").ProcessId | ForEach-Object { Get-Tree $_ }',
-    '  $p',
-    '}',
-    `Get-Tree ${rootPid} | ForEach-Object {`,
-    '  try {',
-    '    $pr = [System.Diagnostics.Process]::GetProcessById($_)',
-    `    if ('${action}' -eq 'suspend') { [PC]::NtSuspendProcess($pr.Handle) | Out-Null }`,
-    '    else { [PC]::NtResumeProcess($pr.Handle) | Out-Null }',
-    '  } catch {}',
-    '}'
-  ].join('\n');
-  const encoded = Buffer.from(script, 'utf16le').toString('base64');
-  execFile('powershell', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+  const pythonScript = `
+import ctypes
+
+def get_children(pid):
+    kernel32 = ctypes.windll.kernel32
+    TH32CS_SNAPPROCESS = 2
+    class PROCESSENTRY32(ctypes.Structure):
+        _fields_ = [("dwSize", ctypes.c_uint32), ("cntUsage", ctypes.c_uint32), ("th32ProcessID", ctypes.c_uint32),
+                    ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", ctypes.c_uint32), ("cntThreads", ctypes.c_uint32),
+                    ("th32ParentProcessID", ctypes.c_uint32), ("pcPriClassBase", ctypes.c_long), ("dwFlags", ctypes.c_uint32),
+                    ("szExeFile", ctypes.c_char * 260)]
+    hProcessSnap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    pe32 = PROCESSENTRY32()
+    pe32.dwSize = ctypes.sizeof(PROCESSENTRY32)
+    children = []
+    if kernel32.Process32First(hProcessSnap, ctypes.byref(pe32)):
+        while True:
+            if pe32.th32ParentProcessID == pid:
+                children.append(pe32.th32ProcessID)
+            if not kernel32.Process32Next(hProcessSnap, ctypes.byref(pe32)):
+                break
+    kernel32.CloseHandle(hProcessSnap)
+    return children
+
+def get_tree(pid):
+    tree = [pid]
+    for c in get_children(pid):
+        tree.extend(get_tree(c))
+    return tree
+
+action = "${action}"
+pid = ${rootPid}
+ntdll = ctypes.windll.ntdll
+kernel32 = ctypes.windll.kernel32
+PROCESS_SUSPEND_RESUME = 0x0800
+
+for p in get_tree(pid):
+    h = kernel32.OpenProcess(PROCESS_SUSPEND_RESUME, False, p)
+    if h:
+        if action == "suspend":
+            ntdll.NtSuspendProcess(h)
+        else:
+            ntdll.NtResumeProcess(h)
+        kernel32.CloseHandle(h)
+  `;
+  execFile('python', ['-c', pythonScript], (err) => {
+    if (err) console.error('Suspend/resume failed:', err);
+  });
 }
 
 ipcMain.on('pause-script',  (event, { pid }) => suspendResumeTree(pid, 'suspend'));

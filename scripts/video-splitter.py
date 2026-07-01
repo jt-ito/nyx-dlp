@@ -33,7 +33,7 @@ def run_ffmpeg_progress(cmd: list, total_sec: float, desc: str):
                     if now - last_print > 2.0: # Print update every 2 seconds
                         pct = (current_sec / total_sec) * 100
                         if pct > 100: pct = 100
-                        print(f"[download] {pct:.1f}% ({current_sec:.2f}s / {total_sec:.2f}s) - {desc}")
+                        print(f"[splitting] {pct:.1f}% ({current_sec:.2f}s / {total_sec:.2f}s) - {desc}")
                         last_print = now
                 except ValueError:
                     pass

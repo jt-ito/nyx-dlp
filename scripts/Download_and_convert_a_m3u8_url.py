@@ -7,6 +7,28 @@ except Exception:
 import os
 import sys
 import subprocess
+import atexit
+import signal
+
+_download_active = True
+
+def _write_stopped(u: str) -> None:
+    try:
+        if os.path.exists('stopped_downloads.txt'):
+            with open('stopped_downloads.txt', 'r', encoding='utf-8') as f:
+                if u in [line.strip() for line in f]:
+                    return
+        with open('stopped_downloads.txt', 'a', encoding='utf-8') as f:
+            f.write(u + '\n')
+    except Exception:
+        pass
+
+def _on_exit() -> None:
+    if _download_active and 'url' in globals():
+        _write_stopped(url)
+
+atexit.register(_on_exit)
+signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 
 NVENC_CODECS = {'h264_nvenc', 'h265_nvenc', 'hevc_nvenc'}
 
@@ -87,4 +109,13 @@ if __name__ == "__main__":
     container   = sys.argv[8] if len(sys.argv) > 8 else 'mp4'
     # sys.argv[9] = cookies_path (accepted for API consistency, not used by ffmpeg)
     choice_lower = choice.lower()
-    encoded_video = download_and_convert_m3u8(url, choice_lower, codec, bitrate, resolution, fps, audio_bitrate, container)
+    try:
+        encoded_video = download_and_convert_m3u8(url, choice_lower, codec, bitrate, resolution, fps, audio_bitrate, container)
+    except subprocess.CalledProcessError:
+        try:
+            with open('failed_downloads.txt', 'a', encoding='utf-8') as f:
+                f.write(url + '\n')
+        except Exception:
+            pass
+    finally:
+        _download_active = False

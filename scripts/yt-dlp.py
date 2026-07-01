@@ -143,9 +143,23 @@ def _write_failed(u: str) -> None:
     except Exception:
         pass
 
+def _write_stopped(u: str) -> None:
+    path = os.path.join(_original_dir, 'stopped_downloads.txt')
+    try:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                lines = [line.strip() for line in f]
+                if u in lines:
+                    return
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write(u + '\n')
+        print(f"Saved to stopped_downloads.txt: {u}")
+    except Exception:
+        pass
+
 def _on_exit() -> None:
     if _download_active:
-        _write_failed(url)
+        _write_stopped(url)
 
 atexit.register(_on_exit)
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
