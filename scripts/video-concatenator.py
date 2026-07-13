@@ -84,14 +84,14 @@ def run_ffmpeg_progress(cmd: list, total_sec: float, desc: str):
 
 def reencode_to_match(ffmpeg: str, src: Path,
                       ref_meta: dict, src_meta: dict,
-                      use_nvenc: bool):
+                      use_nvenc: bool, temp_dir: Path):
     duration = float(src_meta["format"]["duration"])
     rv = next(s for s in ref_meta["streams"] if s["codec_type"] == "video")
     fps = rv["avg_frame_rate"]
     w, h = rv["width"], rv["height"]
 
     tmp = Path(tempfile.NamedTemporaryFile(
-        prefix="fix_", suffix=src.suffix, delete=False).name)
+        dir=temp_dir, prefix="fix_", suffix=src.suffix, delete=False).name)
 
     if use_nvenc:
         vcodec = ["-c:v", "h264_nvenc", "-preset", "slow",
@@ -111,9 +111,9 @@ def reencode_to_match(ffmpeg: str, src: Path,
     run_ffmpeg_progress(cmd, duration, f"Re-encoding {src.name}")
     return tmp, duration
 
-def remux_to_ts(ffmpeg: str, src: Path, duration: float, label: str):
+def remux_to_ts(ffmpeg: str, src: Path, duration: float, label: str, temp_dir: Path):
     ts = Path(tempfile.NamedTemporaryFile(
-        prefix="ts_", suffix=".ts", delete=False).name)
+        dir=temp_dir, prefix="ts_", suffix=".ts", delete=False).name)
     cmd = [
         ffmpeg, "-y", "-i", str(src),
         "-c", "copy",
@@ -199,15 +199,16 @@ def main():
                 (rv["width"], rv["height"]) != (tv["width"], tv["height"])
             )
             if args.force_encode or mismatch:
-                src, _ = reencode_to_match(ffmpeg, vid, ref_meta, metas[idx], use_nvenc)
+                src, _ = reencode_to_match(ffmpeg, vid, ref_meta, metas[idx], use_nvenc, output.parent)
                 reencoded_mp4.append(src)
             else:
                 src = vid
-        ts = remux_to_ts(ffmpeg, src, dur, vid.name)
+        ts = remux_to_ts(ffmpeg, src, dur, vid.name, output.parent)
         ts_parts.append(ts)
 
     # write a temporary list file for concat demuxer
-    list_file = Path(tempfile.gettempdir()) / "concat_list.txt"
+    list_file = Path(tempfile.NamedTemporaryFile(
+        dir=output.parent, prefix="concat_list_", suffix=".txt", delete=False).name)
     try:
         with open(list_file, "w", encoding='utf-8') as f:
             for ts in ts_parts:
