@@ -118,20 +118,35 @@ document.querySelectorAll('.nav-item').forEach(btn => {
       if (contentEl) activePanel._savedScroll = contentEl.scrollTop;
     }
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => {
-      p.classList.remove('active');
-      p.querySelectorAll('.terminal-body').forEach(t => t._updateScrollBtn?.());
-    });
+    // Deactivate all panels — skip _updateScrollBtn on hidden panels to avoid
+    // forced layout reads (scrollHeight/clientHeight) on terminals that aren't visible.
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     const panel = document.getElementById('tab-' + btn.dataset.tab);
     if (panel) {
       panel.classList.add('active');
-      updateAllOpts();
+      // Only render opts for the tab that's becoming visible (lazy, targeted).
+      updateOptsForTab(btn.dataset.tab);
       if (panel._savedScroll !== undefined) {
         const contentEl = document.querySelector('.content');
         if (contentEl) contentEl.scrollTop = panel._savedScroll;
       }
-      panel.querySelectorAll('.terminal-body').forEach(t => t._updateScrollBtn?.());
+      // Only update scroll buttons on the newly-active panel's terminals.
+      panel.querySelectorAll('[data-terminal]').forEach(t => t._updateScrollBtn?.());
+      // Flush any log lines that accumulated while this tab was in the background.
+      // Lines were held in _pendingLines (not written to DOM) to avoid hidden layout work.
+      panel.querySelectorAll('[data-log-el]').forEach(logEl => {
+        if (logEl._hasUnflushed || (logEl._pendingLines?.length ?? 0) > 0) {
+          logEl._hasUnflushed = false;
+          flushPendingLogsSync(logEl);
+          if (logEl._autoFollow !== false) {
+            const scrollEl = logEl._scrollEl || logEl;
+            scrollEl.scrollTop = scrollEl.scrollHeight;
+            logEl._lastScrollTop = scrollEl.scrollTop;  // Bug 2: keep direction-detection in sync
+          }
+          logEl._updateScrollBtn?.();
+        }
+      });
     }
   });
 });
@@ -295,6 +310,7 @@ const SETTINGS_MAP = {
   'show-tool-gallery':    { navTab: 'gallery' },
   'show-tool-splitter':   { navTab: 'splitter' },
   'show-tool-concatenator': { navTab: 'concatenator' },
+  'show-tool-encoder':    { navTab: 'encoder' },
   'show-ls-quality':      { el: 'ls-quality-group' },
   'show-yd-format':       { el: 'yd-format-group' },
   'show-yd-client':       { el: 'yd-client-group' },
@@ -318,6 +334,7 @@ const SETTINGS_DEFAULTS = {
   'show-tool-gallery':    true,
   'show-tool-splitter':   true,
   'show-tool-concatenator': true,
+  'show-tool-encoder':    true,
   'show-ls-quality':      true,
   'show-yd-format':       true,
   'show-yd-client':       true,
@@ -458,12 +475,40 @@ function getBatchExtraArgs() {
 }
 
 
+// ── Advanced-opts dirty flags ──────────────────────────────────
+// Opts are rebuilt from scratch on first render and whenever a value or pin
+// actually changes. On subsequent tab switches with no changes, the rebuild
+// is skipped entirely, eliminating the layout cost.
+const _optsDirty = { ytdlp: true, batch: true };
+
+function markOptsDirty(prefix) {
+  if (prefix === 'ytdlp-opt:') _optsDirty.ytdlp = true;
+  if (prefix === 'batch-opt:') _optsDirty.batch = true;
+}
+
   function updateAllOpts() {
     renderYtdlpOpts();
     renderBatchOpts();
     renderModifiedOpts('yd-modified-opts', 'ytdlp-opt:');
     renderModifiedOpts('batch-modified-opts', 'batch-opt:');
+    _optsDirty.ytdlp = false;
+    _optsDirty.batch = false;
   }
+
+// Targeted opt render — only rebuilds containers for the tab being shown.
+// Tabs without dynamic opts (livestream, m3u8, gallery, splitter,
+// concatenator, encoder) cost nothing.
+function updateOptsForTab(tabName) {
+  if (tabName === 'ytdlp' && _optsDirty.ytdlp) {
+    renderYtdlpOpts();
+    renderModifiedOpts('yd-modified-opts', 'ytdlp-opt:');
+    _optsDirty.ytdlp = false;
+  } else if (tabName === 'batch' && _optsDirty.batch) {
+    renderBatchOpts();
+    renderModifiedOpts('batch-modified-opts', 'batch-opt:');
+    _optsDirty.batch = false;
+  }
+}
 
   function createOptRow(opt, prefix, isModifiedView = false) {
     const row = document.createElement('div');
@@ -522,6 +567,8 @@ function getBatchExtraArgs() {
           pinBtn.innerHTML = pinOffIcon;
           pinBtn.title = 'Unpin from More Options';
         }
+        // Mark dirty so the next tab switch re-renders the modified opts panel.
+        markOptsDirty(prefix);
         renderModifiedOpts('yd-modified-opts', 'ytdlp-opt:');
         renderModifiedOpts('batch-modified-opts', 'batch-opt:');
       };
@@ -536,6 +583,7 @@ function getBatchExtraArgs() {
     const onChange = (val) => {
       if (val === null) localStorage.removeItem(prefix + opt.key);
       else localStorage.setItem(prefix + opt.key, val);
+      markOptsDirty(prefix);
       if (isModifiedView) updateAllOpts();
     };
 
@@ -920,6 +968,11 @@ function appendLog(logEl, text, cls) {
   }
 
   logEl._pendingLines.push({ text, cls, count: 1, isProgress });
+  // Cap background buffer to prevent unbounded memory growth during long runs.
+  // Keeps the most recent 10,000 lines if the buffer overflows.
+  if (logEl._pendingLines.length > 15000) {
+    logEl._pendingLines = logEl._pendingLines.slice(-10000);
+  }
   if (!logEl._rafPending) triggerRaf(logEl);
 }
 
@@ -968,6 +1021,12 @@ function flushPendingLogsSync(logEl) {
 }
 
 function triggerRaf(logEl) {
+    // Don't schedule any DOM work for hidden tabs. Lines stay in _pendingLines
+    // and are flushed in a single pass when the user switches to this tab.
+    if (!logEl.closest('.tab-panel')?.classList.contains('active')) {
+        logEl._hasUnflushed = true;
+        return;
+    }
     logEl._rafPending = true;
     setTimeout(() => {
       requestAnimationFrame(() => {
@@ -979,22 +1038,28 @@ function triggerRaf(logEl) {
             const target = scrollEl.scrollHeight - scrollEl.clientHeight;
             if (Math.abs(scrollEl.scrollTop - target) > 1) {
               scrollEl.scrollTo({ top: target, behavior: 'auto' });
+              logEl._lastScrollTop = target;  // Bug 2: keep direction-detection in sync
             }
           }
+          logEl._updateScrollBtn?.();  // Bug 4: button must update even when no new lines
           return;
         }
 
         if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
           const scrollEl = logEl._scrollEl || logEl;
           scrollEl.scrollTop = scrollEl.scrollHeight;
+          logEl._lastScrollTop = scrollEl.scrollTop;  // Bug 2: keep direction-detection in sync
         }
         logEl._updateScrollBtn?.();
       });
     }, 0);
 }
 function clearLog(logEl) {
-  if (logEl._scrollBtnHandler) {
-    (logEl._scrollEl || logEl).removeEventListener('scroll', logEl._scrollBtnHandler);
+  if (logEl._scrollListener) {
+    // Bug 3: remove the actual wrapper reference, not _scrollBtnHandler
+    (logEl._scrollEl || logEl).removeEventListener('scroll', logEl._scrollListener);
+    logEl._scrollListener = null;
+    logEl._hasScrollListener = false;
     logEl._scrollBtnHandler = null;
     logEl._scrollEl = null;
   }
@@ -1004,8 +1069,10 @@ function clearLog(logEl) {
   logEl._lineCount = 0;
   logEl._hasError = false;
   logEl._autoFollow = true;
+  logEl._lastScrollTop = 0;  // Bug 2: reset so direction detection starts clean
   logEl._pendingLines = []; logEl._lastRenderedLine = null;  // discard any buffered lines not yet flushed
   logEl._rafPending = false;
+  logEl._hasUnflushed = false;
   logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
 }
 
@@ -1013,6 +1080,8 @@ function markBodyStart(logEl) {
   const m = document.createElement('div');
   m.className = 'log-body-start';
   logEl.appendChild(m);
+  // Mark this element so the tab-switch handler can find and flush it.
+  logEl.setAttribute('data-log-el', '1');
 
   // .content is the actual scrollable container; terminal-body just grows to fit
   const scrollEl = logEl.closest('.content');
@@ -1052,21 +1121,21 @@ function markBodyStart(logEl) {
   };
   logEl._updateScrollBtn = updateBtn;
 
-  // Button click: Γåæ = go to top + pause; Γåô = go to bottom + resume
+  // Button click: ↑ = go to top + pause; ↓ = go to bottom + resume
+  // Bug 1: act on _autoFollow (matches what the icon shows), not raw scroll position.
+  // Raw scroll position can lag behind auto-scroll, causing the wrong action to fire.
   btn.addEventListener('click', () => {
-    const target = scrollEl.scrollHeight - scrollEl.clientHeight;
-    const atBottom = scrollEl.scrollTop >= target - 60;
-    
-    if (atBottom) {
+    if (logEl._autoFollow) {
+      // Button shows ↑ → go to top, pause auto-follow
       logEl._autoFollow = false;
-      if (scrollEl.scrollTop > 0) {
-        scrollEl.scrollTo({ top: 0, behavior: 'auto' });
-      }
+      scrollEl.scrollTo({ top: 0, behavior: 'auto' });
+      logEl._lastScrollTop = 0;  // Bug 2: keep direction-detection in sync
     } else {
+      // Button shows ↓ → go to bottom, resume auto-follow
       logEl._autoFollow = true;
-      if (Math.abs(scrollEl.scrollTop - target) > 1) {
-        scrollEl.scrollTo({ top: target, behavior: 'auto' });
-      }
+      const target = scrollEl.scrollHeight - scrollEl.clientHeight;
+      scrollEl.scrollTo({ top: target, behavior: 'auto' });
+      logEl._lastScrollTop = target;  // Bug 2: keep direction-detection in sync
     }
     updateBtn();
   });
@@ -1086,13 +1155,13 @@ function markBodyStart(logEl) {
     updateBtn();
   };
 
-  if (!logEl._hasScrollListener) {
-    logEl._hasScrollListener = true;
-    scrollEl.addEventListener('scroll', () => {
-      if (!logEl.closest('.tab-panel')?.classList.contains('active')) return;
-      logEl._scrollBtnHandler();
-    });
-  }
+  // Bug 3: store the wrapper reference so clearLog can actually remove it.
+  // Previously an anonymous function was passed, making removeEventListener a no-op.
+  logEl._scrollListener = () => {
+    if (!logEl.closest('.tab-panel')?.classList.contains('active')) return;
+    logEl._scrollBtnHandler?.();
+  };
+  scrollEl.addEventListener('scroll', logEl._scrollListener);
 }
 
 function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
@@ -2111,7 +2180,10 @@ try {
   ];
 
   // Checkboxes on the tool tabs (not settings-page toggles) — save on change
-  const CHECK_IDS = ['batch-rest', 'm3-encode', 'gdl-meta'];
+  const CHECK_IDS = [
+    'batch-rest', 'm3-encode', 'gdl-meta',
+    'ls-use-cookies', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies'
+  ];
 
   TEXT_IDS.forEach(id => {
     const el = document.getElementById(id);
@@ -2134,7 +2206,14 @@ try {
     if (!el) return;
     const v = localStorage.getItem(fkey(id));
     // Default overrides for checkboxes that should be ON out of the box
-    const defaults = { 'batch-rest': true };
+    const defaults = {
+      'batch-rest': true,
+      'ls-use-cookies': true,
+      'yd-use-cookies': true,
+      'batch-use-cookies': true,
+      'm3-use-cookies': true,
+      'gdl-use-cookies': true
+    };
     el.checked = v !== null ? v === 'true' : (defaults[id] ?? false);
     el.dispatchEvent(new Event('change'));
     el.addEventListener('change', () => localStorage.setItem(fkey(id), el.checked));
@@ -2416,6 +2495,104 @@ if (concatPauseBtn) {
       window.api.resumeScript(concatPid);
       concatPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
       appendLog(concatLog, '▶ Process resumed.', 'warning');
+    }
+  });
+}
+
+// ── Video Encoder Logic ────────────────────────────────────────────────────────
+let encPid = null;
+const encRunBtn   = document.getElementById('enc-run');
+const encStopBtn  = document.getElementById('enc-stop');
+const encPauseBtn = document.getElementById('enc-pause');
+const encClearBtn = document.getElementById('enc-clear');
+const encLog      = document.getElementById('enc-log');
+const encProgressWrap  = document.getElementById('enc-progress-wrap');
+const encProgressBar   = document.getElementById('enc-progress-bar');
+const encProgressLabel = document.getElementById('enc-progress-label');
+
+if (encClearBtn) encClearBtn.addEventListener('click', () => {
+  clearLog(encLog);
+  encProgressWrap.classList.add('hidden');
+});
+
+if (encRunBtn) {
+  encRunBtn.addEventListener('click', async () => {
+    const list = document.getElementById('enc-file-list');
+    const items = list.querySelectorAll('.sortable-item');
+    const files = Array.from(items).map(item => item.dataset.path);
+    const outputDir = document.getElementById('enc-output-dir').value.trim();
+    const mode = document.getElementById('enc-mode').value;
+    const vcodec = document.getElementById('enc-vcodec').value;
+    const acodec = document.getElementById('enc-acodec').value;
+
+    if (files.length === 0) {
+      alert('Please select at least one video file to encode.');
+      return;
+    }
+
+    clearLog(encLog);
+    markBodyStart(encLog);
+    encProgressWrap.classList.remove('hidden');
+    encProgressBar.style.width = '0%';
+    encProgressLabel.textContent = '0%';
+    appendLog(encLog, `> Encoding ${files.length} videos...`, 'input');
+
+    encRunBtn.disabled = true;
+    encStopBtn.classList.remove('hidden');
+    encPauseBtn.classList.remove('hidden');
+    encPauseBtn.classList.remove('paused');
+    encPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
+    incRunning('Video Encoder');
+
+    window.api.runEncoder({ files, outputDir, mode, vcodec, acodec });
+  });
+}
+
+window.api.onEncoderOutput((data) => {
+  if (data.type === 'pid') { encPid = data.pid; return; }
+  handleOutput(encLog, data, () => {
+    encPid = null;
+    encRunBtn.disabled = false;
+    encStopBtn.classList.add('hidden');
+    encPauseBtn.classList.add('hidden');
+    decRunning('Video Encoder');
+  });
+
+  // Extract progress from ffmpeg stdout (if formatted correctly by the python script)
+  if (data.type === 'stdout' && data.text) {
+    const lines = data.text.split('\\n');
+    for (const line of lines) {
+      const match = line.match(/\\[download\\]\\s+(\\d+(?:\\.\\d+)?)%/);
+      if (match) {
+        const pct = match[1];
+        encProgressBar.style.width = `${pct}%`;
+        encProgressLabel.textContent = `${pct}%`;
+      }
+    }
+  }
+});
+
+if (encStopBtn) {
+  encStopBtn.addEventListener('click', () => {
+    if (encPid) {
+      window.api.stopScript(encPid);
+      appendLog(encLog, '⚠ Stopping script...', 'warning');
+    }
+  });
+}
+
+if (encPauseBtn) {
+  encPauseBtn.addEventListener('click', () => {
+    if (!encPid) return;
+    const isPaused = encPauseBtn.classList.toggle('paused');
+    if (isPaused) {
+      window.api.pauseScript(encPid);
+      encPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume';
+      appendLog(encLog, '⏸ Process paused.', 'warning');
+    } else {
+      window.api.resumeScript(encPid);
+      encPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
+      appendLog(encLog, '▶ Process resumed.', 'warning');
     }
   });
 }

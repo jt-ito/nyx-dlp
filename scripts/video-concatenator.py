@@ -170,8 +170,8 @@ def main():
     output = output.with_name(clean_name)
     print(f"Output target: {output}")
 
-    ffmpeg = find_or_exit("ffmpeg")
-    ffprobe = find_or_exit("ffprobe")
+    ffmpeg = ensure_ffmpeg.get_ffmpeg_path()
+    ffprobe = ensure_ffmpeg.get_ffprobe_path()
     use_nvenc = has_nvenc(ffmpeg)
 
     metas, durations = [], []

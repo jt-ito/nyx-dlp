@@ -5,6 +5,11 @@ import subprocess
 import atexit
 import signal
 from pathlib import Path
+try:
+    import ensure_ffmpeg
+    ensure_ffmpeg.run()
+except Exception:
+    pass
 
 def _ensure(pip_pkg, import_name=None):
     try:
@@ -393,6 +398,9 @@ def download_with_aria(url, folder_name, fmt='bestvideo+bestaudio/best', retries
             },
         ],
     }
+    
+    ydl_opts.setdefault('ffmpeg_location', ensure_ffmpeg.get_ffmpeg_path())
+    
     if _extractor_args:
         ydl_opts['extractor_args'] = _extractor_args
     if cookies_path and os.path.isfile(cookies_path):
@@ -469,6 +477,9 @@ def download_with_ffmpeg(url, folder_name, fmt='bestvideo+bestaudio/best', retri
             {'key': 'FFmpegMetadata'},
         ],
     }
+    
+    ydl_opts.setdefault('ffmpeg_location', ensure_ffmpeg.get_ffmpeg_path())
+    
     if _extractor_args:
         ydl_opts['extractor_args'] = _extractor_args
     if cookies_path and os.path.isfile(cookies_path):

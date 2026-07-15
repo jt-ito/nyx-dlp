@@ -79,8 +79,8 @@ def split_video(input_file, num_parts, custom_output_dir=None, force_ext=None):
         print(f"error: File not found: {safe_path}", file=sys.stderr)
         sys.exit(1)
         
-    ffmpeg_cmd = find_or_exit("ffmpeg")
-    ffprobe_cmd = find_or_exit("ffprobe")
+    ffmpeg_cmd = ensure_ffmpeg.get_ffmpeg_path()
+    ffprobe_cmd = ensure_ffmpeg.get_ffprobe_path()
 
     try:
         print(f"Probing {safe_path.name}...")

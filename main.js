@@ -403,6 +403,25 @@ ipcMain.on('run-concatenator', (event, { files, output, forceEncode, outputDir, 
   });
 });
 
+// ── Tool 8: Video Encoder ───────────────────────────────────────────────────────────
+// video-encoder.py: --mode [sequential|parallel] --vcodec [codec] --acodec [codec] file1 file2 ...
+ipcMain.on('run-encoder', (event, { files, outputDir, mode, vcodec, acodec, installFfmpeg }) => {
+  const scriptPath = path.join(scriptsDir, 'video-encoder.py');
+  const targetDir = outputDir || path.dirname(files[0]);
+
+  const args = [];
+  if (mode) args.push('--mode', mode);
+  if (vcodec) args.push('--vcodec', vcodec);
+  if (acodec) args.push('--acodec', acodec);
+  args.push(...files);
+
+  runScript(event, 'encoder-output', scriptPath, {
+    cwd: targetDir,
+    args: args,
+    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
+  });
+});
+
 // ── Remote Server ────────────────────────────────────────────────────────────
 const remoteServer = require('./server.js');
 

@@ -52,7 +52,7 @@ def download_and_convert_m3u8(url, choice_lower, codec='h264_nvenc', bitrate='6M
 
     if choice_lower != "n":
         # Single-pass: encode directly from the URL
-        encode_command = ["ffmpeg", "-y"]
+        encode_command = [ensure_ffmpeg.get_ffmpeg_path(), "-y"]
         if use_cuda:
             encode_command += ["-hwaccel", "cuda"]
         encode_command += [
@@ -82,7 +82,7 @@ def download_and_convert_m3u8(url, choice_lower, codec='h264_nvenc', bitrate='6M
         subprocess.run(encode_command, check=True)
     else:
         # Download and copy the stream without re-encoding
-        copy_command = ["ffmpeg", "-y"]
+        copy_command = [ensure_ffmpeg.get_ffmpeg_path(), "-y"]
         if use_cuda:
             copy_command += ["-hwaccel", "cuda", "-c:v", "h264_cuvid"]
         copy_command += [

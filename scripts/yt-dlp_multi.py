@@ -464,6 +464,7 @@ def download_with_aria(url: str, fmt: str = 'bv+ba/bestvideo+bestaudio/best', re
             "--write-auto-sub", "--sub-langs", "en",
             "--embed-subs", "--add-metadata",
             "--downloader", "ffmpeg",
+            "--ffmpeg-location", ensure_ffmpeg.get_ffmpeg_path(),
             "--remote-components", "ejs:github",
         ]
         if "twitch.tv" in url:

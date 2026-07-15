@@ -118,6 +118,20 @@
           <span>Video Concatenator</span>
           <div class="nav-indicator"></div>
         </button>
+        <button class="nav-item" data-tab="encoder">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <line x1="2" y1="7" x2="7" y2="7"></line>
+            <line x1="2" y1="17" x2="7" y2="17"></line>
+            <line x1="17" y1="17" x2="22" y2="17"></line>
+            <line x1="17" y1="7" x2="22" y2="7"></line>
+          </svg>
+          <span>Video Encoder</span>
+          <div class="nav-indicator"></div>
+        </button>
         <div class="nav-divider"></div>
         <button class="nav-item" data-tab="settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -1103,6 +1117,122 @@
         </div>
       </section>
 
+      <!-- ── Tab: Video Encoder ──────────────────────────────────── -->
+      <section class="tab-panel" id="tab-encoder">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Video Encoder</h1>
+            <p class="panel-subtitle">Batch encode videos or extract audio with FFmpeg</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width" style="margin-bottom: -6px;">
+            <label class="form-label">Input Videos</label>
+            <div class="input-folder-group" style="align-items: flex-start;">
+              <div class="sortable-list-container">
+                <div id="enc-file-list" class="sortable-list">
+                  <div class="sortable-empty-state">No files selected. Use the browse button to add videos.</div>
+                </div>
+              </div>
+              <button class="btn-folder" data-target="enc-file-list" data-pick-type="multi-file" style="margin-top: 0;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <p class="form-help" style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-muted);">Select one or more videos to encode.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="enc-output-dir" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="enc-output-dir">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Processing Mode</label>
+            <select id="enc-mode" class="form-select">
+              <option value="sequential">Sequential (One by one)</option>
+              <option value="parallel">Parallel (Multiple at once)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Video Codec</label>
+            <select id="enc-vcodec" class="form-select">
+              <option value="copy">Copy (No re-encode)</option>
+              <option value="h264_nvenc">H.264 NVENC (NVIDIA GPU)</option>
+              <option value="hevc_nvenc">H.265 NVENC (NVIDIA GPU)</option>
+              <option value="libx264">H.264 (CPU)</option>
+              <option value="libx265">H.265 (CPU)</option>
+              <option value="none">Remove Video</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Audio Codec</label>
+            <select id="enc-acodec" class="form-select">
+              <option value="copy">Copy (No re-encode)</option>
+              <option value="aac">AAC</option>
+              <option value="mp3">MP3</option>
+              <option value="opus">Opus</option>
+              <option value="none">Remove Audio</option>
+            </select>
+          </div>
+
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="enc-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Start Encoding
+          </button>
+          <button class="btn btn-pause hidden" id="enc-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="enc-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="enc-clear">Clear Log</button>
+        </div>
+
+        <div class="progress-bar-container hidden" id="enc-progress-wrap">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="enc-progress-bar"></div>
+          </div>
+          <span class="progress-label" id="enc-progress-label">0%</span>
+        </div>
+
+        <div class="terminal-wrap">
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="enc-log"></div>
+        </div>
+        </div>
+      </section>
+
       <!-- ── Tab: Settings ─────────────────────────────────── -->
       <section class="tab-panel" id="tab-settings">
         <div class="panel-header">
@@ -1183,6 +1313,16 @@
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" data-setting="show-tool-concatenator" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Video Encoder</div>
+                <div class="toggle-desc">Show the Video Encoder tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-encoder" checked />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
