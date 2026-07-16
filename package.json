@@ -1,60 +1,60 @@
 {
-  "name": "nyx-dlp",
-  "version": "2.0.6",
-  "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "build:portable": "node build.js portable",
-    "build:installer": "node build.js installer",
-    "install-deps": "npm install"
-  },
-  "devDependencies": {
-    "@electron/packager": "^20.0.0",
-    "electron": "^28.3.3",
-    "electron-builder": "^24.13.3"
-  },
-  "build": {
-    "appId": "com.nyxdlp.app",
-    "productName": "nyx-dlp",
-    "icon": "assets/icon.ico",
-    "directories": {
-      "output": "dist/installer"
-    },
-    "extraResources": [
-      {
-        "from": "scripts",
-        "to": "scripts"
-      }
-    ],
-    "files": [
-      "**/*",
-      "!dist/**/*",
-      "!scripts/**/*",
-      "!*.md",
-      "!**/__pycache__/**/*"
-    ],
-    "asar": true,
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": true,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "include": "build/installer.nsh"
-    }
-  },
-  "dependencies": {
-    "ws": "^8.21.0"
-  }
+    "name":  "nyx-dlp",
+    "version":  "2.0.7",
+    "description":  "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
+    "main":  "main.js",
+    "scripts":  {
+                    "start":  "electron .",
+                    "build:portable":  "node build.js portable",
+                    "build:installer":  "node build.js installer",
+                    "install-deps":  "npm install"
+                },
+    "devDependencies":  {
+                            "@electron/packager":  "^20.0.0",
+                            "electron":  "^28.3.3",
+                            "electron-builder":  "^24.13.3"
+                        },
+    "build":  {
+                  "appId":  "com.nyxdlp.app",
+                  "productName":  "nyx-dlp",
+                  "icon":  "assets/icon.ico",
+                  "directories":  {
+                                      "output":  "dist/installer"
+                                  },
+                  "extraResources":  [
+                                         {
+                                             "from":  "scripts",
+                                             "to":  "scripts"
+                                         }
+                                     ],
+                  "files":  [
+                                "**/*",
+                                "!dist/**/*",
+                                "!scripts/**/*",
+                                "!*.md",
+                                "!**/__pycache__/**/*"
+                            ],
+                  "asar":  true,
+                  "win":  {
+                              "target":  [
+                                             {
+                                                 "target":  "nsis",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ]
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "perMachine":  true,
+                               "allowToChangeInstallationDirectory":  true,
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true,
+                               "include":  "build/installer.nsh"
+                           }
+              },
+    "dependencies":  {
+                         "ws":  "^8.21.0"
+                     }
 }
