@@ -922,7 +922,12 @@ function appendLog(logEl, text, cls) {
     if (!logEl._hasLiveEventIgnore) logEl._hasError = true;
   }
   
-  if (getSetting('console-timestamps') && !/^\s*\[download\]\s+(?:\d+(?:\.\d+)?%|Destination:)/i.test(text) && !/frame=\s*\d+/i.test(text)) {
+  const destMatch = text.match(/^\s*\[(?:download|ExtractAudio)\]\s+Destination:\s+(.+)/i);
+  const progressMatch = text.match(/^\s*\[(?:download|ExtractAudio)\]\s+(?:\[(.*?)\]\s+)?(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B))/i);
+  const isDlProgress = !!progressMatch;
+  const isFfmpegProgress = /^\s*frame=\s*\d+/i.test(text) || /^\s*size=\s*\d+/i.test(text);
+
+  if (getSetting('console-timestamps') && !isDlProgress && !isFfmpegProgress && !destMatch) {
     const now = new Date();
     const timeStr = '[' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0') + '] ';
     text = timeStr + text;
@@ -942,7 +947,6 @@ function appendLog(logEl, text, cls) {
   if (!logEl._liveProgressMap) logEl._liveProgressMap = new Map();
 
   // 1. Check for Destination line (Start of a new file)
-  const destMatch = text.match(/^\s*\[(?:download|ExtractAudio)\]\s+Destination:\s+(.+)/i);
   if (destMatch) {
       const defaultTask = logEl._liveProgressMap.get('default');
       if (defaultTask && !defaultTask.completed) {
@@ -955,14 +959,16 @@ function appendLog(logEl, text, cls) {
   }
 
   // 2. Check for Progress line (yt-dlp or ffmpeg)
-  const progressMatch = text.match(/^\s*\[(?:download|ExtractAudio)\]\s+(?:\[(.*?)\]\s+)?(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B))/i);
-  const isDlProgress = !!progressMatch;
-  const isFfmpegProgress = /^\s*frame=\s*\d+/i.test(text) || /^\s*size=\s*\d+/i.test(text);
-  
   if (isDlProgress || isFfmpegProgress) {
       let taskId = 'default';
-      if (isDlProgress && progressMatch[1]) {
-          taskId = progressMatch[1];
+      if (isDlProgress) {
+          if (progressMatch[1]) {
+              taskId = progressMatch[1];
+          } else if (text.includes('(frag ')) {
+              taskId = 'fragments';
+          } else if (text.includes('(livestream)') || text.includes('of ~')) {
+              taskId = 'summary';
+          }
       } else if (isFfmpegProgress) {
           taskId = 'ffmpeg';
       }
