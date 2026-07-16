@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('api', {
   runLivestream: (opts) => ipcRenderer.send('run-livestream', opts),
   runYtdlp:      (opts) => ipcRenderer.send('run-ytdlp', opts),
   runBatch:      (opts) => ipcRenderer.send('run-batch', opts),
+  setBatchRest:  (opts) => ipcRenderer.send('set-batch-rest', opts),
   appendBatchQueue: (opts) => ipcRenderer.send('append-batch-queue', opts),
   runM3u8:       (opts) => ipcRenderer.send('run-m3u8', opts),
   runGalleryDl:  (opts) => ipcRenderer.send('run-gallery-dl', opts),

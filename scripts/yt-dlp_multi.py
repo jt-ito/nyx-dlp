@@ -563,8 +563,11 @@ def main() -> None:
     """Main entry point for the script."""
     global _pending_urls, _base_dir_recovery, _current_url
     fmt = sys.argv[1] if len(sys.argv) > 1 else 'bv+ba/bestvideo+bestaudio/best'
-    rest_arg = sys.argv[2] if len(sys.argv) > 2 else None
-    rest = (rest_arg.lower().startswith('y')) if rest_arg is not None else ask_for_rest()
+    try:
+        current_rest = float(sys.argv[2]) if len(sys.argv) > 2 else 0.0
+    except ValueError:
+        rest_arg = sys.argv[2] if len(sys.argv) > 2 else ''
+        current_rest = 5.0 if rest_arg.lower().startswith('y') else 0.0
     urls = get_urls()
     if not urls:
         logger.info("No URLs provided. Exiting.")
@@ -657,10 +660,36 @@ def main() -> None:
             except Exception as e:
                 logger.error(f"Failed to read queue additions: {safe_text(e)}")
 
-        # Existing rest logic
-        if rest and idx < total:
-            logger.info(" Pausing 5 minutes before next download…")
-            time.sleep(5 * 60)
+        # Dynamic rest logic
+        rest_state_file = os.path.join(os.getcwd(), 'rest_state.txt')
+        if os.path.exists(rest_state_file):
+            try:
+                with open(rest_state_file, 'r', encoding='utf-8') as f:
+                    val = f.read().strip()
+                    current_rest = float(val) if val else 0.0
+            except Exception:
+                pass
+                
+        if current_rest > 0 and idx < total:
+            logger.info(f" Pausing {current_rest} minute(s) before next download...")
+            start_rest_time = time.time()
+            while True:
+                if os.path.exists(rest_state_file):
+                    try:
+                        with open(rest_state_file, 'r', encoding='utf-8') as f:
+                            val = f.read().strip()
+                            current_rest = float(val) if val else 0.0
+                    except Exception:
+                        pass
+                
+                if current_rest <= 0:
+                    logger.info(" Rest disabled, continuing immediately.")
+                    break
+                    
+                elapsed = time.time() - start_rest_time
+                if elapsed >= (current_rest * 60):
+                    break
+                time.sleep(1)
         # New: Pause for 30 minutes after every 30 downloads if more than 30
         if total > 30 and idx % 30 == 0 and idx < total:
             logger.info(f" Batch limit reached ({idx} downloads). Pausing 30 minutes before continuing…")

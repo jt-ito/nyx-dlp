@@ -1121,3 +1121,48 @@ html, body {
     text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
 }
+
+.context-menu-item { padding: 8px 16px; cursor: pointer; color: var(--text); }
+.context-menu-item:hover { background: var(--surface-hover); }
+
+
+.auto-collapse-details { margin: 2px 0; }
+.auto-collapse-details summary { cursor: pointer; color: #888; font-size: 0.9em; user-select: none; margin-left: 12px; }
+.auto-collapse-details .details-content { padding-left: 10px; border-left: 2px solid var(--border); margin-left: 16px; margin-top: 4px; }
+
+.context-menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.context-menu-item:hover {
+  background: var(--surface-hover);
+}
+.auto-collapse-details {
+  margin: 2px 0;
+}
+.auto-collapse-details summary {
+  cursor: pointer;
+  color: #888;
+  font-size: 0.9em;
+  user-select: none;
+}
+.auto-collapse-details summary:hover {
+  color: #aaa;
+}
+.auto-collapse-details .details-content {
+  margin-left: 12px;
+  border-left: 1px solid #444;
+  padding-left: 8px;
+}
+
+/* Log Animation */
+@keyframes logFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.terminal-body div[class*="line-"] {
+  animation: logFadeIn 0.3s ease-in-out forwards;
+}

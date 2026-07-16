@@ -333,7 +333,7 @@ ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, ex
   const scriptPath = path.join(scriptsDir, 'yt-dlp_multi.py');
   runScript(event, 'batch-output', scriptPath, {
     cwd: outputDir,
-    args: [format, rest ? 'y' : 'n', cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', bgutilUrl || 'local', useDeno || 'n'],
+    args: [format, String(rest), cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', bgutilUrl || 'local', useDeno || 'n'],
     stdinLines: [...urls, ''],
     env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
   });
@@ -345,6 +345,15 @@ ipcMain.on('append-batch-queue', (event, { outputDir, newUrls }) => {
     fs.appendFileSync(queueFile, newUrls.join('\n') + '\n', 'utf-8');
   } catch (err) {
     console.error('Failed to append to batch queue:', err);
+  }
+});
+
+ipcMain.on('set-batch-rest', (event, { outputDir, val }) => {
+  try {
+    const stateFile = path.join(outputDir, 'rest_state.txt');
+    fs.writeFileSync(stateFile, String(val), 'utf-8');
+  } catch (err) {
+    console.error('Failed to write batch rest state:', err);
   }
 });
 

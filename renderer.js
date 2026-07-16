@@ -1,6 +1,6 @@
-/* ── renderer.js ─ UI logic ─────────────────────────────────── */
+/* â”€â”€ renderer.js â”€ UI logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-// ── Remote API Mocking (for browsers) ─────────────────────────
+// â”€â”€ Remote API Mocking (for browsers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (typeof window.api === 'undefined') {
   console.log("No window.api found. Initializing remote WebSocket connection...");
   
@@ -80,7 +80,7 @@ if (typeof window.api === 'undefined') {
 
 const html = document.documentElement;
 
-// ── Theme ──────────────────────────────────────────────────────
+// â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const themeToggle = document.getElementById('themeToggle');
 const iconMoon = themeToggle.querySelector('.icon-moon');
 const iconSun  = themeToggle.querySelector('.icon-sun');
@@ -101,12 +101,12 @@ themeToggle.addEventListener('click', () =>
   setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
 );
 
-// ── Window Controls ────────────────────────────────────────────
+// â”€â”€ Window Controls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('btnMin').addEventListener('click',   () => window.api.minimize());
 document.getElementById('btnMax').addEventListener('click',   () => window.api.maximize());
 document.getElementById('btnClose').addEventListener('click', () => window.api.close());
 
-// ── Tab Navigation ─────────────────────────────────────────────
+// â”€â”€ Tab Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
     // Only process nav items that actually have data-tab to avoid issues with other nav buttons
@@ -118,7 +118,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
       if (contentEl) activePanel._savedScroll = contentEl.scrollTop;
     }
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    // Deactivate all panels — skip _updateScrollBtn on hidden panels to avoid
+    // Deactivate all panels â€” skip _updateScrollBtn on hidden panels to avoid
     // forced layout reads (scrollHeight/clientHeight) on terminals that aren't visible.
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
@@ -151,7 +151,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
   });
 });
 
-// ── Form-level advanced section toggles ─────────────────────────
+// â”€â”€ Form-level advanced section toggles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('click', e => {
   const btn = e.target.closest('.form-adv-toggle');
   if (!btn) return;
@@ -161,7 +161,7 @@ document.addEventListener('click', e => {
   btn.setAttribute('aria-expanded', String(open));
 });
 
-// ── Folder Picker ──────────────────────────────────────────────
+// â”€â”€ Folder Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.querySelectorAll('.btn-folder').forEach(btn => {
   btn.addEventListener('click', async () => {
     const type = btn.dataset.pickType;
@@ -195,7 +195,7 @@ document.querySelectorAll('.btn-folder').forEach(btn => {
   });
 });
 
-// ── Sortable List Logic ────────────────────────────────────────
+// â”€â”€ Sortable List Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 window.addSortableItem = function(container, filepath) {
   const emptyState = container.querySelector('.sortable-empty-state');
   if (emptyState) emptyState.remove();
@@ -274,7 +274,7 @@ window.addSortableItem = function(container, filepath) {
   container.appendChild(item);
 };
 
-// ── Status Bar ─────────────────────────────────────────────────
+// â”€â”€ Status Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const statusDot  = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const statusWrap = document.getElementById('statusWrap');
@@ -301,7 +301,7 @@ function decRunning(tool) {
   if (runningCount === 0) setStatus('done', 'Done');
 }
 
-// ── Settings ───────────────────────────────────────────────────
+// â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SETTINGS_MAP = {
   'show-tool-livestream': { navTab: 'livestream' },
   'show-tool-ytdlp':      { navTab: 'ytdlp' },
@@ -353,7 +353,7 @@ const SETTINGS_DEFAULTS = {
   'remote-access':        false,
 };
 
-// ── yt-dlp Advanced Options definition ────────────────────────
+// â”€â”€ yt-dlp Advanced Options definition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const YTDLP_OPTS = [
   // File & Naming
   { cat:'File & Naming', key:'output',              flag:'--output',               hasVal:true,  label:'Output template',          desc:'Filename template, e.g. %(title)s.%(ext)s',               type:'text',   placeholder:'%(title)s.%(ext)s' },
@@ -377,7 +377,7 @@ const YTDLP_OPTS = [
   // Post-Processing
   { cat:'Post-Processing', key:'extract-audio',         flag:'--extract-audio',          hasVal:false, label:'Extract audio only',           desc:'Convert video to audio-only output (requires ffmpeg)',      type:'toggle' },
   { cat:'Post-Processing', key:'audio-format',          flag:'--audio-format',           hasVal:true,  label:'Audio format',                 desc:'Format for extracted audio',                               type:'select', opts:[{value:'',label:'Default'},{value:'best',label:'Best'},{value:'aac',label:'AAC'},{value:'alac',label:'ALAC'},{value:'flac',label:'FLAC'},{value:'m4a',label:'M4A'},{value:'mp3',label:'MP3'},{value:'opus',label:'Opus'},{value:'wav',label:'WAV'}] },
-  { cat:'Post-Processing', key:'audio-quality',         flag:'--audio-quality',          hasVal:true,  label:'Audio quality',                desc:'0 (best) – 10 (worst) for VBR, or bitrate e.g. 128K',      type:'text',   placeholder:'5' },
+  { cat:'Post-Processing', key:'audio-quality',         flag:'--audio-quality',          hasVal:true,  label:'Audio quality',                desc:'0 (best) â€“ 10 (worst) for VBR, or bitrate e.g. 128K',      type:'text',   placeholder:'5' },
   { cat:'Post-Processing', key:'remux-video',           flag:'--remux-video',            hasVal:true,  label:'Remux to container',           desc:'Remux without re-encoding (e.g. mp4, mkv, webm)',           type:'select', opts:[{value:'',label:'Disabled'},{value:'mp4',label:'MP4'},{value:'mkv',label:'MKV'},{value:'webm',label:'WebM'},{value:'mov',label:'MOV'},{value:'avi',label:'AVI'},{value:'flv',label:'FLV'}] },
   { cat:'Post-Processing', key:'recode-video',          flag:'--recode-video',           hasVal:true,  label:'Re-encode video',              desc:'Re-encode into another format, e.g. mp4 or mkv',            type:'text',   placeholder:'mp4' },
   { cat:'Post-Processing', key:'keep-video',            flag:'--keep-video',             hasVal:false, label:'Keep intermediate video',      desc:'Keep original video file after post-processing',            type:'toggle' },
@@ -393,17 +393,17 @@ const YTDLP_OPTS = [
   { cat:'Post-Processing', key:'xattrs',                flag:'--xattrs',                 hasVal:false, label:'Write xattrs',                 desc:'Write metadata to file extended attributes (Dublin Core)',   type:'toggle' },
   // Authentication
   { cat:'Authentication', key:'username',               flag:'--username',               hasVal:true,  label:'Username',                     desc:'Login with this account username/ID',                                  type:'text',   placeholder:'myusername' },
-  { cat:'Authentication', key:'password',               flag:'--password',               hasVal:true,  label:'Password',                     desc:'Account password',                                                     type:'password', placeholder:'••••••••' },
+  { cat:'Authentication', key:'password',               flag:'--password',               hasVal:true,  label:'Password',                     desc:'Account password',                                                     type:'password', placeholder:'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' },
   { cat:'Authentication', key:'twofactor',              flag:'--twofactor',              hasVal:true,  label:'Two-factor code',               desc:'Two-factor authentication code',                                       type:'text',   placeholder:'123456' },
   { cat:'Authentication', key:'netrc',                  flag:'--netrc',                  hasVal:false, label:'Use .netrc',                   desc:'Use .netrc authentication data',                                       type:'toggle' },
   { cat:'Authentication', key:'netrc-location',         flag:'--netrc-location',         hasVal:true,  label:'.netrc location',               desc:'Path to .netrc file or its containing directory',                      type:'text',   placeholder:'~/.netrc' },
-  { cat:'Authentication', key:'video-password',         flag:'--video-password',         hasVal:true,  label:'Video password',               desc:'Video-specific password for password-protected content',                type:'password', placeholder:'••••••••' },
+  { cat:'Authentication', key:'video-password',         flag:'--video-password',         hasVal:true,  label:'Video password',               desc:'Video-specific password for password-protected content',                type:'password', placeholder:'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' },
   { cat:'Authentication', key:'ap-mso',                 flag:'--ap-mso',                 hasVal:true,  label:'Adobe Pass MSO',               desc:'Adobe Pass TV provider identifier (use --ap-list-mso for list)',        type:'text',   placeholder:'comcast' },
   { cat:'Authentication', key:'ap-username',            flag:'--ap-username',            hasVal:true,  label:'Adobe Pass username',          desc:'Multiple-system operator account login',                               type:'text',   placeholder:'myusername' },
-  { cat:'Authentication', key:'ap-password',            flag:'--ap-password',            hasVal:true,  label:'Adobe Pass password',          desc:'Multiple-system operator account password',                            type:'password', placeholder:'••••••••' },
+  { cat:'Authentication', key:'ap-password',            flag:'--ap-password',            hasVal:true,  label:'Adobe Pass password',          desc:'Multiple-system operator account password',                            type:'password', placeholder:'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' },
   { cat:'Authentication', key:'client-certificate',     flag:'--client-certificate',     hasVal:true,  label:'Client certificate (PEM)',     desc:'Path to client certificate file in PEM format',                        type:'text',   placeholder:'C:\certs\client.pem' },
   { cat:'Authentication', key:'client-certificate-key', flag:'--client-certificate-key', hasVal:true, label:'Certificate private key',      desc:'Path to private key file for client certificate',                      type:'text',   placeholder:'C:\certs\client.key' },
-  { cat:'Authentication', key:'client-certificate-password', flag:'--client-certificate-password', hasVal:true, label:'Certificate key password', desc:'Password for client certificate private key if encrypted',            type:'password', placeholder:'••••••••' },
+  { cat:'Authentication', key:'client-certificate-password', flag:'--client-certificate-password', hasVal:true, label:'Certificate key password', desc:'Password for client certificate private key if encrypted',            type:'password', placeholder:'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢' },
   // Network & Proxy
   { cat:'Network & Proxy', key:'proxy',                 flag:'--proxy',                 hasVal:true,  label:'Proxy URL',                   desc:'HTTP/HTTPS/SOCKS4/SOCKS5 proxy URL, e.g. socks5://127.0.0.1:1080',   type:'text',   placeholder:'socks5://127.0.0.1:1080' },
   { cat:'Network & Proxy', key:'source-address',        flag:'--source-address',        hasVal:true,  label:'Source IP address',           desc:'Bind outgoing connections to this local IP address',                   type:'text',   placeholder:'0.0.0.0' },
@@ -436,7 +436,7 @@ const YTDLP_OPTS = [
   { cat:'Playlist & Selection', key:'dateafter',        flag:'--dateafter',             hasVal:true,  label:'Date after (YYYYMMDD)',        desc:'Only download videos uploaded on or after this date',                 type:'text',   placeholder:'20240101' },
   { cat:'Playlist & Selection', key:'datebefore',       flag:'--datebefore',            hasVal:true,  label:'Date before (YYYYMMDD)',       desc:'Only download videos uploaded on or before this date',                type:'text',   placeholder:'20241231' },
   { cat:'Playlist & Selection', key:'download-sections', flag:'--download-sections',   hasVal:true,  label:'Download sections',           desc:'Download only specific time range or chapter, e.g. *10:15-20:30',     type:'text',   placeholder:'*10:15-20:30' },
-  { cat:'Playlist & Selection', key:'flat-playlist',    flag:'--flat-playlist',         hasVal:false, label:'Flat playlist (list only)',    desc:'List playlist entries without downloading each video — useful for inspection', type:'toggle' },
+  { cat:'Playlist & Selection', key:'flat-playlist',    flag:'--flat-playlist',         hasVal:false, label:'Flat playlist (list only)',    desc:'List playlist entries without downloading each video â€” useful for inspection', type:'toggle' },
   // Thumbnails
   { cat:'Thumbnails', key:'write-thumbnail',        flag:'--write-thumbnail',           hasVal:false, label:'Write thumbnail',             desc:'Save the best available thumbnail image to disk',                     type:'toggle' },
   { cat:'Thumbnails', key:'write-all-thumbnails',   flag:'--write-all-thumbnails',      hasVal:false, label:'Write all thumbnails',        desc:'Save every available thumbnail resolution/format to disk',            type:'toggle' },
@@ -475,7 +475,7 @@ function getBatchExtraArgs() {
 }
 
 
-// ── Advanced-opts dirty flags ──────────────────────────────────
+// â”€â”€ Advanced-opts dirty flags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Opts are rebuilt from scratch on first render and whenever a value or pin
 // actually changes. On subsequent tab switches with no changes, the rebuild
 // is skipped entirely, eliminating the layout cost.
@@ -495,7 +495,7 @@ function markOptsDirty(prefix) {
     _optsDirty.batch = false;
   }
 
-// Targeted opt render — only rebuilds containers for the tab being shown.
+// Targeted opt render â€” only rebuilds containers for the tab being shown.
 // Tabs without dynamic opts (livestream, m3u8, gallery, splitter,
 // concatenator, encoder) cost nothing.
 function updateOptsForTab(tabName) {
@@ -853,7 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ── Protected-path guard ──────────────────────────────────────
+// â”€â”€ Protected-path guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /**
  * Returns a user-friendly error string if the path is a protected location
  * (drive root, Windows system directories, etc.), or null if safe.
@@ -890,13 +890,20 @@ function isProtectedPath(p) {
   return null; // safe
 }
 
-// ΓöÇΓöÇ Terminal helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-function classifyLine(text, streamType) {
+// Î“Ã¶Ã‡Î“Ã¶Ã‡ Terminal helpers Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
+function classifyLine(text, streamType, logEl) {
   const t = text.trimStart();
+  if (t.includes('This live event will begin in')) {
+    if (logEl) logEl._hasLiveEventIgnore = true;
+    return 'info';
+  }
   if (/^\[debug\]/i.test(t))                    return 'debug';
   if (/^warning:/i.test(t))                      return 'warning';
   if (/^error:/i.test(t))                        return 'error';
   if (/\berror\b.*:/i.test(t) && streamType === 'stderr') return 'error';
+  
+  if (logEl && logEl._hasLiveEventIgnore) return streamType; // Suppress tracebacks if ignored
+
   // Python traceback lines: '  File "...", line N, in ...' and '~~~~^^^' indicator lines
   if (/^\s+File ".*", line \d+/.test(text))      return 'error';
   if (/^\s*[~^]+\s*$/.test(text))                return 'error';
@@ -904,7 +911,7 @@ function classifyLine(text, streamType) {
   return streamType; // 'stdout' or 'stderr'
 }
 
-// ΓöÇΓöÇ Line buffer for batched DOM appends ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// â”€â”€ Line buffer for batched DOM appends â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Instead of one appendChild per line, we collect lines into a buffer and
 // flush them all at once via a DocumentFragment on the next RAF tick.
 // This dramatically reduces layout thrashing when hundreds of lines arrive
@@ -912,36 +919,88 @@ function classifyLine(text, streamType) {
 function appendLog(logEl, text, cls) {
   let t = text.trimStart();
   if (/^Traceback \(most recent call last\)/i.test(t) || /^\s+File ".*\.py"/.test(text)) {
-    logEl._hasError = true;
+    if (!logEl._hasLiveEventIgnore) logEl._hasError = true;
+  }
+  
+  if (getSetting('console-timestamps') && !/^\s*\[download\]\s+(?:\d+(?:\.\d+)?%|Destination:)/i.test(text) && !/frame=\s*\d+/i.test(text)) {
+    const now = new Date();
+    const timeStr = '[' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0') + '] ';
+    text = timeStr + text;
   }
   
   const lastCrIdx = text.lastIndexOf('\r');
   if (lastCrIdx !== -1) {
       text = text.substring(lastCrIdx + 1);
   }
+
+  // --- STATE MACHINE LOGIC ---
+  if (!logEl._pendingLines) logEl._pendingLines = [];
+  logEl._lastRenderedLine = null;
+
+  const isStatus = text.includes('⏸ Paused') || text.includes('▶ Resumed') || text.includes('✔ Process finished') || text.includes('✖ Process exited');
+
+  // 1. Check for Destination line (Start of a new file)
+  const destMatch = text.match(/^\s*\[(?:download|ExtractAudio)\]\s+Destination:\s+(.+)/i);
+  if (destMatch) {
+      // If we already have a live progress slot that wasn't finalized, force finalize it now
+      if (logEl._liveProgress) {
+          logEl._pendingLines.push({ text: '✔ Downloaded ' + logEl._liveProgress.dest + ' — (force finalized)', cls: 'success', count: 1 });
+          logEl._liveProgress = null;
+      }
+      // Open new live slot
+      logEl._liveProgress = { dest: destMatch[1], text: text, cls: cls + ' line-progress' };
+      // Push the destination line to permanent history as an event
+      logEl._pendingLines.push({ text, cls, count: 1 });
+      if (!logEl._rafPending) triggerRaf(logEl);
+      return;
+  }
+
+  // 2. Check for Progress line (yt-dlp or ffmpeg)
+  const isDlProgress = /^\s*\[download\]\s+(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B))/i.test(text);
+  const isFfmpegProgress = /^\s*frame=\s*\d+/i.test(text) || /^\s*size=\s*\d+/i.test(text);
   
-  if (!logEl._pendingLines) logEl._pendingLines = []; logEl._lastRenderedLine = null;
-  
+  if (isDlProgress || isFfmpegProgress) {
+      if (!logEl._liveProgress) {
+          // If a progress line comes but we don't have a live slot, create a generic one
+          logEl._liveProgress = { dest: 'Unknown Task', text: text, cls: cls + ' line-progress' };
+      } else {
+          // Update the live slot in place
+          logEl._liveProgress.text = text;
+          logEl._liveProgress.cls = cls + ' line-progress';
+      }
+      
+      // 3. Completion Detection
+      if (text.includes('100%') || text.includes('100.0%')) {
+          // Convert live slot into a permanent summary event line
+          logEl._pendingLines.push({ text: '✔ Completed ' + logEl._liveProgress.dest + ' — 100%', cls: 'success', count: 1 });
+          logEl._liveProgress = null;
+      }
+      
+      if (!logEl._rafPending) triggerRaf(logEl);
+      return;
+  }
+
+  // Deduplication for normal lines
   const pLen = logEl._pendingLines.length;
   if (pLen > 0) {
       const last = logEl._pendingLines[pLen - 1];
-      if (last.text === text && last.cls === cls && !last.isProgress && text.trim() !== '') {
+      if (last.text === text && last.cls === cls && text.trim() !== '') {
           last.count = (last.count || 1) + 1;
           if (!logEl._rafPending) triggerRaf(logEl);
           return;
       }
   } else if (logEl._lastRenderedLine) {
       const last = logEl._lastRenderedLine;
-      if (last.text === text && last.cls === cls && !last.isProgress && text.trim() !== '') {
+      if (last.text === text && last.cls === cls && text.trim() !== '') {
           last.count = (last.count || 1) + 1;
           if (last.badge) {
-              last.badge.textContent = ` (${last.count})`;
+              last.badge.textContent = ' (' + last.count + ')';
           } else {
               const badge = document.createElement('span');
               badge.className = 'log-badge';
               badge.style.color = '#888';
               badge.style.marginLeft = '8px';
-              badge.textContent = ` (${last.count})`;
+              badge.textContent = ' (' + last.count + ')';
               last.el.appendChild(badge);
               last.badge = badge;
           }
@@ -950,26 +1009,8 @@ function appendLog(logEl, text, cls) {
       }
   }
 
-  const isProgress = /^\s*\[download\]\s+\d+\.\d+%/.test(text) || /^\s*\[download\]\s+Destination:/.test(text);
-    if (isProgress) cls += ' line-progress';
-  
-  if (isProgress && pLen > 0) {
-      const last = logEl._pendingLines[pLen - 1];
-      if (last.isProgress) {
-          last.text = text;
-          if (!logEl._rafPending) triggerRaf(logEl);
-          return;
-      }
-  } else if (isProgress && logEl._lastRenderedLine && logEl._lastRenderedLine.isProgress) {
-      logEl._lastRenderedLine.text = text;
-      logEl._lastRenderedLine.el.textContent = text;
-      if (!logEl._rafPending) triggerRaf(logEl);
-      return;
-  }
-
-  logEl._pendingLines.push({ text, cls, count: 1, isProgress });
-  // Cap background buffer to prevent unbounded memory growth during long runs.
-  // Keeps the most recent 10,000 lines if the buffer overflows.
+  // Normal event line
+  logEl._pendingLines.push({ text, cls, count: 1, isStatus });
   if (logEl._pendingLines.length > 15000) {
     logEl._pendingLines = logEl._pendingLines.slice(-10000);
   }
@@ -978,30 +1019,87 @@ function appendLog(logEl, text, cls) {
 
 function flushPendingLogsSync(logEl) {
     const lines = logEl._pendingLines || [];
-    if (lines.length === 0) return 0;
-    logEl._pendingLines = []; logEl._lastRenderedLine = null;
-
-    logEl._lineCount = (logEl._lineCount || 0) + lines.length;
     const frag = document.createDocumentFragment();
+    const statusFrag = document.createDocumentFragment();
+    
+    if (lines.length > 0) {
+        logEl._pendingLines = []; logEl._lastRenderedLine = null;
+        logEl._lineCount = (logEl._lineCount || 0) + lines.length;
 
-    for (const item of lines) {
-      const div = document.createElement('div');
-      div.className = 'line-' + item.cls;
-      div.textContent = item.text;
-      if (item.count > 1) {
-          const badge = document.createElement('span');
-          badge.className = 'log-badge';
-          badge.style.color = '#888';
-          badge.style.marginLeft = '8px';
-          badge.textContent = ` (${item.count})`;
-          div.appendChild(badge);
-          item.badge = badge;
-      }
-      item.el = div;
-      frag.appendChild(div);
-      logEl._lastRenderedLine = item;
+        for (const item of lines) {
+          const div = document.createElement('div');
+          div.className = 'line-' + item.cls;
+          div.textContent = item.text;
+          if (item.count > 1) {
+              const badge = document.createElement('span');
+              badge.className = 'log-badge';
+              badge.style.color = '#888';
+              badge.style.marginLeft = '8px';
+              badge.textContent = ' (' + item.count + ')';
+              div.appendChild(badge);
+              item.badge = badge;
+          }
+          item.el = div;
+          
+          if (item.isStatus) {
+              statusFrag.appendChild(div);
+              logEl._currentAutoCollapse = null;
+          } else {
+              const isAutoCollapse = (item.cls === 'debug' || item.cls === 'info') && !item.text.includes('▶ Starting') && !item.text.includes('? Starting');
+              if (isAutoCollapse) {
+                  if (!logEl._currentAutoCollapse) {
+                      logEl._currentAutoCollapse = document.createElement('details');
+                      logEl._currentAutoCollapse.className = 'auto-collapse-details';
+                      const summary = document.createElement('summary');
+                      summary.textContent = '... (info/debug logs)';
+                      logEl._currentAutoCollapse.appendChild(summary);
+                      const content = document.createElement('div');
+                      content.className = 'details-content';
+                      logEl._currentAutoCollapse.appendChild(content);
+                      frag.appendChild(logEl._currentAutoCollapse);
+                  }
+                  logEl._currentAutoCollapse.querySelector('.details-content').appendChild(div);
+              } else {
+                  logEl._currentAutoCollapse = null;
+                  frag.appendChild(div);
+              }
+              logEl._lastRenderedLine = item;
+          }
+        }
     }
-    logEl.appendChild(frag);
+    
+    if (!logEl._progressContainer) {
+        logEl._progressContainer = document.createElement('div');
+        logEl._progressContainer.className = 'progress-container';
+        logEl.appendChild(logEl._progressContainer);
+    }
+    if (!logEl._statusContainer) {
+        logEl._statusContainer = document.createElement('div');
+        logEl._statusContainer.className = 'status-container';
+        logEl.appendChild(logEl._statusContainer);
+    }
+
+    if (frag.childNodes.length > 0) {
+        logEl.insertBefore(frag, logEl._progressContainer);
+    }
+    if (statusFrag.childNodes.length > 0) {
+        logEl._statusContainer.appendChild(statusFrag);
+    }
+    
+    // Render the single live progress slot
+    if (logEl._liveProgress) {
+        if (!logEl._liveProgressEl) {
+            logEl._liveProgressEl = document.createElement('div');
+            logEl._progressContainer.appendChild(logEl._liveProgressEl);
+        }
+        logEl._liveProgressEl.className = logEl._liveProgress.cls;
+        logEl._liveProgressEl.textContent = logEl._liveProgress.text;
+    } else {
+        if (logEl._liveProgressEl) {
+            logEl._progressContainer.innerHTML = '';
+            logEl._liveProgressEl = null;
+        }
+    }
 
     if (logEl._lineCount > 5000) {
       let removed = 0;
@@ -1093,7 +1191,7 @@ function markBodyStart(logEl) {
   // Clean up any previous button for this logEl
   logEl._scrollBtn?.remove();
 
-  // Single toggle button: Γåæ scroll-to-top (pauses auto-scroll) / Γåô scroll-to-bottom (resumes)
+  // Single toggle button: Î“Ã¥Ã¦ scroll-to-top (pauses auto-scroll) / Î“Ã¥Ã´ scroll-to-bottom (resumes)
   const btn = document.createElement('div');
   btn.className = 'log-scroll-btn';
   btn.style.display = 'none';
@@ -1121,17 +1219,17 @@ function markBodyStart(logEl) {
   };
   logEl._updateScrollBtn = updateBtn;
 
-  // Button click: ↑ = go to top + pause; ↓ = go to bottom + resume
+  // Button click: â†‘ = go to top + pause; â†“ = go to bottom + resume
   // Bug 1: act on _autoFollow (matches what the icon shows), not raw scroll position.
   // Raw scroll position can lag behind auto-scroll, causing the wrong action to fire.
   btn.addEventListener('click', () => {
     if (logEl._autoFollow) {
-      // Button shows ↑ → go to top, pause auto-follow
+      // Button shows â†‘ â†’ go to top, pause auto-follow
       logEl._autoFollow = false;
       scrollEl.scrollTo({ top: 0, behavior: 'auto' });
       logEl._lastScrollTop = 0;  // Bug 2: keep direction-detection in sync
     } else {
-      // Button shows ↓ → go to bottom, resume auto-follow
+      // Button shows â†“ â†’ go to bottom, resume auto-follow
       logEl._autoFollow = true;
       const target = scrollEl.scrollHeight - scrollEl.clientHeight;
       scrollEl.scrollTo({ top: target, behavior: 'auto' });
@@ -1256,7 +1354,7 @@ function handleOutput(logEl, data, onExit) {
       });
       break;
     }
-    case 'error':   appendLog(logEl, '⚠ ' + data.text, 'error'); break;
+    case 'error':   appendLog(logEl, 'âš  ' + data.text, 'error'); break;
     case 'exit': {
       const failed = data.code !== 0 || !!logEl._hasError;
       logEl._hasError = false;
@@ -1265,7 +1363,7 @@ function handleOutput(logEl, data, onExit) {
       if (!failed) {
         if (bs && bs.failed > 0) {
           const ok = bs.total - bs.failed;
-          appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
+          appendLog(logEl, `âš  ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
         } else {
           appendLog(logEl, '✔ Process finished successfully.', 'success');
         }
@@ -1275,7 +1373,7 @@ function handleOutput(logEl, data, onExit) {
         if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
         else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
         const ok = bs.total - bs.failed;
-        appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
+        appendLog(logEl, `âš  ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
         collapseLogBody(logEl, false, 2, true);
       } else {
         if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
@@ -1288,9 +1386,9 @@ function handleOutput(logEl, data, onExit) {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-// ── 1. Live Stream Archiver ────────────────────────────────────
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 1. Live Stream Archiver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 (function () {
   const log      = document.getElementById('ls-log');
   const runBtn   = document.getElementById('ls-run');
@@ -1327,7 +1425,7 @@ function handleOutput(logEl, data, onExit) {
       window.api.pauseScript(currentPid);
       pauseBtn.innerHTML = resumeIconHTML;
       pauseBtn.classList.add('paused');
-      appendLog(log, '⏸ Paused.', 'info');
+      appendLog(log, 'â¸ Paused.', 'info');
     } else {
       isPaused = false;
       window.api.resumeScript(currentPid);
@@ -1344,10 +1442,10 @@ function handleOutput(logEl, data, onExit) {
     const cookiesPath = (document.getElementById('ls-use-cookies').checked ? document.getElementById('ls-cookies').value.trim() : '');
     const container   = document.getElementById('ls-container').value;
 
-    if (!url)       { appendLog(log, '⚠ Please enter a stream URL.', 'error'); return; }
-    if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    if (!url)       { appendLog(log, 'âš  Please enter a stream URL.', 'error'); return; }
+    if (!outputDir) { appendLog(log, 'âš  Please choose an output directory.', 'error'); return; }
     const lsPathErr = isProtectedPath(outputDir);
-    if (lsPathErr)  { appendLog(log, '⚠ ' + lsPathErr, 'error'); return; }
+    if (lsPathErr)  { appendLog(log, 'âš  ' + lsPathErr, 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting live archiver...`, 'info');
@@ -1392,9 +1490,9 @@ function handleOutput(logEl, data, onExit) {
   });
 })();
 
-// ══════════════════════════════════════════════════════════════
-// ── 2. yt-dlp Single ──────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 2. yt-dlp Single â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 (function () {
   const log      = document.getElementById('yd-log');
   const runBtn   = document.getElementById('yd-run');
@@ -1431,7 +1529,7 @@ function handleOutput(logEl, data, onExit) {
       window.api.pauseScript(currentPid);
       pauseBtn.innerHTML = resumeIconHTML;
       pauseBtn.classList.add('paused');
-      appendLog(log, '⏸ Paused.', 'info');
+      appendLog(log, 'â¸ Paused.', 'info');
     } else {
       isPaused = false;
       window.api.resumeScript(currentPid);
@@ -1450,17 +1548,17 @@ function handleOutput(logEl, data, onExit) {
     const startTime   = document.getElementById('yd-start').value.trim();
     const endTime     = document.getElementById('yd-end').value.trim();
 
-    if (!url)       { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
-    if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    if (!url)       { appendLog(log, 'âš  Please enter a URL.', 'error'); return; }
+    if (!outputDir) { appendLog(log, 'âš  Please choose an output directory.', 'error'); return; }
     const ydPathErr = isProtectedPath(outputDir);
-    if (ydPathErr)  { appendLog(log, '⚠ ' + ydPathErr, 'error'); return; }
+    if (ydPathErr)  { appendLog(log, 'âš  ' + ydPathErr, 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting yt-dlp download...`, 'info');
     appendLog(log, `  URL:    ${url}`, 'cmd');
     appendLog(log, `  Format: ${format}`, 'cmd');
     appendLog(log, `  Container: ${container}`, 'cmd');
-    if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
+    if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} â†’ ${endTime || 'end'}`, 'cmd');
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
@@ -1498,9 +1596,9 @@ function handleOutput(logEl, data, onExit) {
   });
 })();
 
-// ══════════════════════════════════════════════════════════════
-// ── 3. Batch Downloader ───────────────────────────────────────
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 3. Batch Downloader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 (function () {
   const log        = document.getElementById('batch-log');
   const runBtn     = document.getElementById('batch-run');
@@ -1523,7 +1621,7 @@ function handleOutput(logEl, data, onExit) {
     const tick = () => {
       const m = Math.floor(rem / 60);
       const s = rem % 60;
-      progressLbl.textContent = `Resting… ${m}:${s.toString().padStart(2, '0')} (${lastProgressText})`;
+      progressLbl.textContent = `Restingâ€¦ ${m}:${s.toString().padStart(2, '0')} (${lastProgressText})`;
       if (rem <= 0) clearInterval(countdownTimer);
       rem--;
     };
@@ -1591,7 +1689,7 @@ function handleOutput(logEl, data, onExit) {
       window.api.pauseScript(currentPid);
       pauseBtn.innerHTML = resumeIconHTML;
       pauseBtn.classList.add('paused');
-      appendLog(log, '⏸ Paused.', 'info');
+      appendLog(log, 'â¸ Paused.', 'info');
     } else {
       isPaused = false;
       window.api.resumeScript(currentPid);
@@ -1609,10 +1707,10 @@ function handleOutput(logEl, data, onExit) {
     const cookiesPath = (document.getElementById('batch-use-cookies').checked ? document.getElementById('batch-cookies').value.trim() : '');
     const container   = document.getElementById('batch-container').value;
 
-    if (urls.length === 0) { appendLog(log, '⚠ Please enter at least one valid URL.', 'error'); return; }
-    if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    if (urls.length === 0) { appendLog(log, 'âš  Please enter at least one valid URL.', 'error'); return; }
+    if (!outputDir)        { appendLog(log, 'âš  Please choose an output directory.', 'error'); return; }
     const batchPathErr = isProtectedPath(outputDir);
-    if (batchPathErr)      { appendLog(log, '⚠ ' + batchPathErr, 'error'); return; }
+    if (batchPathErr)      { appendLog(log, 'âš  ' + batchPathErr, 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting batch download of ${urls.length} URL(s)...`, 'info');
@@ -1648,7 +1746,7 @@ function handleOutput(logEl, data, onExit) {
       // Update progress bar and track partial failures
       if (data.type === 'stderr' || data.type === 'stdout') {
         data.text.split('\n').forEach(line => {
-          // [X/Y] Processing: — fires at the START of each URL; captures total and
+          // [X/Y] Processing: â€” fires at the START of each URL; captures total and
           // resets completedCount to X-1 (how many were done before this one started).
           const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
           if (m) {
@@ -1657,7 +1755,7 @@ function handleOutput(logEl, data, onExit) {
             batchTotal     = parseInt(m[2], 10);
             lastProgressText = `${completedCount} / ${batchTotal}`;
           }
-          // Increment on successful finish OR per-URL failure — fires at the END of
+          // Increment on successful finish OR per-URL failure â€” fires at the END of
           // each URL so the counter updates without waiting for the next one to start.
           if (/Finished processing media from|Download failed:/i.test(line)) {
             completedCount = Math.min(completedCount + 1, batchTotal);
@@ -1706,9 +1804,9 @@ function handleOutput(logEl, data, onExit) {
   });
 })();
 
-// ══════════════════════════════════════════════════════════════
-// ── 4. M3U8 Downloader ────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 4. M3U8 Downloader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 (function () {
   const log        = document.getElementById('m3-log');
   const runBtn     = document.getElementById('m3-run');
@@ -1738,7 +1836,7 @@ function handleOutput(logEl, data, onExit) {
     encodeChk.dispatchEvent(new Event('change'));
   });
 
-  // ── URL mode toggle ──────────────────────────────────────────
+  // â”€â”€ URL mode toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const m3Textarea = document.getElementById('m3-urls');
   function updateM3Count() {
     const n = getM3Urls().length;
@@ -1798,7 +1896,7 @@ function handleOutput(logEl, data, onExit) {
       window.api.pauseScript(currentPid);
       pauseBtn.innerHTML = resumeIconHTML;
       pauseBtn.classList.add('paused');
-      appendLog(log, '⏸ Paused.', 'info');
+      appendLog(log, 'â¸ Paused.', 'info');
     } else {
       isPaused = false;
       window.api.resumeScript(currentPid);
@@ -1821,10 +1919,10 @@ function handleOutput(logEl, data, onExit) {
     const audioBitrate = document.getElementById('m3-audio-bitrate').value;
     const cookiesPath  = (document.getElementById('m3-use-cookies').checked ? document.getElementById('m3-cookies').value.trim() : '');
 
-    if (urls.length === 0) { appendLog(log, '⚠ Please enter an M3U8 URL.', 'error'); return; }
-    if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    if (urls.length === 0) { appendLog(log, 'âš  Please enter an M3U8 URL.', 'error'); return; }
+    if (!outputDir)        { appendLog(log, 'âš  Please choose an output directory.', 'error'); return; }
     const m3PathErr = isProtectedPath(outputDir);
-    if (m3PathErr)         { appendLog(log, '⚠ ' + m3PathErr, 'error'); return; }
+    if (m3PathErr)         { appendLog(log, 'âš  ' + m3PathErr, 'error'); return; }
 
     clearLog(log);
     if (urls.length > 1) {
@@ -1888,9 +1986,9 @@ function handleOutput(logEl, data, onExit) {
   });
 })()
 
-// ══════════════════════════════════════════════════════════════
-// ── 5. gallery-dl ─────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 5. gallery-dl â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 try {
 (function () {
   const log        = document.getElementById('gdl-log');
@@ -1905,7 +2003,7 @@ try {
   // Verify elements exist before touching them
   if (!log || !runBtn || !pauseBtn || !stopBtn) {
     console.error('[gallery-dl IIFE] Missing element:', { log, runBtn, pauseBtn, stopBtn });
-    throw new Error('Missing DOM element — see console');
+    throw new Error('Missing DOM element â€” see console');
   }
   let currentPid   = null;
   let isPaused     = false;
@@ -1915,7 +2013,7 @@ try {
   const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
-  // ── URL mode toggle ──────────────────────────────────────────
+  // â”€â”€ URL mode toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const gdlTextarea = document.getElementById('gdl-urls');
   function checkAddQueue() {
     if (!currentPid || !gdlMultiMode) return;
@@ -1993,7 +2091,7 @@ try {
       window.api.pauseScript(currentPid);
       pauseBtn.innerHTML = resumeIconHTML;
       pauseBtn.classList.add('paused');
-      appendLog(log, '⏸ Paused.', 'info');
+      appendLog(log, 'â¸ Paused.', 'info');
     } else {
       isPaused = false;
       window.api.resumeScript(currentPid);
@@ -2012,10 +2110,10 @@ try {
     const cookiesPath = (document.getElementById('gdl-use-cookies').checked ? document.getElementById('gdl-cookies').value.trim() : '');
     const installGdl  = getSetting('dep-install-gdl') ? 'y' : 'n';
 
-    if (urls.length === 0) { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
-    if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
+    if (urls.length === 0) { appendLog(log, 'âš  Please enter a URL.', 'error'); return; }
+    if (!outputDir)        { appendLog(log, 'âš  Please choose an output directory.', 'error'); return; }
     const gdlPathErr = isProtectedPath(outputDir);
-    if (gdlPathErr)        { appendLog(log, '⚠ ' + gdlPathErr, 'error'); return; }
+    if (gdlPathErr)        { appendLog(log, 'âš  ' + gdlPathErr, 'error'); return; }
 
     clearLog(log);
     if (urls.length > 1) {
@@ -2079,18 +2177,18 @@ try {
   if (errBox) {
     const d = document.createElement('div');
     d.className = 'line-error';
-    d.textContent = '⚠ gallery-dl init error: ' + e.message;
+    d.textContent = 'âš  gallery-dl init error: ' + e.message;
     errBox.appendChild(d);
   } else {
     alert('gallery-dl init error: ' + e.message);
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ── 6. Settings ──────────────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 6. Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 (function () {
-  // Apply all settings on init (skip disk-space — its module isn't ready yet)
+  // Apply all settings on init (skip disk-space â€” its module isn't ready yet)
   Object.keys(SETTINGS_MAP).forEach(key => {
     if (key === 'show-disk-space') return;
     applySetting(key, getSetting(key));
@@ -2154,13 +2252,13 @@ try {
   }
 })();
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ── 7. Form field persistence ─────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 7. Form field persistence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 (function () {
   function fkey(id) { return 'field:' + id; }
 
-  // Text inputs — save on every keystroke
+  // Text inputs â€” save on every keystroke
   const TEXT_IDS = [
     'ls-output',    'ls-cookies',
     'yd-output',    'yd-cookies',
@@ -2170,7 +2268,7 @@ try {
     'dep-bgutil-url',
   ];
 
-  // Select dropdowns — save on change
+  // Select dropdowns â€” save on change
   const SELECT_IDS = [
     'ls-quality',
     'yd-format',
@@ -2179,7 +2277,7 @@ try {
     'gdl-filetypes',
   ];
 
-  // Checkboxes on the tool tabs (not settings-page toggles) — save on change
+  // Checkboxes on the tool tabs (not settings-page toggles) â€” save on change
   const CHECK_IDS = [
     'batch-rest', 'm3-encode', 'gdl-meta',
     'ls-use-cookies', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies'
@@ -2227,11 +2325,11 @@ try {
   }
 })();
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ── 8. Disk Space ─────────────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ 8. Disk Space â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const diskSpace = (() => {
-  // Map tab name → output directory input id
+  // Map tab name â†’ output directory input id
   const TAB_OUTPUT_IDS = {
     ytdlp:      'yd-output',
     livestream: 'ls-output',
@@ -2253,7 +2351,7 @@ const diskSpace = (() => {
   let pollTimer = null;
   let activeTab = document.querySelector('.nav-item.active')?.dataset.tab || 'ytdlp';
 
-  // ── Helpers ──────────────────────────────────────────────────
+  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function getDrivePath() {
     const mode = localStorage.getItem('disk-space-mode') || 'auto';
     if (mode === 'static') {
@@ -2277,7 +2375,7 @@ const diskSpace = (() => {
   async function refresh() {
     if (!enabled) return;
     const drivePath = getDrivePath();
-    if (!drivePath) { pill.textContent = '— free'; pill.className = 'disk-space-pill'; return; }
+    if (!drivePath) { pill.textContent = 'â€” free'; pill.className = 'disk-space-pill'; return; }
     const result = await window.api.getDiskSpace(drivePath);
     if (!result) { pill.textContent = '? free'; pill.className = 'disk-space-pill'; return; }
     const freeGB = result.free / (1024 ** 3);
@@ -2288,7 +2386,7 @@ const diskSpace = (() => {
   function startPolling() { refresh(); pollTimer = setInterval(refresh, 10000); }
   function stopPolling()  { clearInterval(pollTimer); pollTimer = null; }
 
-  // ── Public: enable / disable ─────────────────────────────────
+  // â”€â”€ Public: enable / disable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function setEnabled(val) {
     enabled = val;
     pill.style.display    = val ? '' : 'none';
@@ -2297,7 +2395,7 @@ const diskSpace = (() => {
     else     stopPolling();
   }
 
-  // ── Settings UI wiring ────────────────────────────────────────
+  // â”€â”€ Settings UI wiring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function syncStaticGroup() {
     const isStatic = radioStatic.checked;
     staticGrp.style.display = isStatic ? '' : 'none';
@@ -2335,7 +2433,7 @@ const diskSpace = (() => {
 applySetting('show-disk-space', getSetting('show-disk-space'));
 applySetting('minimize-to-tray', getSetting('minimize-to-tray'));
 
-// ── Video Splitter Logic ───────────────────────────────────────────────────────
+// â”€â”€ Video Splitter Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const spSelect = document.getElementById('sp-parts-select');
 const spCustomGrp = document.getElementById('sp-parts-custom-group');
 if (spSelect && spCustomGrp) {
@@ -2403,7 +2501,7 @@ if (spStopBtn) {
   spStopBtn.addEventListener('click', () => {
     if (spPid) {
       window.api.stopScript(spPid);
-      appendLog(spLog, '⚠ Stopping script...', 'warning');
+      appendLog(spLog, 'âš  Stopping script...', 'warning');
     }
   });
 }
@@ -2415,7 +2513,7 @@ if (spPauseBtn) {
     if (isPaused) {
       window.api.pauseScript(spPid);
       spPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume';
-      appendLog(spLog, '⏸ Process paused.', 'warning');
+      appendLog(spLog, 'â¸ Process paused.', 'warning');
     } else {
       window.api.resumeScript(spPid);
       spPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
@@ -2424,7 +2522,7 @@ if (spPauseBtn) {
   });
 }
 
-// ── Video Concatenator Logic ───────────────────────────────────────────────────
+// â”€â”€ Video Concatenator Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let concatPid = null;
 const concatRunBtn   = document.getElementById('concat-run');
 const concatStopBtn  = document.getElementById('concat-stop');
@@ -2478,7 +2576,7 @@ if (concatStopBtn) {
   concatStopBtn.addEventListener('click', () => {
     if (concatPid) {
       window.api.stopScript(concatPid);
-      appendLog(concatLog, '⚠ Stopping script...', 'warning');
+      appendLog(concatLog, 'âš  Stopping script...', 'warning');
     }
   });
 }
@@ -2490,7 +2588,7 @@ if (concatPauseBtn) {
     if (isPaused) {
       window.api.pauseScript(concatPid);
       concatPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume';
-      appendLog(concatLog, '⏸ Process paused.', 'warning');
+      appendLog(concatLog, 'â¸ Process paused.', 'warning');
     } else {
       window.api.resumeScript(concatPid);
       concatPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
@@ -2499,7 +2597,7 @@ if (concatPauseBtn) {
   });
 }
 
-// ── Video Encoder Logic ────────────────────────────────────────────────────────
+// â”€â”€ Video Encoder Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let encPid = null;
 const encRunBtn   = document.getElementById('enc-run');
 const encStopBtn  = document.getElementById('enc-stop');
@@ -2576,7 +2674,7 @@ if (encStopBtn) {
   encStopBtn.addEventListener('click', () => {
     if (encPid) {
       window.api.stopScript(encPid);
-      appendLog(encLog, '⚠ Stopping script...', 'warning');
+      appendLog(encLog, 'âš  Stopping script...', 'warning');
     }
   });
 }
@@ -2588,7 +2686,7 @@ if (encPauseBtn) {
     if (isPaused) {
       window.api.pauseScript(encPid);
       encPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume';
-      appendLog(encLog, '⏸ Process paused.', 'warning');
+      appendLog(encLog, 'â¸ Process paused.', 'warning');
     } else {
       window.api.resumeScript(encPid);
       encPauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> Pause';
@@ -2600,7 +2698,7 @@ if (encPauseBtn) {
 // Initialize options on startup
 updateAllOpts();
 
-// ── UI State Synchronization ────────────────────────────────────
+// â”€â”€ UI State Synchronization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let isSyncingState = false;
 
 function broadcastState(el) {
@@ -2688,5 +2786,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.api.requestFullState) window.api.requestFullState();
       }, 500);
     }
+  }
+});
+// -- Batch Rest Context Menu ------------------------------
+document.addEventListener('contextmenu', e => {
+  const target = e.target;
+  if (target.classList.contains('line-info') && target.textContent.includes('Resting between downloads')) {
+    e.preventDefault();
+    const menu = document.getElementById('batch-rest-context-menu');
+    if (!menu) return;
+    menu.style.display = 'block';
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+  } else {
+    const menu = document.getElementById('batch-rest-context-menu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+
+document.addEventListener('click', e => {
+  const menu = document.getElementById('batch-rest-context-menu');
+  if (menu && menu.style.display === 'block') {
+    if (e.target.classList.contains('context-menu-item')) {
+      let val = e.target.getAttribute('data-val');
+      if (val === 'custom') {
+        const input = prompt('Enter rest time in seconds:');
+        if (input && !isNaN(input)) {
+          val = parseInt(input);
+        } else {
+          return;
+        }
+      } else {
+        val = parseInt(val) * 60; // minutes to seconds
+      }
+      if (window.api && window.api.setBatchRest) {
+        window.api.setBatchRest(val);
+      }
+    }
+    menu.style.display = 'none';
   }
 });
