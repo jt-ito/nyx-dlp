@@ -1201,8 +1201,17 @@ function clearLog(logEl) {
   logEl._pendingLines = []; logEl._lastRenderedLine = null;  // discard any buffered lines not yet flushed
   logEl._rafPending = false;
   logEl._hasUnflushed = false;
+  
+  // Bug 5: Reset dynamic containers and state maps that were detached by innerHTML = ''
+  logEl._progressContainer = null;
+  logEl._statusContainer = null;
+  logEl._liveProgressMap = null;
+  logEl._liveProgressEls = null;
+  logEl._currentAutoCollapse = null;
+
   logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
 }
+
 
 function markBodyStart(logEl) {
   const m = document.createElement('div');
@@ -2290,7 +2299,7 @@ try {
 
   // Text inputs â€” save on every keystroke
   const TEXT_IDS = [
-    'ls-output',    'ls-cookies',
+    'ls-output',    'ls-cookies', 'ls-concurrent',
     'yd-output',    'yd-cookies',
     'batch-output', 'batch-cookies',
     'm3-output',    'm3-cookies',
@@ -2298,19 +2307,19 @@ try {
     'dep-bgutil-url',
   ];
 
-  // Select dropdowns â€” save on change
+  // Select dropdowns — save on change
   const SELECT_IDS = [
-    'ls-quality',
+    'ls-quality', 'ls-client', 'ls-container',
     'yd-format',
     'batch-format', 'yd-client', 'batch-client',
     'm3-codec', 'm3-bitrate', 'm3-resolution', 'm3-fps', 'm3-audio-bitrate', 'm3-container',
     'gdl-filetypes',
   ];
 
-  // Checkboxes on the tool tabs (not settings-page toggles) â€” save on change
+  // Checkboxes on the tool tabs (not settings-page toggles) — save on change
   const CHECK_IDS = [
     'batch-rest', 'm3-encode', 'gdl-meta',
-    'ls-use-cookies', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies'
+    'ls-use-cookies', 'ls-from-start', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies'
   ];
 
   TEXT_IDS.forEach(id => {

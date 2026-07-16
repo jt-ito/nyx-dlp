@@ -161,15 +161,19 @@ except FileNotFoundError as e:
 def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
     """Download using yt-dlp with robust livestream configuration."""
     # Progress tracking
-    last_progress_time = [time.time()]
+    last_progress_time = {}
     
     def progress_hook(d: Dict[str, Any]):
         """Hook for download progress updates."""
         status = d.get('status')
+        info = d.get('info_dict', {})
+        # Use format_id (e.g. video/audio format) to separate progress bars
+        task_id = info.get('format_id') or 'summary'
         
         if status == 'downloading':
-            # Log progress every 30 seconds
-            if time.time() - last_progress_time[0] > 30:
+            now = time.time()
+            # Update frequently enough for smooth UI, but not every millisecond
+            if now - last_progress_time.get(task_id, 0) > 0.5:
                 downloaded = d.get('downloaded_bytes', 0)
                 total = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
                 speed = d.get('speed', 0)
@@ -179,13 +183,18 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
                 else:
                     speed_str = "N/A"
                 
+                # Output with [task_id] so renderer.js can track them independently
+                frag_index = d.get('fragment_index')
+                frag_count = d.get('fragment_count')
+                frag_str = f" (frag {frag_index}/{frag_count or '~'})" if frag_index else ""
+                
                 if total:
                     percent = (downloaded / total) * 100
-                    print(f"[download] {percent:.1f}% of ~{total / 1024 / 1024:.1f}MiB at {speed_str}")
+                    print(f"[download] [{task_id}] {percent:.1f}% of ~{total / 1024 / 1024:.1f}MiB at {speed_str}{frag_str}", flush=True)
                 else:
-                    print(f"[download] {downloaded / 1024 / 1024:.1f}MiB at {speed_str} (livestream)")
+                    print(f"[download] [{task_id}] {downloaded / 1024 / 1024:.1f}MiB at {speed_str}{frag_str} (livestream)", flush=True)
                 
-                last_progress_time[0] = time.time()
+                last_progress_time[task_id] = now
     
     # Configure yt-dlp options (optimized for stability)
     ydl_opts = {
@@ -215,7 +224,7 @@ def run_ytdlp(url, fmt='bestvideo*+bestaudio/best'):
         'retries': 30,
         # Livestream specific — retry every 30-60 s while waiting for stream to go live
         'wait_for_video': (30, 60),
-        'noprogress': False,
+        'noprogress': True,
         'no_color': True,
         'hls_prefer_native': True,
         'merge_output_format': container,
