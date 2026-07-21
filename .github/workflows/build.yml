@@ -32,9 +32,13 @@ jobs:
 
       - name: Build Installer
         run: npm run build:installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Portable (ZIP)
         run: npm run build:portable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v4
