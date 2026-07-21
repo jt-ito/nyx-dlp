@@ -56,6 +56,7 @@ new_code = '''function appendLog(logEl, text, cls) {
   
   if (isDlProgress || isFfmpegProgress) {
       if (!logEl._liveProgress) {
+          if (text.includes('100%') || text.includes('100.0%')) return;
           // If a progress line comes but we don't have a live slot, create a generic one
           logEl._liveProgress = { dest: 'Unknown Task', text: text, cls: cls + ' line-progress' };
       } else {
@@ -66,8 +67,13 @@ new_code = '''function appendLog(logEl, text, cls) {
       
       // 3. Completion Detection
       if (text.includes('100%') || text.includes('100.0%')) {
+          let cleanText = text.replace(/^\\s*\\[(?:download|ExtractAudio)\\]\\s+(?:\\[(.*?)\\]\\s+)?/, '').trim();
+          if (cleanText.startsWith('100%')) cleanText = cleanText.substring(4).trim();
+          if (cleanText.startsWith('100.0%')) cleanText = cleanText.substring(6).trim();
+          if (cleanText.startsWith('-')) cleanText = cleanText.substring(1).trim();
+          
           // Convert live slot into a permanent summary event line
-          logEl._pendingLines.push({ text: ✔ Completed  + logEl._liveProgress.dest +  — 100%, cls: 'success', count: 1 });
+          logEl._pendingLines.push({ text: '✔ Completed ' + logEl._liveProgress.dest + ' — 100% ' + cleanText, cls: 'success', count: 1 });
           logEl._liveProgress = null;
       }
       

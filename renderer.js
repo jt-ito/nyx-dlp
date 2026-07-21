@@ -975,6 +975,7 @@ function appendLog(logEl, text, cls) {
       
       let current = logEl._liveProgressMap.get(taskId);
       if (!current) {
+          if (text.includes('100%') || text.includes('100.0%')) return;
           current = { dest: taskId === 'default' ? 'Unknown Task' : taskId, text: text, cls: cls + ' line-progress' };
           logEl._liveProgressMap.set(taskId, current);
       } else {
@@ -985,7 +986,11 @@ function appendLog(logEl, text, cls) {
       // 3. Completion Detection
       if (text.includes('100%') || text.includes('100.0%')) {
           if (!current.completed) {
-              logEl._pendingLines.push({ text: '✔ Completed ' + current.dest + ' — 100%', cls: 'success', count: 1 });
+              let cleanText = text.replace(/^\s*\[(?:download|ExtractAudio)\]\s+(?:\[(.*?)\]\s+)?/, '').trim();
+              if (cleanText.startsWith('100%')) cleanText = cleanText.substring(4).trim();
+              if (cleanText.startsWith('100.0%')) cleanText = cleanText.substring(6).trim();
+              if (cleanText.startsWith('-')) cleanText = cleanText.substring(1).trim();
+              logEl._pendingLines.push({ text: '✔ Completed ' + current.dest + ' — 100% ' + cleanText, cls: 'success', count: 1 });
               current.completed = true;
               logEl._liveProgressMap.delete(taskId);
           }
@@ -1399,6 +1404,16 @@ function handleOutput(logEl, data, onExit) {
       logEl._hasError = false;
       const bs = logEl._batchStats;
       logEl._batchStats = null;
+      
+      const getExitMsg = (c) => {
+        if (c === null) return 'Process was manually stopped or interrupted';
+        if (c === 1) return 'General error (e.g., video unavailable, network issue, or partial failure)';
+        if (c === 2) return 'Invalid arguments or configuration error';
+        if (c === 130 || c === 3221225786) return 'Process was terminated or interrupted';
+        if (c === 137) return 'Process killed (e.g., out of memory)';
+        return `Unknown error (code ${c})`;
+      };
+
       if (!failed) {
         if (bs && bs.failed > 0) {
           const ok = bs.total - bs.failed;
@@ -1409,13 +1424,13 @@ function handleOutput(logEl, data, onExit) {
         collapseLogBody(logEl, false);
       } else if (bs && bs.failed > 0) {
         // Batch partial failure: clean summary + "View errors" button
-        if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+        if (data.code !== 0) appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
         else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
         const ok = bs.total - bs.failed;
         appendLog(logEl, `âš  ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
         collapseLogBody(logEl, false, 2, true);
       } else {
-        if (data.code !== 0) appendLog(logEl, `✖ Process exited with code ${data.code}`, 'error');
+        if (data.code !== 0) appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
         else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
         collapseLogBody(logEl, true);
       }
