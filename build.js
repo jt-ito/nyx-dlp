@@ -13,6 +13,7 @@ async function build() {
     console.log(`Building ${isPortable ? 'portable zip' : 'NSIS installer'} with electron-builder...`);
 
     const result = await builder.build({
+      publish: 'never',
       targets: Platform.WINDOWS.createTarget(isPortable ? 'zip' : 'nsis'),
       config: {
         afterPack: async (context) => {
