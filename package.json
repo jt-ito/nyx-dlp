@@ -7,6 +7,9 @@
                     "start":  "electron .",
                     "build:portable":  "node build.js portable",
                     "build:installer":  "node build.js installer",
+                    "build:mac":  "node build.js mac",
+                    "build:linux":  "node build.js linux",
+                    "build:linux-cli":  "node build.js linux-cli",
                     "install-deps":  "npm install"
                 },
     "devDependencies":  {
@@ -52,6 +55,31 @@
                                "createDesktopShortcut":  true,
                                "createStartMenuShortcut":  true,
                                "include":  "build/installer.nsh"
+                           },
+                  "mac":  {
+                               "target":  [
+                                              {
+                                                  "target":  "dmg",
+                                                  "arch":  [
+                                                               "x64",
+                                                               "arm64"
+                                                           ]
+                                              }
+                                          ],
+                               "icon":  "assets/icon.ico",
+                               "category":  "public.app-category.utilities"
+                           },
+                  "linux":  {
+                               "target":  [
+                                              {
+                                                  "target":  "AppImage",
+                                                  "arch":  [
+                                                               "x64"
+                                                           ]
+                                              }
+                                          ],
+                               "icon":  "assets/icon.ico",
+                               "category":  "Utility"
                            }
               },
     "dependencies":  {

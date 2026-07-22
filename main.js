@@ -41,7 +41,8 @@ ipcMain.on('set-minimize-to-tray', (e, val) => {
 
 function createTray() {
   if (tray) return;
-  tray = new Tray(path.join(__dirname, 'assets', 'icon.ico'));
+  const trayIcon = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+  tray = new Tray(path.join(__dirname, 'assets', trayIcon));
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show', click: () => { mainWindow.show(); mainWindow.focus(); } },
     { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
@@ -65,7 +66,7 @@ function createWindow() {
       sandbox: false,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, 'assets', 'icon.ico'),
+    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     backgroundColor: '#0f0f13'
   });
 
@@ -159,9 +160,15 @@ ipcMain.handle('get-disk-space', async (_e, drivePath) => {
 function isProtectedPath(p) {
   if (!p) return null;
   const norm = p.replace(/\\/g, '/');
+
+  // Windows: block drive roots and network share roots
   if (/^[A-Za-z]:\/?$/.test(p)) return `Drive root is not allowed: "${p}"`;
   if (/^\/\/[^/]+\/?$/.test(norm) || /^\\\\[^\\]+\\?$/.test(p)) return `Network share root is not allowed: "${p}"`;
-  const sysRoots = [
+
+  // Linux/macOS: block filesystem root
+  if (process.platform !== 'win32' && /^\/?$/.test(norm)) return `Filesystem root is not allowed: "${p}"`;
+
+  const winRoots = [
     /^[A-Za-z]:\/Windows(\/|$)/i,
     /^[A-Za-z]:\/Program Files( \(x86\))?(\/|$)/i,
     /^[A-Za-z]:\/ProgramData(\/|$)/i,
@@ -169,6 +176,15 @@ function isProtectedPath(p) {
     /^[A-Za-z]:\/Recovery(\/|$)/i,
     /^[A-Za-z]:\/\$Recycle\.Bin(\/|$)/i,
   ];
+  const unixRoots = [
+    /^\/(bin|sbin|usr|lib|lib64|etc|boot|dev|proc|sys|run)(\/|$)/i,
+    /^\/System(\/|$)/i,             // macOS
+    /^\/Library(\/|$)/i,            // macOS
+    /^\/Applications(\/|$)/i,       // macOS
+    /^\/private\/(etc|var)(\/|$)/i,  // macOS
+  ];
+
+  const sysRoots = process.platform === 'win32' ? winRoots : unixRoots;
   for (const re of sysRoots) if (re.test(norm)) return `System directory is not allowed: "${p}"`;
   return null;
 }
