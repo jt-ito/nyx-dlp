@@ -1757,7 +1757,11 @@ function handleOutput(logEl, data, onExit) {
     const urls        = getUrls();
     const outputDir   = document.getElementById('batch-output').value.trim();
     const format      = document.getElementById('batch-format').value;
-    const rest        = document.getElementById('batch-rest').checked;
+    let rest          = document.getElementById('batch-rest').checked;
+    const customRest  = document.getElementById('batch-rest').dataset.customVal;
+    if (rest && customRest !== undefined) {
+      rest = customRest;
+    }
     const cookiesPath = (document.getElementById('batch-use-cookies').checked ? document.getElementById('batch-cookies').value.trim() : '');
     const container   = document.getElementById('batch-container').value;
 
@@ -1770,7 +1774,7 @@ function handleOutput(logEl, data, onExit) {
     appendLog(log, `▶ Starting batch download of ${urls.length} URL(s)...`, 'info');
     appendLog(log, `  Format: ${format}`, 'cmd');
     appendLog(log, `  Container: ${container}`, 'cmd');
-    appendLog(log, `  Rest between downloads: ${rest ? 'Yes (~5 min)' : 'No'}`, 'cmd');
+    appendLog(log, `  Rest between downloads: ${rest === false ? 'No' : `Yes (~${customRest !== undefined ? customRest : 5} min)`}`, 'cmd');
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
@@ -2319,6 +2323,8 @@ try {
     'batch-output', 'batch-cookies',
     'm3-output',    'm3-cookies',
     'gdl-output',   'gdl-cookies',
+    'sp-output',
+    'concat-output-dir',
     'dep-bgutil-url',
   ];
 
@@ -2845,7 +2851,17 @@ document.addEventListener('DOMContentLoaded', () => {
 // -- Batch Rest Context Menu ------------------------------
 document.addEventListener('contextmenu', e => {
   const target = e.target;
-  if (target.classList.contains('line-info') && target.textContent.includes('Resting between downloads')) {
+  const targetLine = target.closest ? target.closest('.line-info, .line-cmd, #batch-rest-toggle') : null;
+  if (!targetLine) {
+    const menu = document.getElementById('batch-rest-context-menu');
+    if (menu) menu.style.display = 'none';
+    return;
+  }
+  
+  const isToggle = targetLine.id === 'batch-rest-toggle';
+  const isRestText = targetLine.textContent.includes('Rest between downloads') || (targetLine.textContent.includes('Pausing') && targetLine.textContent.includes('before next download'));
+  
+  if (isToggle || isRestText) {
     e.preventDefault();
     const menu = document.getElementById('batch-rest-context-menu');
     if (!menu) return;
@@ -2858,25 +2874,58 @@ document.addEventListener('contextmenu', e => {
   }
 });
 
+function applyRestValue(val) {
+  if (window.api && window.api.setBatchRest) {
+    document.getElementById('batch-rest').dataset.customVal = val;
+    const desc = document.querySelector('#batch-rest-toggle .toggle-desc');
+    if (desc) {
+       desc.textContent = `Pause ~${val} minute(s) between each download`;
+    }
+    const outputDir = document.getElementById('batch-output').value.trim();
+    if (outputDir) {
+       window.api.setBatchRest({ outputDir, val });
+    }
+  }
+}
+
 document.addEventListener('click', e => {
   const menu = document.getElementById('batch-rest-context-menu');
   if (menu && menu.style.display === 'block') {
     if (e.target.classList.contains('context-menu-item')) {
       let val = e.target.getAttribute('data-val');
       if (val === 'custom') {
-        const input = prompt('Enter rest time in seconds:');
-        if (input && !isNaN(input)) {
-          val = parseInt(input);
-        } else {
-          return;
+        const modal = document.getElementById('custom-rest-modal');
+        const input = document.getElementById('custom-rest-input');
+        if (modal && input) {
+          input.value = '';
+          modal.style.display = 'flex';
+          input.focus();
         }
       } else {
-        val = parseInt(val) * 60; // minutes to seconds
-      }
-      if (window.api && window.api.setBatchRest) {
-        window.api.setBatchRest(val);
+        val = parseFloat(val); // data-val is in minutes
+        applyRestValue(val);
       }
     }
     menu.style.display = 'none';
   }
 });
+
+const restModal = document.getElementById('custom-rest-modal');
+const restOkBtn = document.getElementById('custom-rest-ok');
+const restCancelBtn = document.getElementById('custom-rest-cancel');
+const restInput = document.getElementById('custom-rest-input');
+
+if (restOkBtn) {
+  restOkBtn.addEventListener('click', () => {
+    const inputVal = parseInt(restInput.value);
+    if (!isNaN(inputVal) && inputVal > 0) {
+      applyRestValue(inputVal / 60);
+    }
+    restModal.style.display = 'none';
+  });
+}
+if (restCancelBtn) {
+  restCancelBtn.addEventListener('click', () => {
+    restModal.style.display = 'none';
+  });
+}

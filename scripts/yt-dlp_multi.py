@@ -567,7 +567,7 @@ def main() -> None:
         current_rest = float(sys.argv[2]) if len(sys.argv) > 2 else 0.0
     except ValueError:
         rest_arg = sys.argv[2] if len(sys.argv) > 2 else ''
-        current_rest = 5.0 if rest_arg.lower().startswith('y') else 0.0
+        current_rest = 5.0 if (rest_arg.lower().startswith('y') or rest_arg.lower() == 'true') else 0.0
     urls = get_urls()
     if not urls:
         logger.info("No URLs provided. Exiting.")
