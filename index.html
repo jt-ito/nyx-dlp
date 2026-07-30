@@ -132,6 +132,16 @@
           <span>Video Encoder</span>
           <div class="nav-indicator"></div>
         </button>
+        <button class="nav-item" data-tab="ia">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 9v6"></path>
+            <path d="M9 12h6"></path>
+          </svg>
+          <span>Internet Archive</span>
+          <div class="nav-indicator"></div>
+        </button>
         <div class="nav-divider"></div>
         <button class="nav-item" data-tab="settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -258,8 +268,12 @@
             </div>
             
             <div class="adv-grid" style="margin-top: 16px;">
+              <div class="form-group full-width" id="ls-twitch-token-group">
+                <label class="form-label">Twitch Auth Token <span class="label-optional">(optional, for streamlink ad bypass / turbo rewind)</span></label>
+                <input type="password" id="ls-twitch-token" class="form-input" placeholder="OAuth token" />
+              </div>
               <div class="form-group full-width">
-                <label class="form-label">Download from start (DVR) <span class="label-optional" style="color: var(--warning-color);">(may fail with cookies)</span></label>
+                <label class="form-label">Download from start (DVR) <span class="label-optional" style="color: var(--warning-color);">(may fail with cookies. Twitch: requires VODs enabled, uses yt-dlp)</span></label>
                 <label class="toggle-switch" style="justify-content: flex-start;">
                   <input type="checkbox" id="ls-from-start" checked />
                   <span class="toggle-track"><span class="toggle-thumb"></span></span>
@@ -509,9 +523,22 @@
               </label>
             </div>
           </div>
+          <div class="form-group" id="batch-skip-live-group">
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Skip Live Streams</div>
+                <div class="toggle-desc">If a stream is live, skip it or push to the end of the queue.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="batch-skip-live" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
 
           <div class="adv-wrapper" style="grid-column: 1 / -1;">
-            <div class="adv-wrapper" style="grid-column: 1 / -1;">
           <div class="adv-toggle-wrap">
               <button class="form-adv-toggle" aria-expanded="false" data-adv="batch-adv">
                 <span>More options</span>
@@ -559,11 +586,10 @@
                   </button>
                 </div>
               </div>
-              <div id="batch-modified-opts" style="display: contents;"></div>
-        </div>
-        </div>
-        </div>
-        </div>
+                <div id="batch-modified-opts" style="display: contents;"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="action-row">
@@ -1234,6 +1260,211 @@
       </section>
 
       <!-- â”€â”€ Tab: Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- ── Tab: Internet Archive ────────────────────────────────────────── -->
+      <section class="tab-panel" id="tab-ia">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Internet Archive</h1>
+            <p class="panel-subtitle">Upload to and download from archive.org</p>
+          </div>
+          <!-- Toggle for upload/download -->
+          <div class="segmented-control" id="ia-mode-toggle">
+            <button class="segment active" data-mode="upload">Upload</button>
+            <button class="segment" data-mode="download">Download</button>
+          </div>
+        </div>
+
+        <div class="scrollable-content">
+          <div class="card form-grid" id="ia-upload-form">
+            <div class="form-group full-width">
+              <label class="form-label">Target File(s)</label>
+              <div class="input-folder-group">
+                <textarea id="ia-files" class="form-input form-textarea" placeholder="No files selected. Use the browse button to add files." readonly rows="3" style="resize: vertical;"></textarea>
+                <button class="btn-folder" data-target="ia-files" data-pick-type="multi-file">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Identifier (Required)</label>
+              <input type="text" id="ia-identifier-up" class="form-input" placeholder="e.g. my-unique-item-id-2026" />
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input type="text" id="ia-title" class="form-input" placeholder="My Awesome Upload" />
+            </div>
+
+            <div class="form-group full-width">
+              <label class="form-label">Description (Required)</label>
+              <textarea id="ia-description" class="form-input form-textarea" rows="3" placeholder="Description of the item..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Subject Tags (Required)</label>
+              <input type="text" id="ia-subject" class="form-input" placeholder="tag1, tag2, tag3" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Collection</label>
+              <select id="ia-collection" class="form-select">
+                <option value="test_collection">test_collection</option>
+                <option value="opensource_media">opensource_media</option>
+                <option value="opensource_audio">opensource_audio</option>
+                <option value="opensource_movies">opensource_movies</option>
+              </select>
+            </div>
+
+            <div class="adv-toggle-wrap" style="grid-column: 1 / -1; margin-top: 10px;">
+              <button class="form-adv-toggle" aria-expanded="false" data-adv="ia-adv">
+                <span>More Metadata Options</span>
+                <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="adv-body" id="ia-adv">
+              <div class="adv-grid">
+                <div class="form-group">
+                  <label class="form-label">Media Type</label>
+                  <select id="ia-mediatype" class="form-select">
+                    <option value="">Auto (based on collection)</option>
+                    <option value="movies">Movies / Video (Movie Reel)</option>
+                    <option value="audio">Audio (Music Note)</option>
+                    <option value="texts">Texts / Books (Book)</option>
+                    <option value="data">Data / Files (Folder)</option>
+                    <option value="software">Software (Disk)</option>
+                    <option value="image">Image (Picture)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Creator</label>
+                  <input type="text" id="ia-creator" class="form-input" placeholder="Author/Creator" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Date (YYYY-MM-DD)</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="text" id="ia-date-y" class="form-input" placeholder="YYYY" maxlength="4" style="flex: 2; text-align: center;" />
+                    <span style="display: flex; align-items: center; color: var(--text-subtle);">-</span>
+                    <input type="text" id="ia-date-m" class="form-input" placeholder="MM" maxlength="2" style="flex: 1; text-align: center;" />
+                    <span style="display: flex; align-items: center; color: var(--text-subtle);">-</span>
+                    <input type="text" id="ia-date-d" class="form-input" placeholder="DD" maxlength="2" style="flex: 1; text-align: center;" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Language</label>
+                  <select id="ia-language" class="form-select">
+                    <option value="">None / Auto</option>
+                    <option value="eng">English (eng)</option>
+                    <option value="spa">Spanish (spa)</option>
+                    <option value="fre">French (fre)</option>
+                    <option value="ger">German (ger)</option>
+                    <option value="jpn">Japanese (jpn)</option>
+                    <option value="chi">Chinese (chi)</option>
+                    <option value="rus">Russian (rus)</option>
+                    <option value="por">Portuguese (por)</option>
+                    <option value="ita">Italian (ita)</option>
+                    <option value="hin">Hindi (hin)</option>
+                    <option value="ara">Arabic (ara)</option>
+                    <option value="kor">Korean (kor)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">License</label>
+                  <input type="text" id="ia-license" class="form-input" placeholder="https://creativecommons.org/..." />
+                </div>
+              </div>
+            </div>
+            
+            <div class="action-row" style="grid-column: 1 / -1; margin-top: 16px;">
+              <button class="btn btn-primary btn-run" id="ia-upload-run">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Upload to IA
+              </button>
+              <button class="btn btn-ghost btn-stop hidden" id="ia-upload-stop">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+                </svg>
+                Stop
+              </button>
+              <button class="btn btn-ghost" id="ia-upload-clear">Clear Log</button>
+              <button class="btn btn-ghost" id="ia-config-btn" title="Run 'ia configure' in terminal to login">Login to IA</button>
+            </div>
+          </div>
+
+          <div class="card form-grid hidden" id="ia-download-form" style="display: none;">
+            <div class="form-group full-width">
+              <label class="form-label">Identifier (Required)</label>
+              <input type="text" id="ia-identifier-down" class="form-input" placeholder="e.g. my-unique-item-id-2026" />
+            </div>
+
+            <div class="form-group full-width">
+              <label class="form-label">Output Directory</label>
+              <div class="input-folder-group">
+                <input type="text" id="ia-output" class="form-input" placeholder="Select output folder..." />
+                <button class="btn-folder" data-target="ia-output">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="action-row" style="grid-column: 1 / -1; margin-top: 16px;">
+              <button class="btn btn-primary btn-run" id="ia-download-run">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+                </svg>
+                Download
+              </button>
+              <button class="btn btn-ghost btn-stop hidden" id="ia-download-stop">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+                </svg>
+                Stop
+              </button>
+              <button class="btn btn-ghost" id="ia-download-clear">Clear Log</button>
+            </div>
+          </div>
+
+          <div class="terminal-wrap" style="margin-top: 20px;">
+            <div class="terminal-container">
+              <div class="terminal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span class="terminal-title">Output</span>
+                  <div class="terminal-actions">
+                    <button class="btn-term-action btn-term-scroll" title="Follow log" data-terminal="ia-log">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M19 12l-7 7-7-7"/>
+                      </svg>
+                    </button>
+                    <button class="btn-term-action btn-term-copy" title="Copy output" data-terminal="ia-log">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="terminal-dots">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+              <div class="terminal-body" id="ia-log" data-log-el="true"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="tab-panel" id="tab-settings">
         <div class="panel-header">
           <div class="panel-title-group">
@@ -1326,6 +1557,16 @@
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Internet Archive</div>
+                <div class="toggle-desc">Show the Internet Archive tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-ia" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
           </div>
 
           <div class="settings-section">
@@ -1384,6 +1625,16 @@
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Skip Live Streams</div>
+                <div class="toggle-desc">Show the skip live streams toggle</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-batch-skip-live" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+          </div>
             <div id="batch-modified-opts"></div>
             <div class="ytdlp-adv-wrapper">
               <button class="ytdlp-advanced-toggle" id="batch-advanced-toggle" aria-expanded="false">
@@ -1505,13 +1756,13 @@
             </div>
             <div id="dep-bgutil-url-group" style="padding: 4px 16px 0px;">
               <label class="form-label" style="margin-bottom:4px;">bgutil server URL <span class="label-optional">(optional)</span></label>
-              <input type="text" id="dep-bgutil-url" class="form-input" placeholder="Leave empty for local deno mode â€” or http://127.0.0.1:4416" />
+              <input type="text" id="dep-bgutil-url" class="form-input" placeholder="Leave empty for local deno mode — or http://127.0.0.1:4416" />
               <p class="settings-section-desc" style="margin: 4px 0 -4px;">Leave empty to run locally via deno. Only set a URL if you have a bgutil-http server running.</p>
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
                 <div class="toggle-label">Auto-install deno</div>
-                <div class="toggle-desc">Automatically install deno if not found â€” required for bgutil local mode and JS challenge solving</div>
+                <div class="toggle-desc">Automatically install deno if not found — required for bgutil local mode and JS challenge solving</div>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" data-setting="dep-use-deno" checked />
@@ -1538,6 +1789,26 @@
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Auto-download Streamlink</div>
+                <div class="toggle-desc">Automatically download Streamlink if missing</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="dep-auto-streamlink" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Auto-download Internet Archive CLI</div>
+                <div class="toggle-desc">Automatically download IA CLI if missing</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="dep-auto-ia" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
           </div>
 
           <div class="settings-section" id="disk-space-settings-section">
@@ -1558,11 +1829,11 @@
                 <div style="display:flex; flex-direction:column; gap:6px; padding: 0 16px 12px; width:100%">
                   <label class="disk-radio-label">
                     <input type="radio" name="disk-mode" value="auto" id="disk-mode-auto" checked />
-                    <span>Auto â€” use the output directory of the active tool</span>
+                    <span>Auto — use the output directory of the active tool</span>
                   </label>
                   <label class="disk-radio-label">
                     <input type="radio" name="disk-mode" value="static" id="disk-mode-static" />
-                    <span>Static â€” always use a specific drive</span>
+                    <span>Static — always use a specific drive</span>
                   </label>
                   <div id="disk-static-drive-group" style="display:none; margin-top:4px">
                     <input type="text" id="disk-static-drive" class="form-input" placeholder="e.g. C:\" maxlength="4" style="width:120px" />
@@ -1659,6 +1930,70 @@
     </div>
   </div>
 
-  <script src="renderer.js"></script>
+  <!-- IA Login Modal -->
+  <div id="ia-login-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 400px; max-width: 90vw;">
+      <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">Internet Archive Authentication</h3>
+      
+      <div style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 3px solid #ffbd2e;">
+        <p style="font-size: 12px; color: var(--text); margin-bottom: 8px;"><strong>Disclaimer:</strong> This app runs locally on your machine. Your credentials are used securely by the official IA CLI to authenticate and are <em>never</em> sent to, seen by, or stored by any other servers.</p>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">If you prefer, you can safely run <code>ia configure</code> in your own terminal instead of using this form.</p>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label">Email (Username)</label>
+        <input type="text" id="ia-auth-email" class="form-input" style="width: 100%;" placeholder="user@example.com" />
+      </div>
+      
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label class="form-label">Password</label>
+        <input type="password" id="ia-auth-password" class="form-input" style="width: 100%;" placeholder="••••••••" />
+      </div>
+
+      <div id="ia-auth-error" style="display: none; color: #ff5f57; font-size: 12px; margin-bottom: 16px;"></div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-ghost" id="ia-auth-cancel">Cancel</button>
+        <button class="btn btn-primary" id="ia-auth-submit">Login</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IA Already Connected Modal -->
+  <div id="ia-connected-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 320px; text-align: center;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#28ca41" stroke-width="2" style="margin-bottom: 16px;">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">Already Connected!</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Your Internet Archive session is active and ready to use.</p>
+      
+      <button class="btn btn-primary" id="ia-connected-close" style="width: 100%;">Awesome</button>
+    </div>
+  </div>
+
+  <script src="renderer/theme.js"></script>
+  <script src="renderer/terminal.js"></script>
+  <script src="renderer/path-guard.js"></script>
+  <script src="renderer/status.js"></script>
+  <script src="renderer/settings.js"></script>
+  <script src="renderer/settings-init.js"></script>
+  <script src="renderer/persistence.js"></script>
+  <script src="renderer/ytdlp-opts.js"></script>
+  <script src="renderer/navigation.js"></script>
+  <script src="renderer/context-menu.js"></script>
+  <script src="renderer/tools/livestream.js"></script>
+  <script src="renderer/tools/ytdlp.js"></script>
+  <script src="renderer/tools/batch.js"></script>
+  <script src="renderer/tools/m3u8.js"></script>
+  <script src="renderer/tools/gallery-dl.js"></script>
+  <script src="renderer/tools/splitter.js"></script>
+  <script src="renderer/tools/concatenator.js"></script>
+  <script src="renderer/tools/encoder.js"></script>
+  <script src="renderer/tools/ia.js"></script>
+  <script src="renderer/sync.js"></script>
+  <script src="renderer/disk-space.js"></script>
+  <script src="renderer/remote-api.js"></script>
 </body>
 </html>

@@ -19,7 +19,7 @@ new_code = '''function appendLog(logEl, text, cls) {
   
   if (getSetting('console-timestamps') && !/^\\s*\\[download\\]\\s+(?:\\d+(?:\\.\\d+)?%|Destination:)/i.test(text) && !/frame=\\s*\\d+/i.test(text)) {
     const now = new Date();
-    const timeStr = [ + String(now.getHours()).padStart(2, '0') + : + String(now.getMinutes()).padStart(2, '0') + : + String(now.getSeconds()).padStart(2, '0') + ] ;
+    const timeStr = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}] `;
     text = timeStr + text;
   }
   
@@ -39,7 +39,7 @@ new_code = '''function appendLog(logEl, text, cls) {
   if (destMatch) {
       // If we already have a live progress slot that wasn't finalized, force finalize it now
       if (logEl._liveProgress) {
-          logEl._pendingLines.push({ text: ✔ Downloaded  + logEl._liveProgress.dest +  — (force finalized), cls: 'success', count: 1 });
+          logEl._pendingLines.push({ text: `✔ Downloaded ${logEl._liveProgress.dest} — (force finalized)`, cls: 'success', count: 1 });
           logEl._liveProgress = null;
       }
       // Open new live slot
@@ -55,6 +55,11 @@ new_code = '''function appendLog(logEl, text, cls) {
   const isFfmpegProgress = /^\\s*frame=\\s*\\d+/i.test(text) || /^\\s*size=\\s*\\d+/i.test(text);
   
   if (isDlProgress || isFfmpegProgress) {
+      if (logEl._downloadCompleted && isDlProgress) {
+          // Ignore stray yt-dlp progress lines that arrive immediately after completion
+          return;
+      }
+      
       if (!logEl._liveProgress) {
           if (text.includes('100%') || text.includes('100.0%')) return;
           // If a progress line comes but we don't have a live slot, create a generic one
@@ -75,11 +80,15 @@ new_code = '''function appendLog(logEl, text, cls) {
           // Convert live slot into a permanent summary event line
           logEl._pendingLines.push({ text: '✔ Completed ' + logEl._liveProgress.dest + ' — 100% ' + cleanText, cls: 'success', count: 1 });
           logEl._liveProgress = null;
+          logEl._downloadCompleted = true;
       }
       
       if (!logEl._rafPending) triggerRaf(logEl);
       return;
   }
+
+  // Any non-progress line resets the completion flag
+  logEl._downloadCompleted = false;
 
   // Deduplication for normal lines
   const pLen = logEl._pendingLines.length;
@@ -95,13 +104,13 @@ new_code = '''function appendLog(logEl, text, cls) {
       if (last.text === text && last.cls === cls && text.trim() !== '') {
           last.count = (last.count || 1) + 1;
           if (last.badge) {
-              last.badge.textContent =  ( + last.count + );
+              last.badge.textContent = ` (${last.count})`;
           } else {
               const badge = document.createElement('span');
               badge.className = 'log-badge';
               badge.style.color = '#888';
               badge.style.marginLeft = '8px';
-              badge.textContent =  ( + last.count + );
+              badge.textContent = ` (${last.count})`;
               last.el.appendChild(badge);
               last.badge = badge;
           }
@@ -112,6 +121,9 @@ new_code = '''function appendLog(logEl, text, cls) {
 
   // Normal event line
   logEl._pendingLines.push({ text, cls, count: 1, isStatus });
+  if (isStatus) {
+      logEl._liveProgress = null;
+  }
   if (logEl._pendingLines.length > 15000) {
     logEl._pendingLines = logEl._pendingLines.slice(-10000);
   }
@@ -136,7 +148,7 @@ function flushPendingLogsSync(logEl) {
               badge.className = 'log-badge';
               badge.style.color = '#888';
               badge.style.marginLeft = '8px';
-              badge.textContent =  ( + item.count + );
+              badge.textContent = ` (${item.count})`;
               div.appendChild(badge);
               item.badge = badge;
           }
@@ -188,12 +200,20 @@ function flushPendingLogsSync(logEl) {
     }
     
     // Render the single live progress slot
-    logEl._progressContainer.innerHTML = '';
     if (logEl._liveProgress) {
-        const div = document.createElement('div');
-        div.className = logEl._liveProgress.cls;
-        div.textContent = logEl._liveProgress.text;
-        logEl._progressContainer.appendChild(div);
+        let div = logEl._progressContainer.firstElementChild;
+        if (!div) {
+            div = document.createElement('div');
+            logEl._progressContainer.appendChild(div);
+        }
+        if (div.className !== logEl._liveProgress.cls) {
+            div.className = logEl._liveProgress.cls;
+        }
+        if (div.textContent !== logEl._liveProgress.text) {
+            div.textContent = logEl._liveProgress.text;
+        }
+    } else {
+        logEl._progressContainer.innerHTML = '';
     }
 
     if (logEl._lineCount > 5000) {

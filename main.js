@@ -52,10 +52,35 @@ function createTray() {
   tray.on('click', () => { mainWindow.show(); mainWindow.focus(); });
 }
 
+function loadWindowState() {
+  try {
+    const stateFile = path.join(app.getPath('userData'), 'window-state.json');
+    if (fs.existsSync(stateFile)) {
+      return JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
+    }
+  } catch (e) {}
+  return { width: 1100, height: 750 };
+}
+
+function saveWindowState(win) {
+  if (!win || win.isDestroyed()) return;
+  // Do not save state if maximized or minimized to avoid getting stuck
+  if (win.isMaximized() || win.isMinimized()) return;
+  
+  try {
+    const stateFile = path.join(app.getPath('userData'), 'window-state.json');
+    fs.writeFileSync(stateFile, JSON.stringify(win.getBounds()), 'utf-8');
+  } catch (e) {}
+}
+
 function createWindow() {
+  const state = loadWindowState();
+  
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 750,
+    width: state.width || 1100,
+    height: state.height || 750,
+    x: state.x,
+    y: state.y,
     minWidth: 800,
     minHeight: 600,
     frame: false,
@@ -73,6 +98,7 @@ function createWindow() {
   mainWindow.loadFile('index.html');
 
   mainWindow.on('close', (e) => {
+    saveWindowState(mainWindow);
     if (minimizeToTray && !isQuitting) {
       e.preventDefault();
       mainWindow.hide();
@@ -199,253 +225,83 @@ function broadcastIPC(channel, data) {
   }
 }
 
-// Script runner — passes argv args, optionally pipes stdin, sets cwd, streams output
-function runScript(event, replyChannel, scriptPath, { cwd, args = [], stdinLines = [], env = {} }) {
-  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+const runners = require('./lib/runners.js');
 
-  // Reject protected output directories before touching the filesystem
-  const pathErr = isProtectedPath(cwd);
-  if (pathErr) {
-    broadcastIPC(replyChannel, { type: 'error', text: pathErr });
-    broadcastIPC(replyChannel, { type: 'exit', code: 1 });
-    return null;
+function getFfmpegSettings() {
+  const installFfmpeg = fullUiState['dep-install-ffmpeg'] ? fullUiState['dep-install-ffmpeg'].checked : true;
+  const ffmpegVersion = fullUiState['dep-ffmpeg-version'] ? fullUiState['dep-ffmpeg-version'].value : 'auto';
+  return { installFfmpeg, ffmpegVersion };
+}
+
+function prepareRunner(opts, channel, runnerFn) {
+  const broadcast = (data) => broadcastIPC(channel, data);
+  if (opts.outputDir) {
+    const pathErr = isProtectedPath(opts.outputDir);
+    if (pathErr) {
+      broadcast({ type: 'error', text: pathErr });
+      broadcast({ type: 'exit', code: 1 });
+      return;
+    }
+    try {
+      fs.mkdirSync(opts.outputDir, { recursive: true });
+    } catch (err) {
+      broadcast({ type: 'error', text: `Cannot create output directory: ${err.message}` });
+      broadcast({ type: 'exit', code: 1 });
+      return;
+    }
   }
-
-  // Ensure output directory exists
-  try {
-    fs.mkdirSync(cwd, { recursive: true });
-  } catch (err) {
-    broadcastIPC(replyChannel, { type: 'error', text: `Cannot create output directory: ${err.message}` });
-    broadcastIPC(replyChannel, { type: 'exit', code: 1 });
-    return null;
-  }
-
-  const proc = spawn(pythonCmd, ['-u', scriptPath, ...args], {
-    cwd,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8', ...env }
+  Object.assign(opts, getFfmpegSettings());
+  runnerFn(opts, broadcast).catch(e => {
+    broadcast({ type: 'error', text: e.message });
+    broadcast({ type: 'exit', code: 1 });
   });
-
-  broadcastIPC(replyChannel, { type: 'pid', pid: proc.pid });
-
-  activeProcs.set(proc.pid, proc);
-
-  // Feed any required stdin lines, then close stdin
-  for (const line of stdinLines) {
-    proc.stdin.write(line + '\n');
-  }
-  proc.stdin.end();
-
-  proc.stdout.on('data', (data) => {
-    broadcastIPC(replyChannel, { type: 'stdout', text: data.toString() });
-  });
-  proc.stderr.on('data', (data) => {
-    broadcastIPC(replyChannel, { type: 'stderr', text: data.toString() });
-  });
-  proc.on('close', (code) => {
-    activeProcs.delete(proc.pid);
-    broadcastIPC(replyChannel, { type: 'exit', code });
-  });
-  proc.on('error', (err) => {
-    broadcastIPC(replyChannel, { type: 'error', text: err.message });
-  });
-
-  return proc.pid;
 }
 
 // ── Stop / Pause / Resume ────────────────────────────────────────────────────
-ipcMain.on('stop-script', (event, { pid }) => {
-  if (process.platform === 'win32') {
-    execFile('taskkill', ['/pid', String(pid), '/T', '/F']);
-  } else {
-    const proc = activeProcs.get(pid);
-    if (proc) proc.kill('SIGTERM');
-  }
-});
-
-function suspendResumeTree(rootPid, action) {
-  if (process.platform !== 'win32') {
-    try { process.kill(rootPid, action === 'suspend' ? 'SIGSTOP' : 'SIGCONT'); } catch (_) {}
-    return;
-  }
-  const pythonScript = `
-import ctypes
-
-def get_children(pid):
-    kernel32 = ctypes.windll.kernel32
-    TH32CS_SNAPPROCESS = 2
-    class PROCESSENTRY32(ctypes.Structure):
-        _fields_ = [("dwSize", ctypes.c_uint32), ("cntUsage", ctypes.c_uint32), ("th32ProcessID", ctypes.c_uint32),
-                    ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", ctypes.c_uint32), ("cntThreads", ctypes.c_uint32),
-                    ("th32ParentProcessID", ctypes.c_uint32), ("pcPriClassBase", ctypes.c_long), ("dwFlags", ctypes.c_uint32),
-                    ("szExeFile", ctypes.c_char * 260)]
-    hProcessSnap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    pe32 = PROCESSENTRY32()
-    pe32.dwSize = ctypes.sizeof(PROCESSENTRY32)
-    children = []
-    if kernel32.Process32First(hProcessSnap, ctypes.byref(pe32)):
-        while True:
-            if pe32.th32ParentProcessID == pid:
-                children.append(pe32.th32ProcessID)
-            if not kernel32.Process32Next(hProcessSnap, ctypes.byref(pe32)):
-                break
-    kernel32.CloseHandle(hProcessSnap)
-    return children
-
-def get_tree(pid):
-    tree = [pid]
-    for c in get_children(pid):
-        tree.extend(get_tree(c))
-    return tree
-
-action = "${action}"
-pid = ${rootPid}
-ntdll = ctypes.windll.ntdll
-kernel32 = ctypes.windll.kernel32
-PROCESS_SUSPEND_RESUME = 0x0800
-
-for p in get_tree(pid):
-    h = kernel32.OpenProcess(PROCESS_SUSPEND_RESUME, False, p)
-    if h:
-        if action == "suspend":
-            ntdll.NtSuspendProcess(h)
-        else:
-            ntdll.NtResumeProcess(h)
-        kernel32.CloseHandle(h)
-  `;
-  execFile('python', ['-c', pythonScript], (err) => {
-    if (err) console.error('Suspend/resume failed:', err);
-  });
-}
-
-ipcMain.on('pause-script',  (event, { pid }) => suspendResumeTree(pid, 'suspend'));
-ipcMain.on('resume-script', (event, { pid }) => suspendResumeTree(pid, 'resume'));
+ipcMain.on('stop-script', (event, { pid }) => runners.stopProc(pid));
+ipcMain.on('pause-script',  (event, { pid }) => runners.pauseProc(pid));
+ipcMain.on('resume-script', (event, { pid }) => runners.resumeProc(pid));
 
 // ── Tool 1: YouTube Live Stream Archiver ──────────────────────────────────────
-// yt-archiver.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=container  sys.argv[5]=bgutilUrl  sys.argv[6]=useDeno  sys.argv[7]=client  sys.argv[8]=fromStart  sys.argv[9]=concurrent
-ipcMain.on('run-livestream', (event, { url, outputDir, format, cookiesPath, container, client, fromStart, concurrent, bgutilUrl, useDeno, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'yt-archiver.py');
-  runScript(event, 'livestream-output', scriptPath, {
-    cwd: outputDir,
-    args: [url, format, cookiesPath || '', container || 'mp4', bgutilUrl || 'local', useDeno || 'n', client || 'default', fromStart || 'y', concurrent || '5'],
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
+ipcMain.on('run-livestream', (event, opts) => prepareRunner(opts, 'livestream-output', runners.runLivestream));
 
 // ── Tool 2: yt-dlp Single Download ───────────────────────────────────────────
-// yt-dlp.py: sys.argv[1]=url  sys.argv[2]=format  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  sys.argv[6]=startTime  sys.argv[7]=endTime
-ipcMain.on('run-ytdlp', (event, { url, outputDir, format, cookiesPath, extraArgs, container, startTime, endTime, bgutilUrl, useDeno, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'yt-dlp.py');
-  runScript(event, 'ytdlp-output', scriptPath, {
-    cwd: outputDir,
-    args: [url, format, cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', startTime || '', endTime || '', bgutilUrl || 'local', useDeno || 'n'],
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
+ipcMain.on('run-ytdlp', (event, opts) => prepareRunner(opts, 'ytdlp-output', runners.runYtdlp));
+
+// ── Tool: Internet Archive ────────────────────────────────────────────────────
+ipcMain.on('run-ia-upload', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaUpload));
+ipcMain.on('run-ia-download', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaDownload));
+ipcMain.handle('check-ia-auth', async (event, { autoIa } = {}) => await runners.checkIaAuth(autoIa));
+ipcMain.handle('run-ia-configure', async (event, { email, password, autoIa }) => await runners.runIaConfigure(email, password, autoIa));
 
 // ── Tool 3: Batch Downloader ──────────────────────────────────────────────────
-// yt-dlp_multi.py: sys.argv[1]=format  sys.argv[2]=rest  sys.argv[3]=cookiesPath  sys.argv[4]=extraArgsJSON  sys.argv[5]=container  stdin=URLs
-ipcMain.on('run-batch', (event, { urls, outputDir, format, rest, cookiesPath, extraArgs, container, bgutilUrl, useDeno, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'yt-dlp_multi.py');
-  runScript(event, 'batch-output', scriptPath, {
-    cwd: outputDir,
-    args: [format, String(rest), cookiesPath || '', JSON.stringify(extraArgs || []), container || 'mp4', bgutilUrl || 'local', useDeno || 'n'],
-    stdinLines: [...urls, ''],
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
-
+ipcMain.on('run-batch', (event, opts) => prepareRunner(opts, 'batch-output', runners.runBatch));
 ipcMain.on('append-batch-queue', (event, { outputDir, newUrls }) => {
   try {
-    const queueFile = path.join(outputDir, 'queue_additions.txt');
-    fs.appendFileSync(queueFile, newUrls.join('\n') + '\n', 'utf-8');
-  } catch (err) {
-    console.error('Failed to append to batch queue:', err);
-  }
+    fs.appendFileSync(path.join(outputDir, 'queue_additions.txt'), newUrls.join('\n') + '\n', 'utf-8');
+  } catch (err) {}
 });
-
 ipcMain.on('set-batch-rest', (event, { outputDir, val }) => {
   try {
-    const stateFile = path.join(outputDir, 'rest_state.txt');
-    fs.writeFileSync(stateFile, String(val), 'utf-8');
-  } catch (err) {
-    console.error('Failed to write batch rest state:', err);
-  }
+    fs.writeFileSync(path.join(outputDir, 'rest_state.txt'), String(val), 'utf-8');
+  } catch (err) {}
 });
 
 // ── Tool 4: M3U8 Downloader/Encoder ──────────────────────────────────────────
-// Download_and_convert_a_m3u8_url.py:
-//   sys.argv[1]=url  [2]=encode(y/n)  [3]=codec  [4]=bitrate  [5]=resolution  [6]=fps  [7]=audioBitrate  [8]=cookiesPath
-ipcMain.on('run-m3u8', (event, { url, outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'Download_and_convert_a_m3u8_url.py');
-  runScript(event, 'm3u8-output', scriptPath, {
-    cwd: outputDir,
-    args: [url, encode ? 'y' : 'n', codec, bitrate, resolution, fps, audioBitrate, container || 'mp4', cookiesPath || ''],
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
+ipcMain.on('run-m3u8', (event, opts) => prepareRunner(opts, 'm3u8-output', runners.runM3u8));
+
 // ── Tool 5: gallery-dl ────────────────────────────────────────────────────────────
-// gallery-dl.py: sys.argv[1]=url  [2]=filetypes  [3]=metadata(y/n)  [4]=cookiesPath
-ipcMain.on('run-gallery-dl', (event, { url, outputDir, filetypes, metadata, cookiesPath, installGdl, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'gallery-dl.py');
-  runScript(event, 'gallery-dl-output', scriptPath, {
-    cwd: outputDir,
-    args: [url, filetypes, metadata ? 'y' : 'n', cookiesPath || '', installGdl || 'y'],
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
+ipcMain.on('run-gallery-dl', (event, opts) => prepareRunner(opts, 'gallery-dl-output', runners.runGalleryDl));
 
 // ── Tool 6: Video Splitter ──────────────────────────────────────────────────────────
-// video-splitter.py: sys.argv[1]=file  sys.argv[2]=parts  sys.argv[3]=outputDir
-ipcMain.on('run-splitter', (event, { file, parts, outputDir, containerFormat, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'video-splitter.py');
-  const targetDir = outputDir || path.dirname(file);
-  const args = [file, String(parts), targetDir];
-  if (containerFormat) {
-    args.push('--format', containerFormat);
-  }
-  runScript(event, 'splitter-output', scriptPath, {
-    cwd: targetDir,
-    args: args,
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
+ipcMain.on('run-splitter', (event, opts) => prepareRunner(opts, 'splitter-output', runners.runSplitter));
 
 // ── Tool 7: Video Concatenator ──────────────────────────────────────────────────────
-// video-concatenator.py: --output output.mp4 [--force-encode] file1 file2 ...
-ipcMain.on('run-concatenator', (event, { files, output, forceEncode, outputDir, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'video-concatenator.py');
-  const targetDir = outputDir || path.dirname(files[0]);
-  
-  const args = ['--output', output];
-  if (forceEncode) args.push('--force-encode');
-  args.push(...files);
-  
-  runScript(event, 'concatenator-output', scriptPath, {
-    cwd: targetDir,
-    args: args,
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
+ipcMain.on('run-concatenator', (event, opts) => prepareRunner(opts, 'concatenator-output', runners.runConcatenator));
 
 // ── Tool 8: Video Encoder ───────────────────────────────────────────────────────────
-// video-encoder.py: --mode [sequential|parallel] --vcodec [codec] --acodec [codec] file1 file2 ...
-ipcMain.on('run-encoder', (event, { files, outputDir, mode, vcodec, acodec, installFfmpeg }) => {
-  const scriptPath = path.join(scriptsDir, 'video-encoder.py');
-  const targetDir = outputDir || path.dirname(files[0]);
+ipcMain.on('run-encoder', (event, opts) => prepareRunner(opts, 'encoder-output', runners.runEncoder));
 
-  const args = [];
-  if (mode) args.push('--mode', mode);
-  if (vcodec) args.push('--vcodec', vcodec);
-  if (acodec) args.push('--acodec', acodec);
-  args.push(...files);
-
-  runScript(event, 'encoder-output', scriptPath, {
-    cwd: targetDir,
-    args: args,
-    env: { AUTO_INSTALL_FFMPEG: installFfmpeg ? '1' : '0' }
-  });
-});
 
 // ── Remote Server ────────────────────────────────────────────────────────────
 const remoteServer = require('./server.js');

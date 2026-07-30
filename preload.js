@@ -27,6 +27,10 @@ contextBridge.exposeInMainWorld('api', {
   runSplitter:   (opts) => ipcRenderer.send('run-splitter', opts),
   runConcatenator: (opts) => ipcRenderer.send('run-concatenator', opts),
   runEncoder:    (opts) => ipcRenderer.send('run-encoder', opts),
+  runIaUpload:   (opts) => ipcRenderer.send('run-ia-upload', opts),
+  runIaDownload: (opts) => ipcRenderer.send('run-ia-download', opts),
+  checkIaAuth: (autoIa) => ipcRenderer.invoke('check-ia-auth', { autoIa }),
+  runIaConfigure: (email, password, autoIa) => ipcRenderer.invoke('run-ia-configure', { email, password, autoIa }),
 
   // Output listeners
   onLivestreamOutput: (cb) => ipcRenderer.on('livestream-output', (_e, d) => cb(d)),
@@ -37,6 +41,7 @@ contextBridge.exposeInMainWorld('api', {
   onSplitterOutput:   (cb) => ipcRenderer.on('splitter-output',    (_e, d) => cb(d)),
   onConcatenatorOutput: (cb) => ipcRenderer.on('concatenator-output', (_e, d) => cb(d)),
   onEncoderOutput:    (cb) => ipcRenderer.on('encoder-output',    (_e, d) => cb(d)),
+  onIaOutput:         (cb) => ipcRenderer.on('ia-output',         (_e, d) => cb(d)),
 
   // Process control
   stopScript:   (pid) => ipcRenderer.send('stop-script',   { pid }),

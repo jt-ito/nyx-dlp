@@ -62,30 +62,13 @@ function die(msg) {
   process.exit(1);
 }
 
-function runPython(scriptName, args, cwd, stdinLines = []) {
-  const scriptPath = path.join(scriptsDir, scriptName);
-  if (!fs.existsSync(scriptPath)) {
-    die(`Script not found: ${scriptPath}`);
-  }
+const runners = require('./lib/runners.js');
 
-  // Ensure output dir exists
-  if (cwd) {
-    fs.mkdirSync(cwd, { recursive: true });
-  }
-
-  const proc = spawn(pythonCmd, ['-u', scriptPath, ...args], {
-    cwd: cwd || process.cwd(),
-    stdio: ['pipe', 'inherit', 'inherit'],
-    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }
-  });
-
-  for (const line of stdinLines) {
-    proc.stdin.write(line + '\n');
-  }
-  proc.stdin.end();
-
-  proc.on('close', (code) => process.exit(code || 0));
-  proc.on('error', (err) => die(err.message));
+function broadcastTerminal(data) {
+  if (data.type === 'stdout' && data.text) process.stdout.write(data.text);
+  if (data.type === 'stderr' && data.text) process.stderr.write(data.text);
+  if (data.type === 'error' && data.text) console.error('Error:', data.text);
+  if (data.type === 'exit') process.exit(data.code || 0);
 }
 
 // ── Tool dispatch ────────────────────────────────────────────────────
@@ -114,44 +97,49 @@ Run "nyx-dlp-cli <tool> --help" for tool-specific options.
   process.exit(0);
 }
 
+// Prepare opts
+const opts = { outputDir: outDir };
+if (outDir) fs.mkdirSync(outDir, { recursive: true });
+
 switch (tool) {
   case 'ytdlp': {
     const url = positional[0];
     if (!url) die('URL required. Usage: nyx-dlp-cli ytdlp <url> -o <dir>');
     if (!outDir) die('Output directory required (-o <dir>)');
-    const format = flags.f || flags.format || 'bestvideo+bestaudio/best';
-    const cookies = flags.c || flags.cookies || '';
-    const container = flags.container || 'mp4';
-    const extraArgs = flags['extra-args'] || '[]';
-    const startTime = flags['start-time'] || '';
-    const endTime = flags['end-time'] || '';
-    runPython('yt-dlp.py', [url, format, cookies, extraArgs, container, startTime, endTime, 'local', 'n'], outDir);
+    opts.url = url;
+    opts.format = flags.f || flags.format || 'bestvideo+bestaudio/best';
+    opts.cookiesPath = flags.c || flags.cookies || '';
+    opts.container = flags.container || 'mp4';
+    opts.extraArgs = JSON.parse(flags['extra-args'] || '[]');
+    opts.startTime = flags['start-time'] || '';
+    opts.endTime = flags['end-time'] || '';
+    runners.runYtdlp(opts, broadcastTerminal);
     break;
   }
 
   case 'batch': {
     if (!outDir) die('Output directory required (-o <dir>)');
-    const format = flags.f || flags.format || 'bestvideo+bestaudio/best';
-    const rest = flags.rest || '0';
-    const cookies = flags.c || flags.cookies || '';
-    const container = flags.container || 'mp4';
-    const extraArgs = flags['extra-args'] || '[]';
-    // Read URLs from stdin or positional args
+    opts.format = flags.f || flags.format || 'bestvideo+bestaudio/best';
+    opts.rest = flags.rest || '0';
+    opts.cookiesPath = flags.c || flags.cookies || '';
+    opts.container = flags.container || 'mp4';
+    opts.extraArgs = JSON.parse(flags['extra-args'] || '[]');
     const urls = positional.length > 0 ? positional : [];
     if (urls.length === 0 && process.stdin.isTTY) {
       die('Pipe URLs via stdin or pass them as arguments.\nExample: cat urls.txt | nyx-dlp-cli batch -o ./output');
     }
+    opts.urls = urls;
+    
     if (urls.length > 0) {
-      runPython('yt-dlp_multi.py', [format, rest, cookies, extraArgs, container, 'local', 'n'], outDir, [...urls, '']);
+      runners.runBatch(opts, broadcastTerminal);
     } else {
-      // Forward stdin directly
-      const proc = spawn(pythonCmd, ['-u', path.join(scriptsDir, 'yt-dlp_multi.py'), format, rest, cookies, extraArgs, container, 'local', 'n'], {
-        cwd: outDir,
-        stdio: ['inherit', 'inherit', 'inherit'],
-        env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' }
+      let stdinData = '';
+      process.stdin.setEncoding('utf-8');
+      process.stdin.on('data', chunk => stdinData += chunk);
+      process.stdin.on('end', () => {
+        opts.urls = stdinData.split('\n').map(l => l.trim()).filter(Boolean);
+        runners.runBatch(opts, broadcastTerminal);
       });
-      proc.on('close', (code) => process.exit(code || 0));
-      proc.on('error', (err) => die(err.message));
     }
     break;
   }
@@ -160,13 +148,14 @@ switch (tool) {
     const url = positional[0];
     if (!url) die('URL required. Usage: nyx-dlp-cli livestream <url> -o <dir>');
     if (!outDir) die('Output directory required (-o <dir>)');
-    const format = flags.f || flags.format || 'best';
-    const cookies = flags.c || flags.cookies || '';
-    const container = flags.container || 'mp4';
-    const client = flags.client || 'default';
-    const fromStart = flags['from-start'] || 'y';
-    const concurrent = flags.concurrent || '5';
-    runPython('yt-archiver.py', [url, format, cookies, container, 'local', 'n', client, fromStart, concurrent], outDir);
+    opts.url = url;
+    opts.format = flags.f || flags.format || 'best';
+    opts.cookiesPath = flags.c || flags.cookies || '';
+    opts.container = flags.container || 'mp4';
+    opts.client = flags.client || 'default';
+    opts.fromStart = flags['from-start'] || 'y';
+    opts.concurrent = flags.concurrent || '5';
+    runners.runLivestream(opts, broadcastTerminal);
     break;
   }
 
@@ -174,15 +163,16 @@ switch (tool) {
     const url = positional[0];
     if (!url) die('URL required. Usage: nyx-dlp-cli m3u8 <url> -o <dir>');
     if (!outDir) die('Output directory required (-o <dir>)');
-    const encode = flags.encode ? 'y' : 'n';
-    const codec = flags.codec || 'h264';
-    const bitrate = flags.bitrate || '5M';
-    const resolution = flags.resolution || '1920x1080';
-    const fps = flags.fps || '30';
-    const audioBitrate = flags['audio-bitrate'] || '192k';
-    const container = flags.container || 'mp4';
-    const cookies = flags.c || flags.cookies || '';
-    runPython('Download_and_convert_a_m3u8_url.py', [url, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookies], outDir);
+    opts.url = url;
+    opts.encode = !!flags.encode;
+    opts.codec = flags.codec || 'h264';
+    opts.bitrate = flags.bitrate || '5M';
+    opts.resolution = flags.resolution || '1920x1080';
+    opts.fps = flags.fps || '30';
+    opts.audioBitrate = flags['audio-bitrate'] || '192k';
+    opts.container = flags.container || 'mp4';
+    opts.cookiesPath = flags.c || flags.cookies || '';
+    runners.runM3u8(opts, broadcastTerminal);
     break;
   }
 
@@ -190,48 +180,47 @@ switch (tool) {
     const url = positional[0];
     if (!url) die('URL required. Usage: nyx-dlp-cli gallery-dl <url> -o <dir>');
     if (!outDir) die('Output directory required (-o <dir>)');
-    const filetypes = flags.filetypes || '';
-    const metadata = flags.metadata ? 'y' : 'n';
-    const cookies = flags.c || flags.cookies || '';
-    runPython('gallery-dl.py', [url, filetypes, metadata, cookies, 'y'], outDir);
+    opts.url = url;
+    opts.filetypes = flags.filetypes || '';
+    opts.metadata = !!flags.metadata;
+    opts.cookiesPath = flags.c || flags.cookies || '';
+    runners.runGalleryDl(opts, broadcastTerminal);
     break;
   }
 
   case 'splitter': {
     const file = positional[0];
     if (!file) die('File required. Usage: nyx-dlp-cli splitter <file> -o <dir> --parts <n>');
-    const parts = flags.parts;
-    if (!parts) die('--parts <n> required');
-    const targetDir = outDir || path.dirname(file);
-    const args = [file, parts, targetDir];
-    if (flags.format) args.push('--format', flags.format);
-    runPython('video-splitter.py', args, targetDir);
+    if (!flags.parts) die('--parts <n> required');
+    opts.file = file;
+    opts.parts = flags.parts;
+    opts.containerFormat = flags.format;
+    opts.outputDir = outDir || path.dirname(file);
+    runners.runSplitter(opts, broadcastTerminal);
     break;
   }
 
   case 'concat': {
     const files = positional;
     if (files.length < 2) die('At least 2 files required. Usage: nyx-dlp-cli concat -o <dir> --output <name> <file1> <file2> ...');
-    const outputName = flags.output;
-    if (!outputName) die('--output <filename> required');
-    const targetDir = outDir || path.dirname(files[0]);
-    const args = ['--output', outputName];
-    if (flags['force-encode']) args.push('--force-encode');
-    args.push(...files);
-    runPython('video-concatenator.py', args, targetDir);
+    if (!flags.output) die('--output <filename> required');
+    opts.files = files;
+    opts.output = flags.output;
+    opts.forceEncode = !!flags['force-encode'];
+    opts.outputDir = outDir || path.dirname(files[0]);
+    runners.runConcatenator(opts, broadcastTerminal);
     break;
   }
 
   case 'encoder': {
     const files = positional;
     if (files.length === 0) die('At least 1 file required. Usage: nyx-dlp-cli encoder -o <dir> <file1> ...');
-    const targetDir = outDir || path.dirname(files[0]);
-    const args = [];
-    if (flags.mode) args.push('--mode', flags.mode);
-    if (flags.vcodec) args.push('--vcodec', flags.vcodec);
-    if (flags.acodec) args.push('--acodec', flags.acodec);
-    args.push(...files);
-    runPython('video-encoder.py', args, targetDir);
+    opts.files = files;
+    opts.mode = flags.mode;
+    opts.vcodec = flags.vcodec;
+    opts.acodec = flags.acodec;
+    opts.outputDir = outDir || path.dirname(files[0]);
+    runners.runEncoder(opts, broadcastTerminal);
     break;
   }
 

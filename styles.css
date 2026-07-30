@@ -787,6 +787,23 @@ html, body {
   border-bottom: 1px solid var(--terminal-border);
 }
 .terminal-title { font-size: 12px; font-weight: 600; color: var(--terminal-title); letter-spacing: 0.06em; text-transform: uppercase; }
+.terminal-actions { display: flex; gap: 8px; align-items: center; }
+.btn-term-action {
+  background: transparent;
+  border: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.btn-term-action:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 .terminal-dots { display: flex; gap: 6px; }
 .terminal-dots span { width: 10px; height: 10px; border-radius: 50%; }
 .terminal-dots span:nth-child(1) { background: #ff5f57; }
@@ -796,8 +813,8 @@ html, body {
   flex: 1;
   overflow-y: auto;
   padding: 14px 16px;
-  font-family: 'Cascadia Code', 'Consolas', monospace;
-  font-size: 13px;
+  font-family: var(--font);
+  font-size: 14px;
   line-height: 20px;
   color: var(--terminal-txt);
   user-select: text;
@@ -884,6 +901,20 @@ html, body {
 }
 .log-scroll-btn:hover { opacity: 1; color: var(--accent); background: var(--accent-glow); }
 
+/* ── Segmented Control (Upload/Download toggle) ────────────── */
+.segmented-control {
+  display: flex; gap: 4px; background: var(--bg-secondary); padding: 4px; border-radius: 8px;
+}
+.segmented-control .segment {
+  padding: 6px 12px; border-radius: 4px; border: none; background: transparent; color: var(--text-subtle); cursor: pointer; transition: 0.2s; font-family: var(--font); font-size: 13px;
+}
+.segmented-control .segment:hover {
+  color: var(--text);
+}
+.segmented-control .segment.active {
+  background: var(--bg-hover); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
 /* ── Form-level advanced section ─────────────────────────────── */
 .adv-toggle-wrap { grid-column: 1 / -1; }
 .form-adv-toggle {
@@ -898,12 +929,12 @@ html, body {
 .form-adv-toggle[aria-expanded="true"] { border-bottom: 1px solid var(--border); padding-bottom: 9px; }
 .form-adv-toggle[aria-expanded="true"] .ytdlp-chevron { transform: rotate(180deg); }
 .adv-body { grid-column: 1 / -1; display: none; }
-.adv-body.open { display: block; }
+.adv-body.open { display: block; padding: 0 14px 16px; }
 .adv-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  padding: 12px;
+  padding-top: 12px;
 }
 .adv-grid .form-group.full-width { grid-column: 1 / -1; }
 
@@ -1178,4 +1209,39 @@ html, body {
 .context-menu-item:hover {
   background: var(--bg-hover);
   color: #fff;
+}
+
+details.auto-collapse-details {
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  margin: 4px 0;
+  background: rgba(0,0,0,0.2);
+}
+details.auto-collapse-details summary {
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #888;
+  font-size: 0.9em;
+  user-select: none;
+}
+details.auto-collapse-details summary:hover {
+  background: rgba(255,255,255,0.05);
+  color: #aaa;
+}
+
+.collapse-footer-btn {
+  text-align: center;
+  padding: 6px;
+  margin-top: 4px;
+  background: rgba(255,255,255,0.05);
+  color: #888;
+  cursor: pointer;
+  font-size: 0.9em;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  transition: all 0.2s;
+  user-select: none;
+}
+.collapse-footer-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #ddd;
 }
