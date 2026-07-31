@@ -114,6 +114,7 @@ window.addSortableItem = function(container, filepath) {
     if (container.children.length === 0) {
       container.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add videos.</div>';
     }
+    container.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
   item.appendChild(dragHandle);
@@ -159,7 +160,9 @@ window.addSortableItem = function(container, filepath) {
     } else {
       container.insertBefore(window._draggingItem, item.nextSibling);
     }
+    container.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
   container.appendChild(item);
+  container.dispatchEvent(new Event('change', { bubbles: true }));
 };
