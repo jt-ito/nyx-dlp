@@ -90,7 +90,7 @@
     const urls         = activeUrls;
     const outputDir    = document.getElementById('gdl-output').value.trim();
     const filetypes    = document.getElementById('gdl-filetypes').value.trim();
-    const metadata     = document.getElementById('gdl-metadata').checked;
+    const metadata     = document.getElementById('gdl-meta').checked;
     const cookiesPath  = (document.getElementById('gdl-use-cookies').checked ? document.getElementById('gdl-cookies').value.trim() : '');
     const installGdl   = getSetting('dep-install-gdl') ? 'y' : 'n';
 

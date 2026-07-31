@@ -4,7 +4,7 @@
   const runBtn   = document.getElementById('enc-run');
   const pauseBtn = document.getElementById('enc-pause');
   const stopBtn  = document.getElementById('enc-stop');
-  const fileList = document.getElementById('enc-files');
+  const fileList = document.getElementById('enc-file-list');
   let currentPid = null;
   let isPaused   = false;
 
@@ -33,7 +33,7 @@
 
   runBtn.addEventListener('click', () => {
     const files     = Array.from(fileList.querySelectorAll('.sortable-item')).map(el => el.dataset.path);
-    const outputDir = document.getElementById('enc-output').value.trim();
+    const outputDir = document.getElementById('enc-output-dir').value.trim();
     const mode      = document.getElementById('enc-mode').value;
     const vcodec    = document.getElementById('enc-vcodec').value;
     const acodec    = document.getElementById('enc-acodec').value;

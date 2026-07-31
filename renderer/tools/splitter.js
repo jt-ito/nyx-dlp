@@ -1,16 +1,16 @@
 /* ── 6. Video Splitter ───────────────────────────────────── */
 (function () {
-  const log      = document.getElementById('split-log');
-  const runBtn   = document.getElementById('split-run');
-  const pauseBtn = document.getElementById('split-pause');
-  const stopBtn  = document.getElementById('split-stop');
+  const log      = document.getElementById('sp-log');
+  const runBtn   = document.getElementById('sp-run');
+  const pauseBtn = document.getElementById('sp-pause');
+  const stopBtn  = document.getElementById('sp-stop');
   let currentPid = null;
   let isPaused   = false;
 
   const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
-  document.getElementById('split-clear').addEventListener('click', () => clearLog(log));
+  document.getElementById('sp-clear').addEventListener('click', () => clearLog(log));
   stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
 
   pauseBtn.addEventListener('click', () => {
@@ -31,10 +31,10 @@
   });
 
   runBtn.addEventListener('click', () => {
-    const file       = document.getElementById('split-file').value.trim();
-    const parts      = document.getElementById('split-parts').value;
-    const outputDir  = document.getElementById('split-output').value.trim();
-    const container  = document.getElementById('split-container')?.value;
+    const file       = document.getElementById('sp-file').value.trim();
+    const parts      = document.getElementById('sp-parts-select').value;
+    const outputDir  = document.getElementById('sp-output').value.trim();
+    const container  = document.getElementById('sp-container')?.value;
 
     if (!file)  { appendLog(log, '⚠ Please select a video file.', 'error'); return; }
 

@@ -4,7 +4,7 @@
   const runBtn   = document.getElementById('concat-run');
   const pauseBtn = document.getElementById('concat-pause');
   const stopBtn  = document.getElementById('concat-stop');
-  const fileList = document.getElementById('concat-files');
+  const fileList = document.getElementById('concat-file-list');
   let currentPid = null;
   let isPaused   = false;
 
@@ -33,9 +33,9 @@
 
   runBtn.addEventListener('click', () => {
     const files      = Array.from(fileList.querySelectorAll('.sortable-item')).map(el => el.dataset.path);
-    const output     = document.getElementById('concat-output-file').value.trim();
-    const outputDir  = document.getElementById('concat-output').value.trim();
-    const forceEncode = document.getElementById('concat-force-encode')?.checked;
+    const output     = document.getElementById('concat-output-name').value.trim();
+    const outputDir  = document.getElementById('concat-output-dir').value.trim();
+    const forceEncode = document.getElementById('concat-force')?.checked;
 
     if (files.length < 2) { appendLog(log, '⚠ Please select at least 2 video files.', 'error'); return; }
     if (!output)          { appendLog(log, '⚠ Please enter an output filename.', 'error'); return; }
