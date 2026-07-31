@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('api', {
   runIaDownload: (opts) => ipcRenderer.send('run-ia-download', opts),
   checkIaAuth: (autoIa) => ipcRenderer.invoke('check-ia-auth', { autoIa }),
   runIaConfigure: (email, password, autoIa) => ipcRenderer.invoke('run-ia-configure', { email, password, autoIa }),
+  runIaUnlink: () => ipcRenderer.invoke('run-ia-unlink'),
 
   // Output listeners
   onLivestreamOutput: (cb) => ipcRenderer.on('livestream-output', (_e, d) => cb(d)),

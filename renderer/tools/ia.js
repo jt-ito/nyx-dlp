@@ -76,6 +76,12 @@
       // If user clears it completely, allow auto-populating again
       idModifiedByUser = e.target.value.length > 0;
     });
+    iaIdUp.addEventListener('blur', () => {
+      if (iaIdUp.value) {
+        iaIdUp.value = iaIdUp.value.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        iaIdUp.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
     iaTitle.addEventListener('input', () => {
       if (!idModifiedByUser) {
         iaIdUp.value = iaTitle.value.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -126,6 +132,27 @@
   const configBtn = document.getElementById('ia-config-btn');
   const loginModal = document.getElementById('ia-login-modal');
   const connectedModal = document.getElementById('ia-connected-modal');
+  const unlinkModal = document.getElementById('ia-unlink-modal');
+  
+  configBtn.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    unlinkModal.style.display = 'flex';
+  });
+
+  document.getElementById('ia-unlink-cancel').addEventListener('click', () => {
+    unlinkModal.style.display = 'none';
+  });
+
+  document.getElementById('ia-unlink-submit').addEventListener('click', async () => {
+    const btn = document.getElementById('ia-unlink-submit');
+    btn.disabled = true;
+    btn.innerText = 'Unlinking...';
+    await window.api.runIaUnlink();
+    unlinkModal.style.display = 'none';
+    btn.disabled = false;
+    btn.innerText = 'Unlink';
+    appendLog(log, '✔ Internet Archive account unlinked.', 'success');
+  });
   
   const emailInput = document.getElementById('ia-auth-email');
   const passwordInput = document.getElementById('ia-auth-password');

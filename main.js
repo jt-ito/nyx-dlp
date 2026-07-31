@@ -274,6 +274,11 @@ ipcMain.on('run-ia-download', (event, opts) => prepareRunner(opts, 'ia-output', 
 ipcMain.handle('check-ia-auth', async (event, { autoIa } = {}) => await runners.checkIaAuth(autoIa));
 ipcMain.handle('run-ia-configure', async (event, { email, password, autoIa }) => await runners.runIaConfigure(email, password, autoIa));
 
+ipcMain.handle('run-ia-unlink', async () => {
+  runners.unlinkIa();
+  return true;
+});
+
 // ── Tool 3: Batch Downloader ──────────────────────────────────────────────────
 ipcMain.on('run-batch', (event, opts) => prepareRunner(opts, 'batch-output', runners.runBatch));
 ipcMain.on('append-batch-queue', (event, { outputDir, newUrls }) => {
