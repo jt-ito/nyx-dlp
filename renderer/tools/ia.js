@@ -73,8 +73,10 @@
 
   if (iaTitle && iaIdUp) {
     iaIdUp.addEventListener('input', (e) => {
-      // If user clears it completely, allow auto-populating again
-      idModifiedByUser = e.target.value.length > 0;
+      if (e.isTrusted) {
+        // If user clears it completely, allow auto-populating again
+        idModifiedByUser = e.target.value.length > 0;
+      }
     });
     iaTitle.addEventListener('input', () => {
       if (!idModifiedByUser) {
