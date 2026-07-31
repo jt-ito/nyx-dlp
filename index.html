@@ -1317,7 +1317,7 @@
                 <option value="test_collection">test_collection</option>
                 <option value="opensource_media">opensource_media</option>
                 <option value="opensource_audio">opensource_audio</option>
-                <option value="opensource_movies">opensource_movies</option>
+                <option value="opensource_movies" selected>opensource_movies</option>
               </select>
             </div>
 
@@ -1972,6 +1972,18 @@
       <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Your Internet Archive session is active and ready to use.</p>
       
       <button class="btn btn-primary" id="ia-connected-close" style="width: 100%;">Awesome</button>
+    </div>
+  </div>
+
+  <!-- IA Unlink Modal -->
+  <div id="ia-unlink-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 400px; max-width: 90vw;">
+      <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">Unlink Internet Archive</h3>
+      <p style="font-size: 14px; color: var(--text); margin-bottom: 24px;">Are you sure you want to unlink your Internet Archive account? You will need to log in again to upload or download items.</p>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-ghost" id="ia-unlink-cancel">Cancel</button>
+        <button class="btn btn-primary" id="ia-unlink-submit" style="background: #ff5f57; color: #fff; border: none;">Unlink</button>
+      </div>
     </div>
   </div>
 

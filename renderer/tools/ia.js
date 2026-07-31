@@ -264,33 +264,40 @@
       const description = document.getElementById('ia-description').value.trim();
       const subject = document.getElementById('ia-subject').value.trim();
       const collection = document.getElementById('ia-collection').value;
-      const creator = document.getElementById('ia-creator').value.trim();
+      const creator = document.getElementById('ia-creator')?.value?.trim() || '';
       
-      const y = document.getElementById('ia-date-y').value.trim();
-      const m = document.getElementById('ia-date-m').value.trim();
-      const d = document.getElementById('ia-date-d').value.trim();
+      const y = document.getElementById('ia-date-y')?.value?.trim() || '';
+      const m = document.getElementById('ia-date-m')?.value?.trim() || '';
+      const d = document.getElementById('ia-date-d')?.value?.trim() || '';
       let date = '';
       if (y && m && d) date = `${y}-${m}-${d}`;
       else if (y && m) date = `${y}-${m}`;
       else if (y) date = y;
 
-      const language = document.getElementById('ia-language').value.trim();
-      const license = document.getElementById('ia-license').value.trim();
-      const mediatype = document.getElementById('ia-mediatype').value;
+      const language = document.getElementById('ia-language')?.value?.trim() || '';
+      const license = document.getElementById('ia-license')?.value?.trim() || '';
+      const mediatype = document.getElementById('ia-mediatype')?.value || '';
 
-      if (files.length === 0) { appendLog(log, '⚠ Please select at least one file to upload.', 'error'); return null; }
-      if (!identifier) { appendLog(log, '⚠ Please provide an identifier.', 'error'); return null; }
-      if (identifier.length < 5 || identifier.length > 100) { appendLog(log, '⚠ Identifier must be between 5 and 100 characters.', 'error'); return null; }
-      if (!description) { appendLog(log, '⚠ Please provide a description.', 'error'); return null; }
-      if (!subject) { appendLog(log, '⚠ Please provide subject tags.', 'error'); return null; }
+      const showError = (msg) => {
+        appendLog(log, msg, 'error');
+        log.parentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return null;
+      };
 
-      try {
-        const res = await fetch(`https://archive.org/metadata/${identifier}`);
-        const data = await res.json();
-        if (data && data.metadata) {
-          appendLog(log, `⚠ Identifier '${identifier}' already exists. If you do not own it, the upload will fail with Access Denied.`, 'warning');
-        }
-      } catch (err) {} // Ignore if fetch fails
+      if (files.length === 0) return showError('⚠ Please select at least one file to upload.');
+      if (!identifier) return showError('⚠ Please provide an identifier.');
+      if (identifier.length < 5 || identifier.length > 100) return showError('⚠ Identifier must be between 5 and 100 characters.');
+      if (!description) return showError('⚠ Please provide a description.');
+      if (!subject) return showError('⚠ Please provide subject tags.');
+
+      fetch(`https://archive.org/metadata/${identifier}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.metadata) {
+            appendLog(log, `⚠ Identifier '${identifier}' already exists. If you do not own it, the upload will fail with Access Denied.`, 'warning');
+          }
+        })
+        .catch(err => {}); // Ignore if fetch fails
 
       const autoIa = getSetting('dep-auto-ia');
       return {
