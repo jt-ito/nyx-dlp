@@ -7,4 +7,7 @@ scripts/_gallery_dl_debug.txt
 *.mp4
 *.part
 v2788165868/
-app.asarvendor/
+app.asar
+vendor/
+test_file.txt
+test_nsis/

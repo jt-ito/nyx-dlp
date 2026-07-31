@@ -73,10 +73,8 @@
 
   if (iaTitle && iaIdUp) {
     iaIdUp.addEventListener('input', (e) => {
-      if (e.isTrusted) {
-        // If user clears it completely, allow auto-populating again
-        idModifiedByUser = e.target.value.length > 0;
-      }
+      // If user clears it completely, allow auto-populating again
+      idModifiedByUser = e.target.value.length > 0;
     });
     iaTitle.addEventListener('input', () => {
       if (!idModifiedByUser) {
@@ -232,7 +230,7 @@
     uploadStop,
     'IA Upload',
     window.api.runIaUpload,
-    () => {
+    async () => {
       const files = Array.from(document.getElementById('ia-files').querySelectorAll('.sortable-item')).map(el => el.dataset.path);
       const identifier = document.getElementById('ia-identifier-up').value.trim();
       const title = document.getElementById('ia-title').value.trim();
