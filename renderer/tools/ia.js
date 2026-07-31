@@ -95,9 +95,10 @@
       }
     });
     
-    iaFiles.addEventListener('input', () => {
-      if (!titleModifiedByUser && iaFiles.value.trim().length > 0) {
-        const firstFile = iaFiles.value.trim().split('\n')[0].trim();
+    iaFiles.addEventListener('change', () => {
+      const items = Array.from(iaFiles.querySelectorAll('.sortable-item'));
+      if (!titleModifiedByUser && items.length > 0) {
+        const firstFile = items[0].dataset.path;
         if (firstFile) {
           const filenameWithExt = firstFile.split(/[/\\]/).pop();
           const lastDot = filenameWithExt.lastIndexOf('.');
@@ -107,7 +108,7 @@
           // Dispatch synthetic event so identifier also updates!
           iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
         }
-      } else if (!titleModifiedByUser && iaFiles.value.trim().length === 0) {
+      } else if (!titleModifiedByUser && items.length === 0) {
         iaTitle.value = '';
         iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
       }
@@ -195,8 +196,8 @@
   });
 
   function setupRun(runBtn, stopBtn, handlerName, apiCall, buildOpts) {
-    runBtn.addEventListener('click', () => {
-      const opts = buildOpts();
+    runBtn.addEventListener('click', async () => {
+      const opts = await buildOpts();
       if (!opts) return; // Validation failed
 
       clearLog(log);
@@ -230,8 +231,7 @@
     'IA Upload',
     window.api.runIaUpload,
     () => {
-      const filesText = document.getElementById('ia-files').value.trim();
-      const files = filesText ? filesText.split('\n').map(f => f.trim()).filter(Boolean) : [];
+      const files = Array.from(document.getElementById('ia-files').querySelectorAll('.sortable-item')).map(el => el.dataset.path);
       const identifier = document.getElementById('ia-identifier-up').value.trim();
       const title = document.getElementById('ia-title').value.trim();
       const description = document.getElementById('ia-description').value.trim();
@@ -253,8 +253,17 @@
 
       if (files.length === 0) { appendLog(log, '⚠ Please select at least one file to upload.', 'error'); return null; }
       if (!identifier) { appendLog(log, '⚠ Please provide an identifier.', 'error'); return null; }
+      if (identifier.length < 5 || identifier.length > 100) { appendLog(log, '⚠ Identifier must be between 5 and 100 characters.', 'error'); return null; }
       if (!description) { appendLog(log, '⚠ Please provide a description.', 'error'); return null; }
       if (!subject) { appendLog(log, '⚠ Please provide subject tags.', 'error'); return null; }
+
+      try {
+        const res = await fetch(`https://archive.org/metadata/${identifier}`);
+        const data = await res.json();
+        if (data && data.metadata) {
+          appendLog(log, `⚠ Identifier '${identifier}' already exists. If you do not own it, the upload will fail with Access Denied.`, 'warning');
+        }
+      } catch (err) {} // Ignore if fetch fails
 
       const autoIa = getSetting('dep-auto-ia');
       return {
@@ -274,6 +283,7 @@
       const outputDir = document.getElementById('ia-output').value.trim();
 
       if (!identifier) { appendLog(log, '⚠ Please provide an identifier to download.', 'error'); return null; }
+      if (identifier.length < 5 || identifier.length > 100) { appendLog(log, '⚠ Identifier must be between 5 and 100 characters.', 'error'); return null; }
       if (!outputDir) { appendLog(log, '⚠ Please specify an output directory.', 'error'); return null; }
 
       const autoIa = getSetting('dep-auto-ia');
