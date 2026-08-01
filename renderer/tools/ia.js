@@ -90,9 +90,19 @@
     });
   }
 
-  // Auto-populate Title from File Selection
+  // Auto-populate Title and Collection from File Selection
   const iaFiles = document.getElementById('ia-files');
+  const iaCollection = document.getElementById('ia-collection');
   let titleModifiedByUser = !!(iaTitle && iaTitle.value);
+  let collectionModifiedByUser = false;
+
+  if (iaCollection) {
+    iaCollection.addEventListener('change', (e) => {
+      if (e.isTrusted) {
+        collectionModifiedByUser = true;
+      }
+    });
+  }
 
   if (iaTitle && iaFiles) {
     iaTitle.addEventListener('input', (e) => {
@@ -103,20 +113,39 @@
     
     iaFiles.addEventListener('change', () => {
       const items = Array.from(iaFiles.querySelectorAll('.sortable-item'));
-      if (!titleModifiedByUser && items.length > 0) {
+      if (items.length > 0) {
         const firstFile = items[0].dataset.path;
         if (firstFile) {
           const filenameWithExt = firstFile.split(/[/\\]/).pop();
           const lastDot = filenameWithExt.lastIndexOf('.');
           const filename = lastDot > 0 ? filenameWithExt.substring(0, lastDot) : filenameWithExt;
+          const ext = lastDot > 0 ? filenameWithExt.substring(lastDot + 1).toLowerCase() : '';
           
-          iaTitle.value = filename;
-          // Dispatch synthetic event so identifier also updates!
+          if (!titleModifiedByUser) {
+            iaTitle.value = filename;
+            // Dispatch synthetic event so identifier also updates!
+            iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+
+          if (iaCollection && !collectionModifiedByUser) {
+            const videoExts = ['mp4', 'mkv', 'avi', 'mov', 'webm', 'ts', 'flv'];
+            const audioExts = ['mp3', 'wav', 'flac', 'ogg', 'm4a', 'aac'];
+            
+            if (videoExts.includes(ext)) {
+              iaCollection.value = 'opensource_movies';
+            } else if (audioExts.includes(ext)) {
+              iaCollection.value = 'opensource_audio';
+            } else {
+              iaCollection.value = 'opensource_media';
+            }
+            iaCollection.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      } else {
+        if (!titleModifiedByUser) {
+          iaTitle.value = '';
           iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
         }
-      } else if (!titleModifiedByUser && items.length === 0) {
-        iaTitle.value = '';
-        iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });
   }
@@ -277,6 +306,7 @@
       const language = document.getElementById('ia-language')?.value?.trim() || '';
       const license = document.getElementById('ia-license')?.value?.trim() || '';
       const mediatype = document.getElementById('ia-mediatype')?.value || '';
+      const noDerive = document.getElementById('ia-noderive')?.checked || false;
 
       const showError = (msg) => {
         appendLog(log, msg, 'error');
@@ -301,7 +331,7 @@
 
       const autoIa = getSetting('dep-auto-ia');
       return {
-        files, identifier, title, description, subject, collection, creator, date, language, license, mediatype, autoIa
+        files, identifier, title, description, subject, collection, creator, date, language, license, mediatype, noDerive, autoIa
       };
     }
   );
