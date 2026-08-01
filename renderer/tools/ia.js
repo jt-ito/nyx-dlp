@@ -30,6 +30,34 @@
 
   document.getElementById('ia-upload-clear').addEventListener('click', () => clearLog(log));
   document.getElementById('ia-download-clear').addEventListener('click', () => clearLog(log));
+
+  // Reset Info Modal Logic
+  const resetBtn = document.getElementById('ia-upload-reset');
+  const resetModal = document.getElementById('ia-reset-modal');
+  const resetCancel = document.getElementById('ia-reset-cancel');
+  const resetSubmit = document.getElementById('ia-reset-submit');
+
+  resetBtn.addEventListener('click', () => {
+    resetModal.style.display = 'flex';
+  });
+  resetCancel.addEventListener('click', () => {
+    resetModal.style.display = 'none';
+  });
+  resetSubmit.addEventListener('click', () => {
+    document.getElementById('ia-identifier').value = '';
+    document.getElementById('ia-title').value = '';
+    document.getElementById('ia-description').value = '';
+    document.getElementById('ia-creator').value = '';
+    document.getElementById('ia-date-y').value = '';
+    document.getElementById('ia-date-m').value = '';
+    document.getElementById('ia-date-d').value = '';
+    document.getElementById('ia-subject').value = '';
+    document.getElementById('ia-license').value = '';
+    document.getElementById('ia-collection').value = '';
+    const fileList = document.getElementById('ia-file-list');
+    if (fileList) fileList.innerHTML = ''; // Clear files if applicable
+    resetModal.style.display = 'none';
+  });
   
   // Date Auto-Focus Logic
   const dateY = document.getElementById('ia-date-y');

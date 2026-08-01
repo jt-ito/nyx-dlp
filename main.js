@@ -17,6 +17,19 @@ if (app.isPackaged) {
   }
 }
 
+const lastPathFile = path.join(app.getPath('userData'), 'last-used-path.txt');
+let lastUsedPath = '';
+try {
+  if (fs.existsSync(lastPathFile)) {
+    lastUsedPath = fs.readFileSync(lastPathFile, 'utf8').trim();
+  }
+} catch (e) {}
+
+function saveLastPath(p) {
+  lastUsedPath = p;
+  try { fs.writeFileSync(lastPathFile, p, 'utf8'); } catch (e) {}
+}
+
 // In production the Python scripts are placed in resources/scripts/ (extraResources).
 // In dev they sit alongside main.js in scripts/.
 const scriptsDir = app.isPackaged
@@ -138,8 +151,12 @@ ipcMain.on('window-close', () => mainWindow.close());
 ipcMain.handle('pick-folder', async () => {
   mainWindow.focus();
   const result = await dialog.showOpenDialog(mainWindow, {
+    defaultPath: lastUsedPath || app.getPath('downloads'),
     properties: ['openDirectory']
   });
+  if (!result.canceled && result.filePaths.length > 0) {
+    saveLastPath(result.filePaths[0]);
+  }
   return result.canceled ? null : result.filePaths[0];
 });
 
@@ -147,9 +164,13 @@ ipcMain.handle('pick-folder', async () => {
 ipcMain.handle('pick-file', async () => {
   mainWindow.focus();
   const result = await dialog.showOpenDialog(mainWindow, {
+    defaultPath: lastUsedPath || app.getPath('downloads'),
     properties: ['openFile'],
     filters: [{ name: 'Cookies / Text', extensions: ['txt', 'cookies'] }, { name: 'All Files', extensions: ['*'] }]
   });
+  if (!result.canceled && result.filePaths.length > 0) {
+    saveLastPath(path.dirname(result.filePaths[0]));
+  }
   return result.canceled ? null : result.filePaths[0];
 });
 
@@ -157,9 +178,13 @@ ipcMain.handle('pick-file', async () => {
 ipcMain.handle('pick-video', async () => {
   mainWindow.focus();
   const result = await dialog.showOpenDialog(mainWindow, {
+    defaultPath: lastUsedPath || app.getPath('downloads'),
     properties: ['openFile'],
     filters: [{ name: 'Video Files', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm', 'ts', 'flv'] }, { name: 'All Files', extensions: ['*'] }]
   });
+  if (!result.canceled && result.filePaths.length > 0) {
+    saveLastPath(path.dirname(result.filePaths[0]));
+  }
   return result.canceled ? null : result.filePaths[0];
 });
 
@@ -167,9 +192,27 @@ ipcMain.handle('pick-video', async () => {
 ipcMain.handle('pick-files', async () => {
   mainWindow.focus();
   const result = await dialog.showOpenDialog(mainWindow, {
+    defaultPath: lastUsedPath || app.getPath('downloads'),
     properties: ['openFile', 'multiSelections'],
     filters: [{ name: 'Video Files', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm', 'ts', 'flv'] }, { name: 'All Files', extensions: ['*'] }]
   });
+  if (!result.canceled && result.filePaths.length > 0) {
+    saveLastPath(path.dirname(result.filePaths[0]));
+  }
+  return result.canceled ? null : result.filePaths;
+});
+
+// Multi-file picker (All Files default)
+ipcMain.handle('pick-any-files', async () => {
+  mainWindow.focus();
+  const result = await dialog.showOpenDialog(mainWindow, {
+    defaultPath: lastUsedPath || app.getPath('downloads'),
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'All Files', extensions: ['*'] }]
+  });
+  if (!result.canceled && result.filePaths.length > 0) {
+    saveLastPath(path.dirname(result.filePaths[0]));
+  }
   return result.canceled ? null : result.filePaths;
 });
 
