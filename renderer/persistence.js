@@ -23,7 +23,9 @@
     'm3-encode-codec', 'm3-container',
     'sp-container',
     'gdl-filetypes',
-    'dep-ffmpeg-version'
+    'dep-ffmpeg-version',
+    'concat-quality',
+    'enc-quality'
   ];
 
   // Checkboxes on the tool tabs (not settings-page toggles) — save on change

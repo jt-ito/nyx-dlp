@@ -13,6 +13,14 @@
 
   document.getElementById('enc-clear').addEventListener('click', () => clearLog(log));
   stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
+  
+  const vcodecSelect = document.getElementById('enc-vcodec');
+  const encQualityGroup = document.getElementById('enc-quality-group');
+  if (vcodecSelect && encQualityGroup) {
+    vcodecSelect.addEventListener('change', (e) => {
+      encQualityGroup.style.display = (e.target.value === 'copy' || e.target.value === 'none') ? 'none' : 'block';
+    });
+  }
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
@@ -37,13 +45,14 @@
     const mode      = document.getElementById('enc-mode').value;
     const vcodec    = document.getElementById('enc-vcodec').value;
     const acodec    = document.getElementById('enc-acodec').value;
+    const quality   = document.getElementById('enc-quality')?.value || 'medium';
 
     if (files.length === 0) { appendLog(log, '⚠ Please select at least one video file.', 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting encoder (${mode})...`, 'info');
     appendLog(log, `  Files:  ${files.length}`, 'cmd');
-    appendLog(log, `  Vcodec: ${vcodec}`, 'cmd');
+    appendLog(log, `  Vcodec: ${vcodec} (Quality: ${quality})`, 'cmd');
     appendLog(log, `  Acodec: ${acodec}`, 'cmd');
     appendLog(log, `  Mode:   ${mode}`, 'cmd');
     appendLog(log, '', 'stdout');
@@ -72,6 +81,6 @@
       });
     });
 
-    window.api.runEncoder({ files, outputDir: outputDir || '', mode, vcodec, acodec });
+    window.api.runEncoder({ files, mode, vcodec, acodec, quality, outputDir: outputDir || '' });
   });
 })();

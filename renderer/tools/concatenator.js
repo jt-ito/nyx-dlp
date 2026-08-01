@@ -13,6 +13,18 @@
 
   document.getElementById('concat-clear').addEventListener('click', () => clearLog(log));
   stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
+  
+  // Initialize right-click context menu text if saved
+  const savedQuality = localStorage.getItem('field:concat-quality');
+  if (savedQuality) {
+    const toggle = document.getElementById('concat-force');
+    const desc = document.querySelector('#concat-force-toggle .toggle-desc');
+    if (toggle) toggle.dataset.quality = savedQuality;
+    if (desc) {
+      const capVal = savedQuality.charAt(0).toUpperCase() + savedQuality.slice(1);
+      desc.textContent = `Force a full re-encode using ${capVal} quality settings.`;
+    }
+  }
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
@@ -35,8 +47,10 @@
     const files      = Array.from(fileList.querySelectorAll('.sortable-item')).map(el => el.dataset.path);
     const output     = document.getElementById('concat-output-name').value.trim();
     const outputDir  = document.getElementById('concat-output-dir').value.trim();
-    const forceEncode = document.getElementById('concat-force')?.checked;
+    const forceToggle = document.getElementById('concat-force');
+    const forceEncode = forceToggle?.checked;
     const useMkvFix = document.getElementById('concat-mkv')?.checked;
+    const quality = forceToggle?.dataset?.quality || localStorage.getItem('field:concat-quality') || 'medium';
 
     if (files.length < 2) { appendLog(log, '⚠ Please select at least 2 video files.', 'error'); return; }
     if (!output)          { appendLog(log, '⚠ Please enter an output filename.', 'error'); return; }
@@ -45,7 +59,7 @@
     appendLog(log, `▶ Starting concatenation...`, 'info');
     appendLog(log, `  Files: ${files.length}`, 'cmd');
     appendLog(log, `  Output: ${output}`, 'cmd');
-    if (forceEncode) appendLog(log, '  Force re-encode: Yes', 'cmd');
+    if (forceEncode) appendLog(log, `  Force re-encode: Yes (Quality: ${quality})`, 'cmd');
     if (useMkvFix) appendLog(log, '  Use MKV Sync: Yes', 'cmd');
     appendLog(log, '', 'stdout');
     markBodyStart(log);
@@ -73,6 +87,6 @@
       });
     });
 
-    window.api.runConcatenator({ files, output, forceEncode: !!forceEncode, useMkvFix: !!useMkvFix, outputDir: outputDir || '' });
+    window.api.runConcatenator({ files, output, forceEncode: !!forceEncode, useMkvFix: !!useMkvFix, quality, outputDir: outputDir || '' });
   });
 })();

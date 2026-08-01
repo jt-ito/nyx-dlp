@@ -1,10 +1,23 @@
 /* ── Batch Rest Context Menu ────────────────────────────── */
 document.addEventListener('contextmenu', e => {
   const target = e.target;
-  const targetLine = target.closest ? target.closest('.line-info, .line-cmd, #batch-rest-toggle') : null;
-  if (!targetLine) {
-    const menu = document.getElementById('batch-rest-context-menu');
-    if (menu) menu.style.display = 'none';
+  const targetLine = target.closest ? target.closest('.line-info, .line-cmd, #batch-rest-toggle, #concat-force-toggle') : null;
+  
+  // Hide all context menus first
+  const batchMenu = document.getElementById('batch-rest-context-menu');
+  const concatMenu = document.getElementById('concat-quality-context-menu');
+  if (batchMenu) batchMenu.style.display = 'none';
+  if (concatMenu) concatMenu.style.display = 'none';
+  
+  if (!targetLine) return;
+  
+  if (targetLine.id === 'concat-force-toggle') {
+    e.preventDefault();
+    if (concatMenu) {
+      concatMenu.style.display = 'block';
+      concatMenu.style.left = e.pageX + 'px';
+      concatMenu.style.top = e.pageY + 'px';
+    }
     return;
   }
   
@@ -13,14 +26,10 @@ document.addEventListener('contextmenu', e => {
   
   if (isToggle || isRestText) {
     e.preventDefault();
-    const menu = document.getElementById('batch-rest-context-menu');
-    if (!menu) return;
-    menu.style.display = 'block';
-    menu.style.left = e.pageX + 'px';
-    menu.style.top = e.pageY + 'px';
-  } else {
-    const menu = document.getElementById('batch-rest-context-menu');
-    if (menu) menu.style.display = 'none';
+    if (!batchMenu) return;
+    batchMenu.style.display = 'block';
+    batchMenu.style.left = e.pageX + 'px';
+    batchMenu.style.top = e.pageY + 'px';
   }
 });
 
@@ -39,24 +48,42 @@ function applyRestValue(val) {
 }
 
 document.addEventListener('click', e => {
-  const menu = document.getElementById('batch-rest-context-menu');
-  if (menu && menu.style.display === 'block') {
+  const batchMenu = document.getElementById('batch-rest-context-menu');
+  const concatMenu = document.getElementById('concat-quality-context-menu');
+  
+  if (batchMenu && batchMenu.style.display === 'block') {
     if (e.target.classList.contains('context-menu-item')) {
       let val = e.target.getAttribute('data-val');
       if (val === 'custom') {
         const modal = document.getElementById('custom-rest-modal');
-        const input = document.getElementById('custom-rest-input');
-        if (modal && input) {
-          input.value = '';
+        if (modal) {
           modal.style.display = 'flex';
-          input.focus();
+          const input = document.getElementById('custom-rest-input');
+          if (input) { input.value = ''; input.focus(); }
         }
       } else {
-        val = parseFloat(val); // data-val is in minutes
         applyRestValue(val);
       }
     }
-    menu.style.display = 'none';
+    batchMenu.style.display = 'none';
+  }
+  
+  if (concatMenu && concatMenu.style.display === 'block') {
+    if (e.target.classList.contains('context-menu-item')) {
+      let val = e.target.getAttribute('data-val');
+      
+      const toggle = document.getElementById('concat-force');
+      if (toggle) {
+        toggle.dataset.quality = val;
+        const desc = document.querySelector('#concat-force-toggle .toggle-desc');
+        if (desc) {
+          const capVal = val.charAt(0).toUpperCase() + val.slice(1);
+          desc.textContent = `Force a full re-encode using ${capVal} quality settings.`;
+        }
+        localStorage.setItem('field:concat-quality', val);
+      }
+    }
+    concatMenu.style.display = 'none';
   }
 });
 

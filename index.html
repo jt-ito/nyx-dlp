@@ -1092,7 +1092,7 @@
           </div>
 
           <div class="form-group" style="display: flex;">
-            <div class="toggle-card" style="width: 100%; margin: 0; padding: 12px 14px; height: 100%; display: flex; align-items: center;">
+            <div class="toggle-card" id="concat-force-toggle" style="width: 100%; margin: 0; padding: 12px 14px; height: 100%; display: flex; align-items: center;">
               <div class="toggle-card-left">
                 <div class="toggle-label">Force re-encode all videos</div>
                 <div class="toggle-desc">Check this if you want to bypass fast-copy and enforce a full re-encode.</div>
@@ -1209,12 +1209,22 @@
           <div class="form-group">
             <label class="form-label">Video Codec</label>
             <select id="enc-vcodec" class="form-select">
+              <option value="auto">Auto (Best GPU or CPU)</option>
               <option value="copy">Copy (No re-encode)</option>
               <option value="h264_nvenc">H.264 NVENC (NVIDIA GPU)</option>
               <option value="hevc_nvenc">H.265 NVENC (NVIDIA GPU)</option>
               <option value="libx264">H.264 (CPU)</option>
               <option value="libx265">H.265 (CPU)</option>
               <option value="none">Remove Video</option>
+            </select>
+          </div>
+          
+          <div class="form-group" id="enc-quality-group">
+            <label class="form-label">Video Quality</label>
+            <select id="enc-quality" class="form-select">
+              <option value="high">High (Visually Lossless - Larger File)</option>
+              <option value="medium" selected>Medium (Balanced - Recommended)</option>
+              <option value="low">Low (Smallest File Size)</option>
             </select>
           </div>
 
@@ -1948,6 +1958,12 @@
     <div class="context-menu-item" data-val="3">3 Minutes</div>
     <div class="context-menu-item" data-val="5">5 Minutes</div>
     <div class="context-menu-item" data-val="custom">Custom...</div>
+  </div>
+
+  <div id="concat-quality-context-menu" class="context-menu" style="display: none; position: absolute; z-index: 1000; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); padding: 4px 0; min-width: 200px;">
+    <div class="context-menu-item" data-val="high" style="font-weight: 500;">High (Visually Lossless)</div>
+    <div class="context-menu-item" data-val="medium" style="font-weight: 500;">Medium (Balanced)</div>
+    <div class="context-menu-item" data-val="low" style="font-weight: 500;">Low (Smallest Size)</div>
   </div>
 
   <div id="custom-rest-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
