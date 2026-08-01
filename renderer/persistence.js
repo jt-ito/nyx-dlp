@@ -30,7 +30,7 @@
   const CHECK_IDS = [
     'batch-rest', 'batch-skip-live', 'm3-encode', 'gdl-meta',
     'ls-use-cookies', 'ls-from-start', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies',
-    'ia-noderive', 'concat-force'
+    'ia-noderive', 'concat-force', 'concat-mkv'
   ];
 
   TEXT_IDS.forEach(id => {

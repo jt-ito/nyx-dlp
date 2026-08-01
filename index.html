@@ -1091,14 +1091,29 @@
             </div>
           </div>
 
-          <div class="form-group full-width">
-            <div class="toggle-card">
+          <div class="form-group" style="display: flex;">
+            <div class="toggle-card" style="width: 100%; margin: 0; padding: 12px 14px; height: 100%; display: flex; align-items: center;">
               <div class="toggle-card-left">
                 <div class="toggle-label">Force re-encode all videos</div>
                 <div class="toggle-desc">Check this if you want to bypass fast-copy and enforce a full re-encode.</div>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" id="concat-force" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="form-group" style="display: flex;">
+            <div class="toggle-card" style="width: 100%; margin: 0; padding: 12px 14px; height: 100%; display: flex; align-items: center;">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Use MKV Intermediate Sync</div>
+                <div class="toggle-desc">Converts segments to MKV before merging to guarantee perfect timestamps. (Requires 2x temporary disk space)</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="concat-mkv" />
                 <span class="toggle-track">
                   <span class="toggle-thumb"></span>
                 </span>

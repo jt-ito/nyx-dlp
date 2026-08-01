@@ -36,6 +36,7 @@
     const output     = document.getElementById('concat-output-name').value.trim();
     const outputDir  = document.getElementById('concat-output-dir').value.trim();
     const forceEncode = document.getElementById('concat-force')?.checked;
+    const useMkvFix = document.getElementById('concat-mkv')?.checked;
 
     if (files.length < 2) { appendLog(log, '⚠ Please select at least 2 video files.', 'error'); return; }
     if (!output)          { appendLog(log, '⚠ Please enter an output filename.', 'error'); return; }
@@ -45,6 +46,7 @@
     appendLog(log, `  Files: ${files.length}`, 'cmd');
     appendLog(log, `  Output: ${output}`, 'cmd');
     if (forceEncode) appendLog(log, '  Force re-encode: Yes', 'cmd');
+    if (useMkvFix) appendLog(log, '  Use MKV Sync: Yes', 'cmd');
     appendLog(log, '', 'stdout');
     markBodyStart(log);
 
@@ -71,6 +73,6 @@
       });
     });
 
-    window.api.runConcatenator({ files, output, forceEncode: !!forceEncode, outputDir: outputDir || '' });
+    window.api.runConcatenator({ files, output, forceEncode: !!forceEncode, useMkvFix: !!useMkvFix, outputDir: outputDir || '' });
   });
 })();
