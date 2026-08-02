@@ -37,7 +37,7 @@
             "!*.md",
             "!**/__pycache__/**/*"
         ],
-        "asar": true,
+        "asar": false,
         "win": {
             "target": [
                 {
