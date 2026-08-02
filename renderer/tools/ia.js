@@ -44,7 +44,7 @@
     resetModal.style.display = 'none';
   });
   resetSubmit.addEventListener('click', () => {
-    document.getElementById('ia-identifier').value = '';
+    document.getElementById('ia-identifier-up').value = '';
     document.getElementById('ia-title').value = '';
     document.getElementById('ia-description').value = '';
     document.getElementById('ia-creator').value = '';
@@ -53,9 +53,16 @@
     document.getElementById('ia-date-d').value = '';
     document.getElementById('ia-subject').value = '';
     document.getElementById('ia-license').value = '';
-    document.getElementById('ia-collection').value = '';
-    const fileList = document.getElementById('ia-file-list');
-    if (fileList) fileList.innerHTML = ''; // Clear files if applicable
+    document.getElementById('ia-collection').value = 'opensource_movies';
+    document.getElementById('ia-mediatype').value = '';
+    document.getElementById('ia-language').value = '';
+    document.getElementById('ia-noderive').checked = false;
+    const fileList = document.getElementById('ia-files');
+    if (fileList) fileList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
+    
+    // Also reset identifier tracking
+    idModifiedByUser = false;
+
     resetModal.style.display = 'none';
   });
   
