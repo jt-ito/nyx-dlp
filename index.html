@@ -1303,9 +1303,11 @@
           <div class="card form-grid" id="ia-upload-form">
             <div class="form-group full-width">
               <label class="form-label">Target File(s)</label>
-              <div class="input-folder-group">
-                <div id="ia-files" class="sortable-list">
-                  <div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>
+              <div class="input-folder-group" style="align-items: flex-start;">
+                <div class="sortable-list-container">
+                  <div id="ia-files" class="sortable-list">
+                    <div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>
+                  </div>
                 </div>
                 <button class="btn-folder" data-target="ia-files" data-pick-type="multi-any-file">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

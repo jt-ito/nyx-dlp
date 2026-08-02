@@ -551,7 +551,7 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  direction: rtl;
+  direction: ltr;
   text-align: left;
 }
 .sortable-item-remove {
@@ -836,6 +836,7 @@ html, body {
 .terminal-body .line-error   { color: var(--danger); }
 .terminal-body .line-cmd     { color: var(--terminal-cmd); font-style: italic; }
 .terminal-body .line-input   { color: var(--terminal-input); }
+#ia-log .line-progress { white-space: pre-wrap; word-break: break-all; }
 
 /* ── Collapsible log body ─────────────────────────────────────── */
 .terminal-body .log-body-start { display: none; }
