@@ -56,7 +56,11 @@
     document.getElementById('ia-collection').value = 'opensource_movies';
     document.getElementById('ia-mediatype').value = '';
     document.getElementById('ia-language').value = '';
-    document.getElementById('ia-noderive').checked = false;
+    const noDeriveEl = document.getElementById('ia-noderive');
+    if (noDeriveEl) {
+      noDeriveEl.checked = false;
+      noDeriveEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     const fileList = document.getElementById('ia-files');
     if (fileList) fileList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
     
@@ -108,8 +112,10 @@
 
   if (iaTitle && iaIdUp) {
     iaIdUp.addEventListener('input', (e) => {
-      // If user clears it completely, allow auto-populating again
-      idModifiedByUser = e.target.value.length > 0;
+      if (e.isTrusted) {
+        // If user clears it completely, allow auto-populating again
+        idModifiedByUser = e.target.value.length > 0;
+      }
     });
     iaIdUp.addEventListener('blur', () => {
       if (iaIdUp.value) {
