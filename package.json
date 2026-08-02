@@ -21,7 +21,6 @@
         "appId": "com.nyxdlp.app",
         "productName": "nyx-dlp",
         "icon": "assets/icon.ico",
-        "compression": "store",
         "directories": {
             "output": "dist/installer"
         },
@@ -38,7 +37,7 @@
             "!*.md",
             "!**/__pycache__/**/*"
         ],
-        "asar": false,
+        "asar": true,
         "win": {
             "target": [
                 {
@@ -84,7 +83,6 @@
         }
     },
     "dependencies": {
-        "koffi": "^3.1.2",
         "ws": "^8.21.0"
     }
 }

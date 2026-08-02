@@ -21,7 +21,7 @@ If you've ever managed a pile of media-download scripts, you know the drill: hal
 
 It's built entirely in native Node.js — no Python involved anywhere. Every tool runs as a direct `child_process.spawn` call, and nyx-dlp manages its own vendored copies of `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` in a local `vendor/` folder, downloading and updating them on its own. Nothing to install except the app itself.
 
-Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop actually work — on Windows that's done via `NtSuspendProcess`/`NtResumeProcess` through native FFI (`koffi`), not just severing the connection and hoping the CLI recovers gracefully.
+Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop actually work — on Windows that's done via Sysinternals `PsSuspend`, not just severing the connection and hoping the CLI recovers gracefully.
 
 ---
 
@@ -142,7 +142,7 @@ nyx-dlp/
 ├── index.html / styles.css # App shell and dark/light theme
 ├── lib/
 │   ├── runners.js          # Centralized process spawning for every tool — the execution core
-│   ├── runner-utils.js     # Pause/resume/kill, including native Windows process suspension via koffi
+│   ├── runner-utils.js     # Pause/resume/kill, including native Windows process suspension via pssuspend
 │   ├── ensure-ytdlp.js      # Vendors & auto-updates the standalone yt-dlp binary
 │   ├── ensure-ffmpeg.js     # Vendors ffmpeg, selectable by version for older GPU/NVENC support
 │   ├── ensure-ia.js         # Vendors the archive.org `ia` CLI

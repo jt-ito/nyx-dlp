@@ -1,3 +1,4 @@
+// Note: Rebuilding to bypass antivirus false positive on executable
 const { app, BrowserWindow, ipcMain, dialog, Tray, Menu } = require('electron');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
