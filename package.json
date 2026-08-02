@@ -21,6 +21,7 @@
         "appId": "com.nyxdlp.app",
         "productName": "nyx-dlp",
         "icon": "assets/icon.ico",
+        "compression": "store",
         "directories": {
             "output": "dist/installer"
         },
