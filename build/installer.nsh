@@ -15,7 +15,8 @@
 
 !macro customInstall
   DetailPrint "Removing old asar file to prevent unpacked app conflicts..."
-  IfFileExists "$INSTDIR\resources\app.asar" 0 +3
-  Delete "$INSTDIR\resources\app.asar"
-  RMDir /r "$INSTDIR\resources\app.asar.unpacked"
+  ${If} ${FileExists} "$INSTDIR\resources\app.asar"
+    Delete "$INSTDIR\resources\app.asar"
+    RMDir /r "$INSTDIR\resources\app.asar.unpacked"
+  ${EndIf}
 !macroend
