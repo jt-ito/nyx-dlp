@@ -66,6 +66,7 @@
     
     // Also reset identifier tracking
     idModifiedByUser = false;
+    titleModifiedByUser = false;
 
     resetModal.style.display = 'none';
   });
@@ -183,10 +184,10 @@
           }
         }
       } else {
-        if (!titleModifiedByUser) {
-          iaTitle.value = '';
-          iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+        iaTitle.value = '';
+        titleModifiedByUser = false;
+        idModifiedByUser = false;
+        iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });
   }
