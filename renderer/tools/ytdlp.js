@@ -105,10 +105,11 @@
 
     const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
+    const autoYpdl  = getSetting('dep-auto-ypdl');
     window.api.runYtdlp({ 
       url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), 
       container, startTime, endTime, bgutilUrl, useDeno,
-      dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload
+      dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload, autoYpdl
     });
   });
 })();

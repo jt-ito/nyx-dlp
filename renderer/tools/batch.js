@@ -202,6 +202,7 @@
     const dlThumb     = document.getElementById('batch-dl-thumb').checked;
     const embedThumb  = document.getElementById('batch-embed-thumb').checked;
     const skipDownload= document.getElementById('batch-skip-download').checked;
+    const autoYpdl    = getSetting('dep-auto-ypdl');
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter at least one valid URL.', 'error'); return; }
     if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
