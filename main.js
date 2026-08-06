@@ -218,6 +218,19 @@ ipcMain.handle('pick-any-files', async () => {
   return result.canceled ? null : result.filePaths;
 });
 
+// Multi-folder picker
+ipcMain.handle('pick-folders', async () => {
+  mainWindow.focus();
+  const result = await dialog.showOpenDialog(mainWindow, {
+    defaultPath: lastUsedPath || app.getPath('downloads'),
+    properties: ['openDirectory', 'multiSelections']
+  });
+  if (!result.canceled && result.filePaths.length > 0) {
+    saveLastPath(path.dirname(result.filePaths[0]));
+  }
+  return result.canceled ? null : result.filePaths;
+});
+
 // Disk space — returns { free, total } in bytes for the drive containing `drivePath`
 ipcMain.handle('get-disk-space', async (_e, drivePath) => {
   try {
@@ -317,6 +330,47 @@ function broadcastIPC(channel, data) {
 
 const runners = require('./lib/runners.js');
 
+const activeDownloads = new Set();
+const notifiedDrives = new Set();
+let diskCheckInterval = null;
+
+function startDiskCheck() {
+  if (diskCheckInterval) return;
+  diskCheckInterval = setInterval(async () => {
+    if (activeDownloads.size === 0) {
+      clearInterval(diskCheckInterval);
+      diskCheckInterval = null;
+      return;
+    }
+    const ntfStorageEnabled = fullUiState['ntf-storage'] ? fullUiState['ntf-storage'].checked : true;
+    if (!ntfStorageEnabled) return;
+    const thresholdGB = fullUiState['ntf-storage-threshold'] ? parseFloat(fullUiState['ntf-storage-threshold'].value) : 20;
+    if (isNaN(thresholdGB)) return;
+    const thresholdBytes = thresholdGB * 1024 * 1024 * 1024;
+
+    for (const dir of activeDownloads) {
+      try {
+        const stats = await fs.promises.statfs(dir);
+        const free = stats.bfree * stats.bsize;
+        if (free < thresholdBytes) {
+          if (!notifiedDrives.has(dir)) {
+            notifiedDrives.add(dir);
+            if (Notification.isSupported()) {
+              new Notification({
+                title: 'Low Storage Space',
+                body: `The drive containing "${path.basename(dir)}" has less than ${thresholdGB}GB free space remaining.`,
+                icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
+              }).show();
+            }
+          }
+        } else {
+          notifiedDrives.delete(dir);
+        }
+      } catch (e) {}
+    }
+  }, 15000); // check every 15 seconds
+}
+
 function getFfmpegSettings() {
   const installFfmpeg = fullUiState['dep-install-ffmpeg'] ? fullUiState['dep-install-ffmpeg'].checked : true;
   const ffmpegVersion = fullUiState['dep-ffmpeg-version'] ? fullUiState['dep-ffmpeg-version'].value : 'auto';
@@ -324,8 +378,18 @@ function getFfmpegSettings() {
 }
 
 function prepareRunner(opts, channel, runnerFn) {
-  const broadcast = (data) => broadcastIPC(channel, data);
+  const originalBroadcast = (data) => broadcastIPC(channel, data);
+  const broadcast = (data) => {
+    originalBroadcast(data);
+    if (data && data.type === 'exit' && opts.outputDir) {
+      activeDownloads.delete(opts.outputDir);
+    }
+  };
+
   if (opts.outputDir) {
+    activeDownloads.add(opts.outputDir);
+    startDiskCheck();
+    
     const pathErr = isProtectedPath(opts.outputDir);
     if (pathErr) {
       broadcast({ type: 'error', text: pathErr });

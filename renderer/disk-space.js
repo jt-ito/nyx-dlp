@@ -30,9 +30,7 @@ const diskSpace = (() => {
     }
     const outputId = TAB_OUTPUT_IDS[activeTab];
     const val = outputId ? (document.getElementById(outputId)?.value.trim() || '') : '';
-    if (!val) return null;
-    const m = val.match(/^([A-Za-z]:[/\\])/);
-    return m ? m[1] : (val.includes('/') ? '/' : null);
+    return val || null;
   }
 
   function fmtGB(bytes) {

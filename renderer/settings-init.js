@@ -16,14 +16,6 @@
     chk.addEventListener('change', () => {
       localStorage.setItem('setting:' + chk.dataset.setting, chk.checked);
       applySetting(chk.dataset.setting, chk.checked);
-      // Auto-fill bgutil default URL when toggled on and field is empty
-      if (chk.dataset.setting === 'dep-use-bgutil' && chk.checked) {
-        const urlField = document.getElementById('dep-bgutil-url');
-        if (urlField && !urlField.value.trim()) {
-          urlField.value = 'http://127.0.0.1:4416';
-          localStorage.setItem('field:dep-bgutil-url', urlField.value);
-        }
-      }
     });
   });
 

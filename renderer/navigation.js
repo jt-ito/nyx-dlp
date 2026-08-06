@@ -64,6 +64,8 @@ document.querySelectorAll('.btn-folder').forEach(btn => {
       res = await window.api.pickFiles();
     } else if (type === 'multi-any-file') {
       res = await window.api.pickAnyFiles();
+    } else if (type === 'multi-folders') {
+      res = await window.api.pickFolders();
     } else {
       res = await window.api.pickFolder();
     }
@@ -71,10 +73,10 @@ document.querySelectorAll('.btn-folder').forEach(btn => {
       const target = document.getElementById(btn.dataset.target);
       if (target) {
         if (target.classList.contains('sortable-list')) {
-          if (type === 'multi-file' || type === 'multi-any-file') {
+          if (type === 'multi-file' || type === 'multi-any-file' || type === 'multi-folders') {
             res.forEach(filepath => window.addSortableItem(target, filepath));
           }
-        } else if (type === 'multi-file' || type === 'multi-any-file') {
+        } else if (type === 'multi-file' || type === 'multi-any-file' || type === 'multi-folders') {
           const current = target.value.trim();
           target.value = current ? current + '\n' + res.join('\n') : res.join('\n');
           target.dispatchEvent(new Event('input', { bubbles: true }));

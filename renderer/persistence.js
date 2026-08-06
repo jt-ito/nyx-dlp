@@ -11,7 +11,8 @@
     'gdl-output',   'gdl-cookies',
     'sp-output',
     'concat-output-dir',
-    'dep-bgutil-url'
+    'dep-bgutil-url',
+    'ntf-storage-threshold'
   ];
 
   // Select dropdowns — save on change
@@ -69,10 +70,5 @@
     el.addEventListener('change', () => localStorage.setItem(fkey(id), el.checked));
   });
 
-  // Auto-fill bgutil default URL on load if enabled and no value has been saved
-  const bgutilField = document.getElementById('dep-bgutil-url');
-  if (bgutilField && getSetting('dep-use-bgutil') && !bgutilField.value.trim()) {
-    bgutilField.value = 'http://127.0.0.1:4416';
-    localStorage.setItem('field:dep-bgutil-url', bgutilField.value);
-  }
 })();
+

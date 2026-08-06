@@ -25,6 +25,7 @@ const SETTINGS_MAP = {
   'show-disk-space':      { custom: 'disk-space' },
   'minimize-to-tray':     { custom: 'tray' },
   'remote-access':        { custom: 'remote-access' },
+  'ntf-storage':          { el: 'ntf-storage-group' },
 };
 const SETTINGS_DEFAULTS = {
   'show-tool-livestream': true,
@@ -54,6 +55,7 @@ const SETTINGS_DEFAULTS = {
   'show-disk-space':      false,
   'minimize-to-tray':     false,
   'remote-access':        false,
+  'ntf-storage':          true,
 };
 
 function getSetting(key) {

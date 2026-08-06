@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   pickVideo:  () => ipcRenderer.invoke('pick-video'),
   pickFiles:  () => ipcRenderer.invoke('pick-files'),
   pickAnyFiles: () => ipcRenderer.invoke('pick-any-files'),
+  pickFolders: () => ipcRenderer.invoke('pick-folders'),
   getDiskSpace: (drivePath) => ipcRenderer.invoke('get-disk-space', drivePath),
   
   // Notifications & History
