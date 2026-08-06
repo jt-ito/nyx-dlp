@@ -133,23 +133,30 @@
           <div class="nav-indicator"></div>
         </button>
         <button class="nav-item" data-tab="ia">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 9v6"></path>
-            <path d="M9 12h6"></path>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <path d="M12 18v-6"></path>
+            <path d="M9 15h6"></path>
           </svg>
-          <span>Internet Archive</span>
-          <div class="nav-indicator"></div>
+          <span class="nav-text">Internet Archive</span>
         </button>
-        <div class="nav-divider"></div>
-        <button class="nav-item" data-tab="settings">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
+      </div>
+
+      <div class="nav-group">
+        <button class="nav-item" data-tab="history">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
-          <span>Settings</span>
-          <div class="nav-indicator"></div>
+          <span class="nav-text">History</span>
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="nav-text">Settings</span>
         </button>
       </div>
 
@@ -425,6 +432,33 @@
                   </button>
                 </div>
               </div>
+              <div class="form-group" id="yd-subs-group" style="display: flex; flex-direction: column; gap: 12px;">
+                <label class="form-label">Metadata & Extras</label>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="yd-dl-subs" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Subtitles</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-dl-subs" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="yd-embed-subs" style="font-size: 13px; color: var(--text); cursor: pointer;">Embed Subtitles</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-embed-subs" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="yd-dl-chat" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Live Chat (.json)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-dl-chat" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="yd-dl-thumb" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Thumbnail</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-dl-thumb" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="yd-embed-thumb" style="font-size: 13px; color: var(--text); cursor: pointer;">Embed Thumbnail</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-embed-thumb" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 12px;">
+                  <label for="yd-skip-download" style="font-size: 13px; color: var(--text); cursor: pointer;">Skip Video Download (Metadata/Subs only)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-skip-download" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+              </div>
               <div id="yd-modified-opts" style="display: contents;"></div>
         </div>
         </div>
@@ -586,6 +620,33 @@
                   </button>
                 </div>
               </div>
+              <div class="form-group" id="batch-subs-group" style="display: flex; flex-direction: column; gap: 12px;">
+                <label class="form-label">Metadata & Extras</label>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="batch-dl-subs" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Subtitles</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-dl-subs" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="batch-embed-subs" style="font-size: 13px; color: var(--text); cursor: pointer;">Embed Subtitles</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-embed-subs" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="batch-dl-chat" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Live Chat (.json)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-dl-chat" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="batch-dl-thumb" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Thumbnail</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-dl-thumb" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="batch-embed-thumb" style="font-size: 13px; color: var(--text); cursor: pointer;">Embed Thumbnail</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-embed-thumb" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 12px;">
+                  <label for="batch-skip-download" style="font-size: 13px; color: var(--text); cursor: pointer;">Skip Video Download (Metadata/Subs only)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-skip-download" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+              </div>
                 <div id="batch-modified-opts" style="display: contents;"></div>
               </div>
             </div>
@@ -611,6 +672,24 @@
               <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
             </svg>
             Stop
+          </button>
+          <button class="btn btn-ghost hidden" id="batch-skip-rest" title="Skip the rest period between downloads">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 4 15 12 5 20" fill="currentColor"/>
+              <rect x="15" y="4" width="4" height="16" rx="1" fill="currentColor"/>
+            </svg>
+            Skip next rest
+          </button>
+          <button class="btn btn-ghost" id="batch-status-btn" title="View the status of each URL in the current batch">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            Status
           </button>
           <button class="btn btn-ghost" id="batch-clear">Clear Log</button>
         </div>
@@ -1287,7 +1366,6 @@
         </div>
       </section>
 
-      <!-- ── Tab: Settings ─────────────────────────────────── -->
       <!-- ── Tab: Internet Archive ────────────────────────────────────────── -->
       <section class="tab-panel" id="tab-ia">
         <div class="panel-header">
@@ -1298,6 +1376,7 @@
           <!-- Toggle for upload/download -->
           <div class="segmented-control" id="ia-mode-toggle">
             <button class="segment active" data-mode="upload">Upload</button>
+            <button class="segment" data-mode="edit">Edit</button>
             <button class="segment" data-mode="download">Download</button>
           </div>
         </div>
@@ -1448,6 +1527,89 @@
             </div>
           </div>
 
+          <div class="card form-grid hidden" id="ia-edit-form" style="display: none;">
+            <div class="form-group full-width">
+              <label class="form-label">Identifier (Required)</label>
+              <input type="text" id="ia-identifier-edit" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" maxlength="100" />
+            </div>
+
+            <div class="form-group" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+              <h3 style="margin: 0; font-size: 14px; font-weight: 500;">Build Edit Queue</h3>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Action</label>
+              <select id="ia-edit-action" class="form-select">
+                <option value="modify">Modify / Set Metadata</option>
+                <option value="append">Append String to Metadata</option>
+                <option value="append-list">Append Field (List) to Metadata</option>
+                <option value="remove">Remove Metadata Key</option>
+                <option value="upload">Upload File(s)</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="ia-edit-key-group">
+              <label class="form-label">Metadata Key</label>
+              <input type="text" id="ia-edit-key" class="form-input" placeholder="e.g. title, description, creator" />
+            </div>
+
+            <div class="form-group full-width" id="ia-edit-value-group">
+              <label class="form-label">Metadata Value</label>
+              <textarea id="ia-edit-value" class="form-input form-textarea" rows="3" placeholder="New value..."></textarea>
+            </div>
+
+            <div class="form-group full-width" id="ia-edit-files-group" style="display: none;">
+              <label class="form-label">Target File(s)</label>
+              <div class="input-folder-group" style="align-items: flex-start;">
+                <div class="sortable-list-container">
+                  <div id="ia-edit-files" class="sortable-list">
+                    <div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>
+                  </div>
+                </div>
+                <button class="btn-folder" data-target="ia-edit-files" data-pick-type="multi-any-file">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="action-row" style="grid-column: 1 / -1; justify-content: flex-end;">
+              <button class="btn btn-ghost" id="ia-edit-add-action" style="color: var(--accent);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+                  <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Add to Queue
+              </button>
+            </div>
+
+            <div class="form-group full-width" style="margin-top: 8px;">
+              <label class="form-label">Queued Actions</label>
+              <div id="ia-edit-queue-list" class="ia-edit-queue-container">
+                <div class="ia-edit-queue-empty">No actions queued. Add actions above.</div>
+              </div>
+            </div>
+
+            <div class="action-row" style="grid-column: 1 / -1; margin-top: 16px;">
+              <button class="btn btn-primary btn-run" id="ia-edit-run">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Apply Edit
+              </button>
+              <button class="btn btn-ghost btn-stop hidden" id="ia-edit-stop">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+                </svg>
+                Stop
+              </button>
+              <button class="btn btn-ghost" id="ia-edit-reset">Reset Info</button>
+              <button class="btn btn-ghost" id="ia-edit-clear">Clear Log</button>
+            </div>
+          </div>
+
           <div class="card form-grid hidden" id="ia-download-form" style="display: none;">
             <div class="form-group full-width">
               <label class="form-label">Identifier (Required)</label>
@@ -1512,6 +1674,18 @@
         </div>
       </section>
 
+      <!-- 10. History -->
+      <div class="tab-panel" id="tab-history">
+        <div class="tab-header" style="justify-content: space-between; display: flex;">
+          <h2>Download History</h2>
+          <button class="btn btn-ghost" id="history-clear">Clear History</button>
+        </div>
+        <div class="history-list" id="history-list" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <!-- History items injected via history.js -->
+        </div>
+      </div>
+
+      <!-- 11. Settings -->
       <section class="tab-panel" id="tab-settings">
         <div class="panel-header">
           <div class="panel-title-group">
@@ -1937,8 +2111,17 @@
           </div>
 
           <div class="settings-section">
-
             <div class="settings-section-title">Window</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Desktop Notifications</div>
+                <div class="toggle-desc">Show a system notification when a job finishes successfully</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-notifications" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
                 <div class="toggle-label">Minimize to Tray</div>
@@ -2050,7 +2233,23 @@
     </div>
   </div>
 
+  <!-- Batch Status Modal -->
+  <div id="batch-status-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 650px; max-width: 90vw; max-height: 80vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Batch Queue Status</h3>
+        <button id="batch-status-close" class="btn btn-ghost" style="padding: 6px; height: auto;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div id="batch-status-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+        <!-- Status items populated by batch.js -->
+      </div>
+    </div>
+  </div>
+
   <script src="renderer/theme.js"></script>
+  <script src="renderer/history.js"></script>
   <script src="renderer/terminal.js"></script>
   <script src="renderer/path-guard.js"></script>
   <script src="renderer/status.js"></script>

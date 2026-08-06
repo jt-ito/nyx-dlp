@@ -4,6 +4,7 @@
 
   const modeBtns = document.querySelectorAll('#ia-mode-toggle .segment');
   const uploadForm = document.getElementById('ia-upload-form');
+  const editForm = document.getElementById('ia-edit-form');
   const downloadForm = document.getElementById('ia-download-form');
 
   let currentPid = null;
@@ -17,11 +18,22 @@
       if (mode === 'upload') {
         uploadForm.style.display = '';
         uploadForm.classList.remove('hidden');
+        editForm.style.display = 'none';
+        editForm.classList.add('hidden');
+        downloadForm.style.display = 'none';
+        downloadForm.classList.add('hidden');
+      } else if (mode === 'edit') {
+        uploadForm.style.display = 'none';
+        uploadForm.classList.add('hidden');
+        editForm.style.display = '';
+        editForm.classList.remove('hidden');
         downloadForm.style.display = 'none';
         downloadForm.classList.add('hidden');
       } else {
         uploadForm.style.display = 'none';
         uploadForm.classList.add('hidden');
+        editForm.style.display = 'none';
+        editForm.classList.add('hidden');
         downloadForm.style.display = '';
         downloadForm.classList.remove('hidden');
       }
@@ -29,6 +41,7 @@
   });
 
   document.getElementById('ia-upload-clear').addEventListener('click', () => clearLog(log));
+  document.getElementById('ia-edit-clear').addEventListener('click', () => clearLog(log));
   document.getElementById('ia-download-clear').addEventListener('click', () => clearLog(log));
 
   // Reset Info Modal Logic
@@ -56,11 +69,6 @@
     document.getElementById('ia-collection').value = 'opensource_movies';
     document.getElementById('ia-mediatype').value = '';
     document.getElementById('ia-language').value = '';
-    const noDeriveEl = document.getElementById('ia-noderive');
-    if (noDeriveEl) {
-      noDeriveEl.checked = false;
-      noDeriveEl.dispatchEvent(new Event('change', { bubbles: true }));
-    }
     const fileList = document.getElementById('ia-files');
     if (fileList) fileList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
     
@@ -124,12 +132,7 @@
         iaIdUp.dispatchEvent(new Event('change', { bubbles: true }));
       }
     });
-    iaTitle.addEventListener('input', () => {
-      if (!idModifiedByUser) {
-        iaIdUp.value = iaTitle.value.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        iaIdUp.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    });
+
   }
 
   // Auto-populate Title and Collection from File Selection
@@ -153,20 +156,26 @@
       }
     });
     
-    iaFiles.addEventListener('change', () => {
-      const items = Array.from(iaFiles.querySelectorAll('.sortable-item'));
+    // Sortable list logic
+    const updateSortableList = (container, listId) => {
+      const items = Array.from(container.querySelectorAll('.sortable-item'));
       if (items.length > 0) {
         const firstFile = items[0].dataset.path;
-        if (firstFile) {
+        if (firstFile && listId === 'ia-files') {
+          // auto populate logic for upload form
           const filenameWithExt = firstFile.split(/[/\\]/).pop();
           const lastDot = filenameWithExt.lastIndexOf('.');
           const filename = lastDot > 0 ? filenameWithExt.substring(0, lastDot) : filenameWithExt;
           const ext = lastDot > 0 ? filenameWithExt.substring(lastDot + 1).toLowerCase() : '';
           
-          if (!titleModifiedByUser) {
+          if (!titleModifiedByUser && iaTitle) {
             iaTitle.value = filename;
-            // Dispatch synthetic event so identifier also updates!
             iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+
+          if (!idModifiedByUser && iaIdUp) {
+            iaIdUp.value = filename.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            iaIdUp.dispatchEvent(new Event('input', { bubbles: true }));
           }
 
           if (iaCollection && !collectionModifiedByUser) {
@@ -183,13 +192,26 @@
             iaCollection.dispatchEvent(new Event('change', { bubbles: true }));
           }
         }
-      } else {
-        iaTitle.value = '';
-        titleModifiedByUser = false;
-        idModifiedByUser = false;
-        iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
+      } else if (listId === 'ia-files') {
+        if (iaTitle) {
+          iaTitle.value = '';
+          titleModifiedByUser = false;
+          iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (iaIdUp) {
+          iaIdUp.value = '';
+          idModifiedByUser = false;
+          iaIdUp.dispatchEvent(new Event('input', { bubbles: true }));
+        }
       }
-    });
+    };
+
+    iaFiles.addEventListener('change', () => updateSortableList(iaFiles, 'ia-files'));
+    
+    const iaEditFiles = document.getElementById('ia-edit-files');
+    if (iaEditFiles) {
+      iaEditFiles.addEventListener('change', () => updateSortableList(iaEditFiles, 'ia-edit-files'));
+    }
   }
 
   const uploadStop = document.getElementById('ia-upload-stop');
@@ -375,6 +397,149 @@
       return {
         files, identifier, title, description, subject, collection, creator, date, language, license, mediatype, noDerive, autoIa
       };
+    }
+  );
+
+  // Queue Builder Logic
+  const addActionBtn = document.getElementById('ia-edit-add-action');
+  const queueList = document.getElementById('ia-edit-queue-list');
+  const actionSelect = document.getElementById('ia-edit-action');
+  const keyGroup = document.getElementById('ia-edit-key-group');
+  const valueGroup = document.getElementById('ia-edit-value-group');
+  const filesGroup = document.getElementById('ia-edit-files-group');
+  
+  const keyInput = document.getElementById('ia-edit-key');
+  const valInput = document.getElementById('ia-edit-value');
+  const filesList = document.getElementById('ia-edit-files');
+  
+  let queuedEdits = [];
+
+  const updateQueueUI = () => {
+    queueList.innerHTML = '';
+    if (queuedEdits.length === 0) {
+      queueList.innerHTML = '<div class="ia-edit-queue-empty">No actions queued. Add actions above.</div>';
+      return;
+    }
+    
+    queuedEdits.forEach((edit, index) => {
+      const pill = document.createElement('div');
+      pill.className = 'ia-edit-pill';
+      
+      let actionText = '';
+      let contentText = '';
+      
+      if (edit.action === 'upload') {
+        actionText = '📁 Upload';
+        contentText = `${edit.files.length} file(s)`;
+      } else {
+        const actionLabels = {
+          'modify': '✎ Modify',
+          'append': '+ Append',
+          'append-list': '▤ Add Tag',
+          'remove': '✖ Remove'
+        };
+        actionText = actionLabels[edit.action] || edit.action;
+        contentText = edit.action === 'remove' ? edit.key : `${edit.key}: "${edit.val}"`;
+      }
+      
+      pill.innerHTML = `
+        <span class="ia-edit-pill-action">${actionText}</span>
+        <span class="ia-edit-pill-content">${contentText}</span>
+        <button class="ia-edit-pill-remove" title="Remove action">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M18 6L6 18M6 6l12 12"></path>
+          </svg>
+        </button>
+      `;
+      
+      pill.querySelector('.ia-edit-pill-remove').addEventListener('click', (e) => {
+        e.preventDefault();
+        queuedEdits.splice(index, 1);
+        updateQueueUI();
+      });
+      
+      queueList.appendChild(pill);
+    });
+  };
+
+  actionSelect.addEventListener('change', () => {
+    if (actionSelect.value === 'upload') {
+      keyGroup.style.display = 'none';
+      valueGroup.style.display = 'none';
+      filesGroup.style.display = '';
+    } else {
+      keyGroup.style.display = '';
+      valueGroup.style.display = '';
+      filesGroup.style.display = 'none';
+    }
+  });
+
+  filesList.addEventListener('change', () => {
+    const items = Array.from(filesList.querySelectorAll('.sortable-item'));
+    if (items.length === 0) {
+      filesList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
+    }
+  });
+
+  addActionBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const action = actionSelect.value;
+    
+    if (action === 'upload') {
+      const files = Array.from(filesList.querySelectorAll('.sortable-item')).map(el => el.dataset.path);
+      if (files.length === 0) {
+        appendLog(log, '⚠ Please select at least one file before adding to queue.', 'warning');
+        return;
+      }
+      queuedEdits.push({ action, files });
+      filesList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
+    } else {
+      const key = keyInput.value.trim();
+      const val = valInput.value.trim();
+      
+      if (!key) {
+        appendLog(log, '⚠ Please provide a metadata key.', 'warning');
+        return;
+      }
+      queuedEdits.push({ action, key, val });
+      keyInput.value = '';
+      valInput.value = '';
+    }
+    
+    updateQueueUI();
+  });
+
+  const editResetBtn = document.getElementById('ia-edit-reset');
+  if (editResetBtn) {
+    editResetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('ia-identifier-edit').value = '';
+      keyInput.value = '';
+      valInput.value = '';
+      filesList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
+      queuedEdits = [];
+      updateQueueUI();
+    });
+  }
+
+  // Edit Logic
+  const editStop = document.getElementById('ia-edit-stop');
+  setupRun(
+    document.getElementById('ia-edit-run'),
+    editStop,
+    'IA Edit Metadata',
+    window.api.runIaEdit,
+    () => {
+      const identifier = document.getElementById('ia-identifier-edit').value.trim();
+      if (!identifier) { appendLog(log, '⚠ Please provide an identifier.', 'error'); return null; }
+
+      if (queuedEdits.length === 0) { 
+        appendLog(log, '⚠ Please add at least one edit action to the queue.', 'error'); 
+        return null; 
+      }
+      
+      const autoIa = getSetting('dep-auto-ia');
+      return { identifier, actions: queuedEdits, autoIa };
     }
   );
 

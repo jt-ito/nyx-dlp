@@ -16,12 +16,19 @@ contextBridge.exposeInMainWorld('api', {
   pickFiles:  () => ipcRenderer.invoke('pick-files'),
   pickAnyFiles: () => ipcRenderer.invoke('pick-any-files'),
   getDiskSpace: (drivePath) => ipcRenderer.invoke('get-disk-space', drivePath),
+  
+  // Notifications & History
+  showNotification: (opts) => ipcRenderer.send('show-notification', opts),
+  getHistory: () => ipcRenderer.invoke('get-history'),
+  addHistory: (entry) => ipcRenderer.invoke('add-history', entry),
+  clearHistory: () => ipcRenderer.invoke('clear-history'),
 
   // Script runners
   runLivestream: (opts) => ipcRenderer.send('run-livestream', opts),
   runYtdlp:      (opts) => ipcRenderer.send('run-ytdlp', opts),
   runBatch:      (opts) => ipcRenderer.send('run-batch', opts),
   setBatchRest:  (opts) => ipcRenderer.send('set-batch-rest', opts),
+  skipBatchRest: (opts) => ipcRenderer.send('skip-batch-rest', opts),
   appendBatchQueue: (opts) => ipcRenderer.send('append-batch-queue', opts),
   runM3u8:       (opts) => ipcRenderer.send('run-m3u8', opts),
   runGalleryDl:  (opts) => ipcRenderer.send('run-gallery-dl', opts),
@@ -29,6 +36,7 @@ contextBridge.exposeInMainWorld('api', {
   runConcatenator: (opts) => ipcRenderer.send('run-concatenator', opts),
   runEncoder:    (opts) => ipcRenderer.send('run-encoder', opts),
   runIaUpload:   (opts) => ipcRenderer.send('run-ia-upload', opts),
+  runIaEdit:     (opts) => ipcRenderer.send('run-ia-edit', opts),
   runIaDownload: (opts) => ipcRenderer.send('run-ia-download', opts),
   checkIaAuth: (autoIa) => ipcRenderer.invoke('check-ia-auth', { autoIa }),
   runIaConfigure: (email, password, autoIa) => ipcRenderer.invoke('run-ia-configure', { email, password, autoIa }),

@@ -531,6 +531,64 @@ function handleOutput(logEl, data, onExit) {
           appendLog(logEl, '✔ Process finished successfully.', 'success');
         }
         collapseLogBody(logEl, false);
+        
+        if (getSetting('show-notifications') && window.api.showNotification) {
+          window.api.showNotification({ 
+            title: 'nyx-dlp', 
+            body: bs && bs.failed > 0 ? 'Batch completed with some errors.' : 'Job completed successfully!'
+          });
+        }
+        
+        // Save to History
+        if (window.api.addHistory) {
+          let toolName = 'Unknown Tool';
+          let source = '';
+          let output = '';
+          const ts = new Date().toISOString();
+          
+          if (logEl.id === 'yd-log') {
+            toolName = 'yt-dlp';
+            source = document.getElementById('yd-url')?.value.trim();
+            output = document.getElementById('yd-output')?.value.trim();
+          } else if (logEl.id === 'batch-log') {
+            toolName = 'Batch Downloader';
+            const urls = (document.getElementById('batch-urls')?.value.trim() || '').split('\n').filter(l => l.trim() && !l.startsWith('#'));
+            source = `${urls.length} URL(s)`;
+            output = document.getElementById('batch-output')?.value.trim();
+          } else if (logEl.id === 'ls-log') {
+            toolName = 'Live Archiver';
+            source = document.getElementById('ls-url')?.value.trim();
+            output = document.getElementById('ls-output')?.value.trim();
+          } else if (logEl.id === 'm3-log') {
+            toolName = 'M3U8 Downloader';
+            source = document.getElementById('m3-url')?.value.trim();
+            output = document.getElementById('m3-output')?.value.trim();
+          } else if (logEl.id === 'gdl-log') {
+            toolName = 'gallery-dl';
+            source = document.getElementById('gdl-url')?.value.trim();
+            output = document.getElementById('gdl-output')?.value.trim();
+          } else if (logEl.id === 'sp-log') {
+            toolName = 'Video Splitter';
+            source = document.getElementById('sp-file')?.value.trim();
+            output = document.getElementById('sp-output')?.value.trim() || source;
+          } else if (logEl.id === 'concat-log') {
+            toolName = 'Video Concatenator';
+            const list = document.getElementById('concat-list');
+            const items = list ? Array.from(list.querySelectorAll('.sortable-item')).length : 0;
+            source = `${items} File(s)`;
+            output = document.getElementById('concat-output-dir')?.value.trim();
+          } else if (logEl.id === 'enc-log') {
+            toolName = 'Video Encoder';
+            source = document.getElementById('enc-file')?.value.trim();
+            output = source; // Encoder usually outputs next to source
+          }
+          
+          if (source || output) {
+            window.api.addHistory({ date: ts, tool: toolName, source, output, status: (bs && bs.failed > 0) ? 'partial' : 'success' }).then(() => {
+              if (window._refreshHistory) window._refreshHistory();
+            });
+          }
+        }
       } else if (bs && bs.failed > 0) {
         if (data.code !== 0) appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
         else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');

@@ -53,6 +53,13 @@
     const container   = document.getElementById('yd-container').value;
     const startTime   = document.getElementById('yd-start').value.trim();
     const endTime     = document.getElementById('yd-end').value.trim();
+    
+    const dlSubs      = document.getElementById('yd-dl-subs').checked;
+    const embedSubs   = document.getElementById('yd-embed-subs').checked;
+    const dlChat      = document.getElementById('yd-dl-chat').checked;
+    const dlThumb     = document.getElementById('yd-dl-thumb').checked;
+    const embedThumb  = document.getElementById('yd-embed-thumb').checked;
+    const skipDownload= document.getElementById('yd-skip-download').checked;
 
     if (!url)       { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
     if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -98,6 +105,10 @@
 
     const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
-    window.api.runYtdlp({ url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), container, startTime, endTime, bgutilUrl, useDeno });
+    window.api.runYtdlp({ 
+      url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), 
+      container, startTime, endTime, bgutilUrl, useDeno,
+      dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload
+    });
   });
 })();

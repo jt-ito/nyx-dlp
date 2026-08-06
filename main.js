@@ -7,6 +7,8 @@ const fs = require('fs');
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-gpu-cache');
 
+app.setAppUserModelId('nyx-dlp');
+
 // Portable mode: if a .portable file sits next to the exe, store all user data
 // in a "data" folder alongside the exe instead of %AppData%.
 if (app.isPackaged) {
@@ -226,6 +228,50 @@ ipcMain.handle('get-disk-space', async (_e, drivePath) => {
   }
 });
 
+// Notifications
+const { Notification } = require('electron');
+ipcMain.on('show-notification', (e, { title, body }) => {
+  if (Notification.isSupported()) {
+    new Notification({ title, body, icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png') }).show();
+  }
+});
+
+// Download History
+const historyFile = path.join(app.getPath('userData'), 'history.json');
+ipcMain.handle('get-history', async () => {
+  try {
+    if (fs.existsSync(historyFile)) {
+      return JSON.parse(await fs.promises.readFile(historyFile, 'utf8'));
+    }
+  } catch (e) {}
+  return [];
+});
+
+ipcMain.handle('add-history', async (e, entry) => {
+  try {
+    let history = [];
+    if (fs.existsSync(historyFile)) {
+      try { history = JSON.parse(await fs.promises.readFile(historyFile, 'utf8')); } catch(e){}
+    }
+    history.unshift(entry);
+    if (history.length > 1000) history = history.slice(0, 1000); // keep last 1000
+    await fs.promises.writeFile(historyFile, JSON.stringify(history, null, 2));
+    return true;
+  } catch (e) {
+    return false;
+  }
+});
+
+ipcMain.handle('clear-history', async () => {
+  try {
+    await fs.promises.writeFile(historyFile, JSON.stringify([]));
+    return true;
+  } catch (e) {
+    return false;
+  }
+});
+
+
 // ── Protected-path guard (main process) ──────────────────────────────
 function isProtectedPath(p) {
   if (!p) return null;
@@ -314,6 +360,7 @@ ipcMain.on('run-ytdlp', (event, opts) => prepareRunner(opts, 'ytdlp-output', run
 
 // ── Tool: Internet Archive ────────────────────────────────────────────────────
 ipcMain.on('run-ia-upload', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaUpload));
+ipcMain.on('run-ia-edit', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaEdit));
 ipcMain.on('run-ia-download', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaDownload));
 ipcMain.handle('check-ia-auth', async (event, { autoIa } = {}) => await runners.checkIaAuth(autoIa));
 ipcMain.handle('run-ia-configure', async (event, { email, password, autoIa }) => await runners.runIaConfigure(email, password, autoIa));
@@ -333,6 +380,11 @@ ipcMain.on('append-batch-queue', (event, { outputDir, newUrls }) => {
 ipcMain.on('set-batch-rest', (event, { outputDir, val }) => {
   try {
     fs.writeFileSync(path.join(outputDir, 'rest_state.txt'), String(val), 'utf-8');
+  } catch (err) {}
+});
+ipcMain.on('skip-batch-rest', (event, { outputDir }) => {
+  try {
+    fs.writeFileSync(path.join(outputDir, 'skip_rest.txt'), '1', 'utf-8');
   } catch (err) {}
 });
 
