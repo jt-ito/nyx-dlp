@@ -29,13 +29,15 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 
 - 🧰 **9 built-in tools** — one unified interface for the download, archival, and video workflows you actually use
 - 🐍 **No Python, no manual dependencies** — pure Node.js execution; `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` are vendored and auto-updated for you
-- ⏯️ **Real pause / resume / stop** — genuine OS-level process suspension, not just a UI lock
+- ⏯️ **Real process tree pause/resume** — genuine OS-level suspension. Freezes the entire process tree (including background ffmpeg/python threads) simultaneously across Windows, macOS, and Linux, not just a UI lock
 - 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock, and more) with live search
+- 🔑 **Automated PO Tokens** — natively integrates `yt-dlp-get-pot` to bypass `web_creator` challenges without manual token passing
 - 📡 **Live & VOD archiving for YouTube and Twitch** — DVR-style capture from the live edge, or from the start where the platform allows, with Twitch auth-token ad bypass
 - 🗄️ **Internet Archive integration** — authenticate, upload with full metadata (title, collection, subject tags, license, mediatype), or bulk-download an identifier, with automatic retry on failed uploads
 - 🎞️ **Encoder tool** — batch re-encode a queue of files to a chosen video/audio codec, independent of the concatenator/splitter
 - 💾 **Form persistence** — every field and setting is saved and restored between sessions
-- 🩹 **Failed download recovery** — interrupted downloads are logged so nothing silently disappears
+- 🚨 **Low Storage Notifications** — warns you via native OS notifications when the active download drive drops below a customizable threshold
+- 🩹 **Failed download recovery & Rate-limit protections** — interrupted downloads are logged, and Batch mode auto-injects required delays (e.g., 5s for YouTube) to prevent IP bans
 - 🎨 **Color-coded output log** — warnings in yellow, errors in red, interactive prompts in white
 - 🌗 **Dark & light theme**, toggled from the title bar
 - 🖥️ **System tray support** — minimize to tray instead of quitting

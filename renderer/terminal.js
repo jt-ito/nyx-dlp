@@ -76,7 +76,14 @@ function appendLog(logEl, text, cls) {
   const isIaProgress = /^\s*(?:uploading|downloading) (.*?):\s*\d+%\|.*\|\s*\d+\/\d+/i.exec(text);
   
   if (dlMatch || isFfmpegProgress || isIaProgress) {
-      if (logEl._downloadCompleted && (dlMatch || isIaProgress)) return; // Ignore stray progress lines after 100%
+      const iaFileName = isIaProgress ? isIaProgress[1].trim().replace(/\\/g, '/').split('/').pop() : null;
+      if (logEl._downloadCompleted && (dlMatch || isIaProgress)) {
+          if (isIaProgress && logEl._threadDestinations && logEl._threadDestinations.get('ia') !== iaFileName) {
+              logEl._downloadCompleted = false;
+          } else {
+              return; // Ignore stray progress lines after 100%
+          }
+      }
       if (!logEl._liveProgresses) logEl._liveProgresses = new Map();
       if (!logEl._threadDestinations) logEl._threadDestinations = new Map();
       
@@ -185,7 +192,7 @@ function flushPendingLogsSync(logEl) {
           item.el = div;
           
           if (item.isStatus) {
-              statusFrag.appendChild(div);
+              frag.appendChild(div);
               logEl._currentAutoCollapse = null;
           } else {
               const isAutoCollapse = (item.cls === 'debug' || item.cls === 'info') && !item.text.includes('▶ Starting') && !item.text.includes('? Starting');
@@ -194,7 +201,7 @@ function flushPendingLogsSync(logEl) {
                       logEl._currentAutoCollapse = document.createElement('details');
                       logEl._currentAutoCollapse.className = 'auto-collapse-details';
                       const summary = document.createElement('summary');
-                      summary.textContent = '... (info/debug logs)';
+                      summary.textContent = 'Info / Debug Logs';
                       logEl._currentAutoCollapse.appendChild(summary);
                       const content = document.createElement('div');
                       content.className = 'details-content';
@@ -266,14 +273,23 @@ function flushPendingLogsSync(logEl) {
 
     if (logEl._lineCount > 5000) {
       let removed = 0;
-      while (removed < 1000 && logEl.firstChild) {
-        const first = logEl.firstChild;
-        if (first.classList.contains('log-body-start') ||
-            first.classList.contains('log-detail') ||
-            first.classList.contains('log-expand-arrow')) break;
-        if (first === logEl._lastRenderedLine?.el) logEl._lastRenderedLine = null;
-        logEl.removeChild(first);
+      let curr = logEl.firstChild;
+      while (curr && removed < 1000) {
+        const next = curr.nextSibling;
+        if (curr.nodeType !== 1 || (curr.classList && (
+            curr.classList.contains('log-body-start') ||
+            curr.classList.contains('log-detail') ||
+            curr.classList.contains('log-expand-arrow') ||
+            curr.classList.contains('progress-container') ||
+            curr.classList.contains('status-container')
+        ))) {
+          curr = next;
+          continue;
+        }
+        if (curr === logEl._lastRenderedLine?.el) logEl._lastRenderedLine = null;
+        logEl.removeChild(curr);
         removed++;
+        curr = next;
       }
       logEl._lineCount -= removed;
       logEl._lastScrollTop = (logEl._scrollEl || logEl).scrollTop;
@@ -433,6 +449,7 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
   if (withViewErrors) {
     const isErr = el => el.classList.contains('line-error') ||
                         el.classList.contains('line-warning') ||
+                        el.classList.contains('line-blocked') ||
                         el.classList.contains('line-stderr');
     const errLines   = bodyLines.filter(isErr);
     const otherLines = bodyLines.filter(el => !isErr(el));
@@ -461,18 +478,16 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
     }
   } else {
     const isVisible = failed
-      ? el => el.classList.contains('line-error') || el.classList.contains('line-warning') || el.classList.contains('line-stderr') || el.classList.contains('line-success')
+      ? el => el.classList.contains('line-error') || el.classList.contains('line-warning') || el.classList.contains('line-stderr') || el.classList.contains('line-blocked') || el.classList.contains('line-success')
       : el => el.classList.contains('line-success');
 
-    const visible = bodyLines.filter(isVisible);
-    const hidden  = bodyLines.filter(el => !isVisible(el));
-
     const detail = document.createElement('div');
-    detail.className = 'log-detail';
-    hidden.forEach(el => detail.appendChild(el));
+    detail.className = 'log-collapse-container';
+    bodyLines.forEach(el => {
+      if (isVisible(el)) el.classList.add('keep-visible');
+      detail.appendChild(el);
+    });
     sentinel.replaceWith(detail);
-
-    visible.forEach(el => logEl.appendChild(el));
 
     const arrow = document.createElement('div');
     arrow.className = 'log-expand-arrow';
@@ -503,12 +518,27 @@ function handleOutput(logEl, data, onExit) {
       const cleanText = data.text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\[A\[K/g, '');
       cleanText.trimEnd().split('\n').forEach(line => {
         if (line === '') return;
-        appendLog(logEl, line, classifyLine(line, stream));
+        
+        let cls = classifyLine(line, stream, logEl);
+        
+        // Intercept access restrictions (members-only, private, age-gated)
+        if (/(Join this channel to get access|members-only content|Sign in to confirm your age|Private video|Video unavailable|Sign in to verify|confirm you are on the right network)/i.test(line)) {
+            cls = 'blocked';
+            line = line.replace(/ERROR:\s*/i, 'RESTRICTED: ');
+            // Prevent this from flagging the entire batch run as an error
+            if (logEl) logEl._hasError = false; 
+        }
+        
+        appendLog(logEl, line, cls);
       });
       break;
     }
     case 'error':   appendLog(logEl, '⚠ ' + data.text, 'error'); break;
     case 'exit': {
+      if (logEl._liveProgresses && logEl._liveProgresses.size > 0) {
+        logEl._liveProgresses.clear();
+        triggerRaf(logEl);
+      }
       const failed = data.code !== 0 || !!logEl._hasError;
       logEl._hasError = false;
       const bs = logEl._batchStats;

@@ -22,6 +22,13 @@
   encodeChk.addEventListener('change', () => {
     encodeOpts.forEach(el => el.classList.toggle('hidden', !encodeChk.checked));
   });
+  
+  // Initialize visibility based on current state
+  encodeOpts.forEach(el => el.classList.toggle('hidden', !encodeChk.checked));
+  window.addEventListener('DOMContentLoaded', () => {
+    encodeOpts.forEach(el => el.classList.toggle('hidden', !encodeChk.checked));
+  });
+
   document.getElementById('m3-encode-toggle').addEventListener('click', (e) => {
     if (e.target.closest('label')) return;
     encodeChk.checked = !encodeChk.checked;
@@ -151,6 +158,10 @@
     window.api.onM3u8Output((data) => {
       if (data.type === 'pid') { currentPid = data.pid; return; }
       if (data.type === 'exit' && urlIdx < urls.length - 1) {
+        if (log._liveProgresses && log._liveProgresses.size > 0) {
+          log._liveProgresses.clear();
+          if (typeof triggerRaf === 'function') triggerRaf(log);
+        }
         const failed = data.code !== 0 || !!log._hasError;
         log._hasError = false;
         if (failed) appendLog(log, `✖ URL ${urlIdx + 1}/${urls.length} failed (code ${data.code})`, 'error');

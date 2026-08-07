@@ -914,17 +914,19 @@ html, body {
 .terminal-body .line-stderr  { color: var(--terminal-stderr); }
 .terminal-body .line-debug   { color: var(--terminal-debug); font-size: 11.5px; }
 .terminal-body .line-warning { color: var(--terminal-warning); }
+.terminal-body .line-blocked { color: #d946ef; } /* vivid purple for access restrictions */
 .terminal-body .line-info    { color: var(--terminal-info); }
 .terminal-body .line-success { color: var(--success); }
 .terminal-body .line-error   { color: var(--danger); }
 .terminal-body .line-cmd     { color: var(--terminal-cmd); font-style: italic; }
 .terminal-body .line-input   { color: var(--terminal-input); }
-#ia-log .line-progress { white-space: pre-wrap; word-break: break-all; }
+#ia-log .line-progress { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
 
 /* ── Collapsible log body ─────────────────────────────────────── */
 .terminal-body .log-body-start { display: none; }
 .terminal-body .log-detail, .log-body .log-detail { display: none; }
 .terminal-body .log-detail.open, .log-body .log-detail.open { display: block; }
+.terminal-body .log-collapse-container:not(.open) > div:not(.keep-visible) { display: none; }
 .terminal-body .log-expand-arrow, .log-body .log-expand-arrow {
   display: flex;
   justify-content: center;
@@ -1242,35 +1244,16 @@ html, body {
 .context-menu-item:hover { background: var(--surface-hover); }
 
 
-.auto-collapse-details { margin: 2px 0; }
-.auto-collapse-details summary { cursor: pointer; color: #888; font-size: 0.9em; user-select: none; margin-left: 12px; }
-.auto-collapse-details .details-content { padding-left: 10px; border-left: 2px solid var(--border); margin-left: 16px; margin-top: 4px; }
-
 .context-menu-item {
   padding: 8px 12px;
   cursor: pointer;
   font-size: 13px;
   color: var(--text-primary);
+  transition: background 0.2s, color 0.2s;
 }
 .context-menu-item:hover {
   background: var(--surface-hover);
-}
-.auto-collapse-details {
-  margin: 2px 0;
-}
-.auto-collapse-details summary {
-  cursor: pointer;
-  color: #888;
-  font-size: 0.9em;
-  user-select: none;
-}
-.auto-collapse-details summary:hover {
-  color: #aaa;
-}
-.auto-collapse-details .details-content {
-  margin-left: 12px;
-  border-left: 1px solid #444;
-  padding-left: 8px;
+  color: #fff;
 }
 
 /* Log Animation */
@@ -1283,50 +1266,73 @@ html, body {
   animation: logFadeIn 0.3s ease-in-out forwards;
 }
 
-.context-menu-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  color: var(--text);
-  font-size: 13px;
-  transition: background 0.2s, color 0.2s;
-}
-
-.context-menu-item:hover {
-  background: var(--bg-hover);
-  color: #fff;
-}
-
+/* ── Cleaned up auto-collapse-details ── */
 details.auto-collapse-details {
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 4px;
-  margin: 4px 0;
-  background: rgba(0,0,0,0.2);
+  margin: 6px 0;
+  border-left: 2px solid var(--accent, #666);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0 4px 4px 0;
+  overflow: hidden;
+  transition: background 0.2s;
 }
+
+details.auto-collapse-details:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 details.auto-collapse-details summary {
-  padding: 4px 8px;
+  padding: 6px 12px;
   cursor: pointer;
-  color: #888;
+  color: var(--text-muted, #888);
   font-size: 0.9em;
+  font-weight: 500;
   user-select: none;
+  list-style: none; /* Hide default arrow */
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+details.auto-collapse-details summary::-webkit-details-marker {
+  display: none;
+}
+
+details.auto-collapse-details summary::before {
+  content: "⮞";
+  font-size: 0.8em;
+  transition: transform 0.2s;
+  color: var(--accent, #aaa);
+}
+
+details.auto-collapse-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
 details.auto-collapse-details summary:hover {
-  background: rgba(255,255,255,0.05);
-  color: #aaa;
+  color: var(--text-primary, #ccc);
+}
+
+.auto-collapse-details .details-content {
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 .collapse-footer-btn {
   text-align: center;
-  padding: 6px;
-  margin-top: 4px;
-  background: rgba(255,255,255,0.05);
-  color: #888;
+  padding: 8px;
+  background: rgba(0,0,0,0.2);
+  color: var(--text-muted, #888);
   cursor: pointer;
-  font-size: 0.9em;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  font-size: 0.85em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-top: 1px solid rgba(255,255,255,0.05);
   transition: all 0.2s;
   user-select: none;
 }
+
 .collapse-footer-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: #ddd;
+  background: rgba(0,0,0,0.4);
+  color: var(--text-primary, #fff);
 }

@@ -18,6 +18,9 @@
   let lastProgressText = '0 / 0';
   let activeUrls = [];
   
+  const pauseIconHTML  = pauseBtn.innerHTML;
+  const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
+
   let batchUrlStatuses = [];
   const statusBtn = document.getElementById('batch-status-btn');
   const statusModal = document.getElementById('batch-status-modal');
@@ -336,13 +339,23 @@
       });
     });
 
-    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
-    const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
-    window.api.runBatch({ 
-      urls, outputDir, format, rest, skipLive, cookiesPath, 
-      extraArgs: getBatchExtraArgs(), container, bgutilUrl, useDeno,
-      dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload
-    });
+    try {
+      console.log('[BATCH DEBUG] About to call getBatchExtraArgs');
+      const extraArgs = getBatchExtraArgs();
+      console.log('[BATCH DEBUG] extraArgs:', extraArgs);
+      const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
+      const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
+      console.log('[BATCH DEBUG] About to call window.api.runBatch');
+      window.api.runBatch({ 
+        urls, outputDir, format, rest, skipLive, cookiesPath, 
+        extraArgs, container, bgutilUrl, useDeno,
+        dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload
+      });
+      console.log('[BATCH DEBUG] window.api.runBatch called successfully');
+    } catch (e) {
+      console.error('[BATCH DEBUG] ERROR:', e);
+      appendLog(log, '⚠ Internal error: ' + e.message, 'error');
+    }
   });
 
   // Skip rest button

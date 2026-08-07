@@ -378,6 +378,7 @@ function getFfmpegSettings() {
 }
 
 function prepareRunner(opts, channel, runnerFn) {
+  console.log(`[DEBUG prepareRunner] called for channel=${channel}, outputDir=${opts.outputDir}`);
   const originalBroadcast = (data) => broadcastIPC(channel, data);
   const broadcast = (data) => {
     originalBroadcast(data);
@@ -386,29 +387,40 @@ function prepareRunner(opts, channel, runnerFn) {
     }
   };
 
-  if (opts.outputDir) {
-    activeDownloads.add(opts.outputDir);
-    startDiskCheck();
-    
-    const pathErr = isProtectedPath(opts.outputDir);
-    if (pathErr) {
-      broadcast({ type: 'error', text: pathErr });
-      broadcast({ type: 'exit', code: 1 });
-      return;
+  try {
+    if (opts.outputDir) {
+      activeDownloads.add(opts.outputDir);
+      startDiskCheck();
+      
+      const pathErr = isProtectedPath(opts.outputDir);
+      console.log(`[DEBUG prepareRunner] isProtectedPath result:`, pathErr);
+      if (pathErr) {
+        broadcast({ type: 'error', text: pathErr });
+        broadcast({ type: 'exit', code: 1 });
+        return;
+      }
+      try {
+        fs.mkdirSync(opts.outputDir, { recursive: true });
+      } catch (err) {
+        broadcast({ type: 'error', text: `Cannot create output directory: ${err.message}` });
+        broadcast({ type: 'exit', code: 1 });
+        return;
+      }
     }
-    try {
-      fs.mkdirSync(opts.outputDir, { recursive: true });
-    } catch (err) {
-      broadcast({ type: 'error', text: `Cannot create output directory: ${err.message}` });
+    console.log(`[DEBUG prepareRunner] calling getFfmpegSettings`);
+    Object.assign(opts, getFfmpegSettings());
+    console.log(`[DEBUG prepareRunner] calling runnerFn, installFfmpeg=${opts.installFfmpeg}`);
+    runnerFn(opts, broadcast).catch(e => {
+      console.error(`[DEBUG prepareRunner] runnerFn rejected:`, e);
+      broadcast({ type: 'error', text: e.message });
       broadcast({ type: 'exit', code: 1 });
-      return;
-    }
-  }
-  Object.assign(opts, getFfmpegSettings());
-  runnerFn(opts, broadcast).catch(e => {
+    });
+    console.log(`[DEBUG prepareRunner] runnerFn started (async)`);
+  } catch (e) {
+    console.error(`[DEBUG prepareRunner] SYNC ERROR:`, e);
     broadcast({ type: 'error', text: e.message });
     broadcast({ type: 'exit', code: 1 });
-  });
+  }
 }
 
 // ── Stop / Pause / Resume ────────────────────────────────────────────────────

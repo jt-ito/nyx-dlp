@@ -21,7 +21,7 @@
     'yd-format',
     'yd-container', 'yd-client',
     'batch-format', 'batch-container', 'batch-client',
-    'm3-encode-codec', 'm3-container',
+    'm3-codec', 'm3-container',
     'sp-container',
     'gdl-filetypes',
     'dep-ffmpeg-version',
