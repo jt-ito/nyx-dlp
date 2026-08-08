@@ -787,6 +787,12 @@ html, body {
 }
 .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 16px var(--accent-glow); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-success {
+  background: rgba(61,220,151,0.12);
+  border-color: rgba(61,220,151,0.3);
+  color: var(--success);
+}
+.btn-success:hover { background: rgba(61,220,151,0.22); }
 .btn-ghost {
   background: var(--bg-elevated);
   color: var(--text-muted);

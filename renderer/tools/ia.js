@@ -244,6 +244,9 @@
     unlinkModal.style.display = 'none';
     btn.disabled = false;
     btn.innerText = 'Unlink';
+    configBtn.innerText = 'Login to IA';
+    configBtn.classList.remove('btn-success');
+    configBtn.classList.add('btn-ghost');
     appendLog(log, '✔ Internet Archive account unlinked.', 'success');
   });
   
@@ -262,7 +265,14 @@
     const isAuth = await window.api.checkIaAuth(autoIa);
     
     configBtn.disabled = false;
-    configBtn.innerText = 'Login to IA';
+    configBtn.innerText = isAuth ? 'Logged into IA' : 'Login to IA';
+    if (isAuth) {
+      configBtn.classList.remove('btn-ghost');
+      configBtn.classList.add('btn-success');
+    } else {
+      configBtn.classList.remove('btn-success');
+      configBtn.classList.add('btn-ghost');
+    }
 
     if (isAuth) {
       connectedModal.style.display = 'flex';
@@ -308,6 +318,9 @@
     if (result.success) {
       loginModal.style.display = 'none';
       passwordInput.value = ''; // clear password for security
+      configBtn.innerText = 'Logged into IA';
+      configBtn.classList.remove('btn-ghost');
+      configBtn.classList.add('btn-success');
       appendLog(log, '✔ Successfully authenticated with Internet Archive.', 'success');
     } else {
       authError.innerText = result.error || 'Authentication failed.';
@@ -561,5 +574,20 @@
       return { identifier, outputDir, autoIa };
     }
   );
+
+  // Check IA auth on load
+  setTimeout(async () => {
+    try {
+      const autoIa = getSetting('dep-auto-ia');
+      const isAuth = await window.api.checkIaAuth(autoIa);
+      if (isAuth) {
+        configBtn.innerText = 'Logged into IA';
+        configBtn.classList.remove('btn-ghost');
+        configBtn.classList.add('btn-success');
+      }
+    } catch (err) {
+      console.error('Failed to check IA auth on load', err);
+    }
+  }, 500);
 
 })();
