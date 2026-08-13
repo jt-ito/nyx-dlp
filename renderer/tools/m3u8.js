@@ -35,6 +35,31 @@
     encodeChk.dispatchEvent(new Event('change'));
   });
 
+  // ── Quality preset ──────────────────────────────────────
+  const qualityHints = {
+    'lossless':      'Bit-perfect copy of the decoded stream. Huge files but zero quality loss.',
+    'near-lossless': 'Virtually indistinguishable from the source. Very large files.',
+    'high':          'Visually lossless for most content. Recommended for archival.',
+    'medium':        'Good quality with noticeably smaller files. Fine for general use.',
+    'low':           'Acceptable quality, much smaller files. Good for previews or bandwidth-limited use.',
+    'custom':        'Specify your own bitrate below.'
+  };
+  const qualitySelect = document.getElementById('m3-quality');
+  const qualityHint   = document.getElementById('m3-quality-hint');
+  const customBitrateGroup = document.getElementById('m3-custom-bitrate-group');
+
+  qualitySelect.addEventListener('change', () => {
+    const val = qualitySelect.value;
+    qualityHint.textContent = qualityHints[val] || '';
+    if (val === 'custom') {
+      customBitrateGroup.style.cssText = '';
+      customBitrateGroup.classList.remove('hidden');
+    } else {
+      customBitrateGroup.style.display = 'none';
+      customBitrateGroup.style.setProperty('display', 'none', 'important');
+    }
+  });
+
   // ── URL mode toggle ──────────────────────────────────────
   const m3Textarea = document.getElementById('m3-urls');
   function updateM3Count() {
@@ -59,10 +84,24 @@
     countBadge.classList.toggle('hidden', !m3MultiMode);
     modeBtnM3.classList.toggle('active', m3MultiMode);
     modeBtnM3.title = m3MultiMode ? 'Switch to single URL' : 'Switch to multi-URL mode';
+    
+    const singleInput = document.getElementById('m3-url');
     if (m3MultiMode) {
-      const single = document.getElementById('m3-url').value.trim();
-      if (single && !m3Textarea.value.trim()) m3Textarea.value = single + '\n';
+      const single = singleInput.value.trim();
+      if (single && !m3Textarea.value.trim()) {
+        m3Textarea.value = single + '\n';
+      } else if (!single && m3Textarea.value.trim().split('\n').filter(l => l.trim()).length <= 1) {
+        // If single is empty and multi only had 1 or 0 URLs, clear multi to stay in sync
+        m3Textarea.value = '';
+      }
       updateM3Count();
+    } else {
+      const urls = m3Textarea.value.split('\n').map(l => l.trim()).filter(Boolean);
+      if (urls.length === 1) {
+        singleInput.value = urls[0];
+      } else if (urls.length === 0) {
+        singleInput.value = '';
+      }
     }
   });
   function getM3Urls() {
@@ -109,14 +148,18 @@
     activeUrls         = getM3Urls();
     const urls         = activeUrls;
     const outputDir    = document.getElementById('m3-output').value.trim();
+    const startTime    = document.getElementById('m3-start').value.trim();
+    const endTime      = document.getElementById('m3-end').value.trim();
     const encode       = encodeChk.checked;
     const container    = document.getElementById('m3-container').value;
     const codec        = document.getElementById('m3-codec').value;
-    const bitrate      = document.getElementById('m3-bitrate').value;
+    const quality      = document.getElementById('m3-quality').value;
+    const bitrate      = quality === 'custom' ? document.getElementById('m3-bitrate').value : 'source';
     const resolution   = document.getElementById('m3-resolution').value;
     const fps          = document.getElementById('m3-fps').value;
     const audioBitrate = document.getElementById('m3-audio-bitrate').value;
     const cookiesPath  = (document.getElementById('m3-use-cookies').checked ? document.getElementById('m3-cookies').value.trim() : '');
+    const autoRepair   = document.getElementById('m3-auto-repair').checked;
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter an M3U8 URL.', 'error'); return; }
     if (!outputDir)        { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -130,10 +173,12 @@
       appendLog(log, `▶ Starting M3U8 download...`, 'info');
       appendLog(log, `  URL:    ${urls[0]}`, 'cmd');
     }
+    if (startTime || endTime) appendLog(log, `  Clip:   ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
     appendLog(log, `  Output: ${outputDir}`, 'cmd');
     if (encode) {
+      const presetLabel = quality === 'custom' ? `Custom (${bitrate})` : quality.charAt(0).toUpperCase() + quality.slice(1).replace('-', '-');
       appendLog(log, `  Codec:  ${codec}`, 'cmd');
-      appendLog(log, `  Video:  ${bitrate}  ${resolution !== 'source' ? resolution : 'source res'}  ${fps !== 'source' ? fps + 'fps' : 'source fps'}`, 'cmd');
+      appendLog(log, `  Quality: ${presetLabel}  ${resolution !== 'source' ? resolution : 'source res'}  ${fps !== 'source' ? fps + 'fps' : 'source fps'}`, 'cmd');
       appendLog(log, `  Audio:  ${audioBitrate} AAC`, 'cmd');
     } else {
       appendLog(log, `  Re-encode: No (direct ${container.toUpperCase()} download)`, 'cmd');
@@ -169,7 +214,7 @@
         urlIdx++;
         currentPid = null;
         appendLog(log, `▶ [${urlIdx + 1}/${urls.length}] ${urls[urlIdx]}`, 'info');
-        window.api.runM3u8({ url: urls[urlIdx], outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath });
+        window.api.runM3u8({ url: urls[urlIdx], outputDir, startTime, endTime, encode, codec, quality, bitrate, resolution, fps, audioBitrate, container, cookiesPath, autoRepair });
       } else {
         handleOutput(log, data, () => {
           runBtn.classList.remove('hidden');
@@ -183,6 +228,6 @@
       }
     });
 
-    window.api.runM3u8({ url: urls[0], outputDir, encode, codec, bitrate, resolution, fps, audioBitrate, container, cookiesPath });
+    window.api.runM3u8({ url: urls[0], outputDir, startTime, endTime, encode, codec, quality, bitrate, resolution, fps, audioBitrate, container, cookiesPath, autoRepair });
   });
 })()

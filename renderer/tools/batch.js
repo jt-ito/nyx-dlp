@@ -205,6 +205,7 @@
     const dlThumb     = document.getElementById('batch-dl-thumb').checked;
     const embedThumb  = document.getElementById('batch-embed-thumb').checked;
     const skipDownload= document.getElementById('batch-skip-download').checked;
+    const autoRepair  = document.getElementById('batch-auto-repair').checked;
     const autoYpdl    = getSetting('dep-auto-ypdl');
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter at least one valid URL.', 'error'); return; }
@@ -349,7 +350,7 @@
       window.api.runBatch({ 
         urls, outputDir, format, rest, skipLive, cookiesPath, 
         extraArgs, container, bgutilUrl, useDeno,
-        dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload
+        dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload, autoRepair
       });
       console.log('[BATCH DEBUG] window.api.runBatch called successfully');
     } catch (e) {

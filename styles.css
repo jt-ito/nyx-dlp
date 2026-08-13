@@ -29,6 +29,7 @@
 
 /* ── Dark Theme (default) ─────────────────────────────────────── */
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg:           #0f0f13;
   --bg-surface:   #17171d;
   --bg-elevated:  #1e1e27;
@@ -434,6 +435,14 @@ html, body {
   text-transform: none;
   letter-spacing: 0;
   color: var(--text-subtle);
+}
+.field-hint {
+  font-family: var(--font);
+  font-size: 11.5px;
+  color: var(--text-subtle);
+  margin-top: 6px;
+  margin-left: 2px;
+  line-height: 1.4;
 }
 
 /* ── Inputs ───────────────────────────────────────────────────── */

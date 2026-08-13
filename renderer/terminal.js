@@ -479,7 +479,7 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
   } else {
     const isVisible = failed
       ? el => el.classList.contains('line-error') || el.classList.contains('line-warning') || el.classList.contains('line-stderr') || el.classList.contains('line-blocked') || el.classList.contains('line-success')
-      : el => el.classList.contains('line-success');
+      : el => el.classList.contains('line-success') || el.classList.contains('line-error') || el.classList.contains('line-warning');
 
     const detail = document.createElement('div');
     detail.className = 'log-collapse-container';
@@ -516,7 +516,14 @@ function handleOutput(logEl, data, onExit) {
     case 'stderr': {
       const stream = data.type;
       const cleanText = data.text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\[A\[K/g, '');
-      cleanText.trimEnd().split('\n').forEach(line => {
+      
+      if (logEl._streamBuffer === undefined) logEl._streamBuffer = '';
+      logEl._streamBuffer += cleanText;
+      
+      let lines = logEl._streamBuffer.split(/[\r\n]/);
+      logEl._streamBuffer = lines.pop() || '';
+      
+      lines.forEach(line => {
         if (line === '') return;
         
         let cls = classifyLine(line, stream, logEl);
@@ -535,6 +542,11 @@ function handleOutput(logEl, data, onExit) {
     }
     case 'error':   appendLog(logEl, '⚠ ' + data.text, 'error'); break;
     case 'exit': {
+      if (logEl._streamBuffer) {
+        let cls = classifyLine(logEl._streamBuffer, 'stdout', logEl);
+        appendLog(logEl, logEl._streamBuffer, cls);
+        logEl._streamBuffer = '';
+      }
       if (logEl._liveProgresses && logEl._liveProgresses.size > 0) {
         logEl._liveProgresses.clear();
         triggerRaf(logEl);

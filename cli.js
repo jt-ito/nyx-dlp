@@ -194,6 +194,7 @@ switch (tool) {
     if (!flags.parts) die('--parts <n> required');
     opts.file = file;
     opts.parts = flags.parts;
+    opts.partsToSave = flags['parts-to-save'];
     opts.containerFormat = flags.format;
     opts.outputDir = outDir || path.dirname(file);
     runners.runSplitter(opts, broadcastTerminal);

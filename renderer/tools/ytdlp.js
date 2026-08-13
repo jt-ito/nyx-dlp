@@ -60,6 +60,8 @@
     const dlThumb     = document.getElementById('yd-dl-thumb').checked;
     const embedThumb  = document.getElementById('yd-embed-thumb').checked;
     const skipDownload= document.getElementById('yd-skip-download').checked;
+    const getUrl      = document.getElementById('yd-get-url').checked;
+    const autoRepair  = document.getElementById('yd-auto-repair').checked;
 
     if (!url)       { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
     if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -67,13 +69,19 @@
     if (ydPathErr)  { appendLog(log, '⚠ ' + ydPathErr, 'error'); return; }
 
     clearLog(log);
-    appendLog(log, `▶ Starting yt-dlp download...`, 'info');
-    appendLog(log, `  URL:    ${url}`, 'cmd');
-    appendLog(log, `  Format: ${format}`, 'cmd');
-    appendLog(log, `  Container: ${container}`, 'cmd');
-    if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
-    appendLog(log, `  Output: ${outputDir}`, 'cmd');
-    if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
+    if (getUrl) {
+      appendLog(log, `▶ Grabbing direct stream URL...`, 'info');
+      appendLog(log, `  URL:    ${url}`, 'cmd');
+      if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
+    } else {
+      appendLog(log, `▶ Starting yt-dlp download...`, 'info');
+      appendLog(log, `  URL:    ${url}`, 'cmd');
+      appendLog(log, `  Format: ${format}`, 'cmd');
+      appendLog(log, `  Container: ${container}`, 'cmd');
+      if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
+      appendLog(log, `  Output: ${outputDir}`, 'cmd');
+      if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
+    }
     appendLog(log, '', 'stdout');
     markBodyStart(log);
 
@@ -109,7 +117,8 @@
     window.api.runYtdlp({ 
       url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), 
       container, startTime, endTime, bgutilUrl, useDeno,
-      dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload, autoYpdl
+      dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair
     });
   });
+
 })();

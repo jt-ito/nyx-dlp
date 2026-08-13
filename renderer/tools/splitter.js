@@ -13,6 +13,31 @@
   document.getElementById('sp-clear').addEventListener('click', () => clearLog(log));
   stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
 
+  const partsSelect = document.getElementById('sp-parts-select');
+  const partsCustom = document.getElementById('sp-parts-custom');
+  const partsSave = document.getElementById('sp-parts-save');
+
+  function updatePartsSave() {
+    const val = partsSelect.value;
+    if (val === 'custom') {
+      partsCustom.classList.remove('hidden');
+    } else {
+      partsCustom.classList.add('hidden');
+    }
+  }
+
+  partsSelect.addEventListener('change', () => {
+    updatePartsSave();
+    if (partsSelect.value === 'custom') {
+      partsCustom.focus();
+    }
+  });
+
+  partsCustom.addEventListener('input', updatePartsSave);
+
+  // Initialize
+  updatePartsSave();
+
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
     if (!isPaused) {
@@ -33,15 +58,19 @@
   runBtn.addEventListener('click', () => {
     const file       = document.getElementById('sp-file').value.trim();
     const parts      = document.getElementById('sp-parts-select').value;
+    const partsToSave = document.getElementById('sp-parts-save').value;
     const outputDir  = document.getElementById('sp-output').value.trim();
     const container  = document.getElementById('sp-container')?.value;
+
+    const actualParts = parts === 'custom' ? parseInt(partsCustom.value) || 2 : parseInt(parts);
+    const actualPartsToSaveStr = partsToSave.trim();
 
     if (!file)  { appendLog(log, '⚠ Please select a video file.', 'error'); return; }
 
     clearLog(log);
     appendLog(log, `▶ Starting splitter...`, 'info');
     appendLog(log, `  File:  ${file}`, 'cmd');
-    appendLog(log, `  Parts: ${parts}`, 'cmd');
+    appendLog(log, `  Parts: ${actualParts} (Saving: ${actualPartsToSaveStr || 'all'})`, 'cmd');
     if (outputDir) appendLog(log, `  Output: ${outputDir}`, 'cmd');
     appendLog(log, '', 'stdout');
     markBodyStart(log);
@@ -69,6 +98,6 @@
       });
     });
 
-    window.api.runSplitter({ file, parts: parseInt(parts), outputDir: outputDir || '', containerFormat: container || '' });
+    window.api.runSplitter({ file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '', containerFormat: container || '' });
   });
 })();
