@@ -38,6 +38,7 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 - 💾 **Form persistence** — every field and setting is saved and restored between sessions
 - 🚨 **Low Storage Notifications** — warns you via native OS notifications when the active download drive drops below a customizable threshold
 - 🩹 **Failed download recovery & Rate-limit protections** — interrupted downloads are logged, and Batch mode auto-injects required delays (e.g., 5s for YouTube) to prevent IP bans
+- 🛠️ **Twitch VOD Auto-Repair** — seamlessly intercepts CloudFront/HLS timestamp desyncs and missing initialization fragments, automatically rebuilding corrupted Twitch VODs perfectly using native Node.js concurrency without hanging or losing audio sync
 - 🎨 **Color-coded output log** — warnings in yellow, errors in red, interactive prompts in white
 - 🌗 **Dark & light theme**, toggled from the title bar
 - 🖥️ **System tray support** — minimize to tray instead of quitting
