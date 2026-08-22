@@ -26,7 +26,7 @@ if (typeof window.api === 'undefined') {
     }
   };
 
-  let remoteVersion = '3.0.11';
+  let remoteVersion = '4.0.0';
   fetch('/package.json').then(r => r.json()).then(pkg => {
     if (pkg && pkg.version) {
       remoteVersion = pkg.version;

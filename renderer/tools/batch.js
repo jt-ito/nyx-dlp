@@ -15,6 +15,8 @@
   let isResting  = false;
   let skipNextRest = false;
   let countdownTimer = null;
+  let completedCount = 0;
+  let batchTotal = 1;
   let lastProgressText = '0 / 0';
   let activeUrls = [];
   
@@ -224,9 +226,12 @@
     appendLog(log, '', 'stdout');
     markBodyStart(log);
 
+    completedCount = 0;
+    batchTotal = urls.length;
+    lastProgressText = `0 / ${urls.length}`;
     progressWrap.classList.remove('hidden');
     progressBar.style.width = '0%';
-    progressLbl.textContent = `0 / ${urls.length}`;
+    progressLbl.textContent = lastProgressText;
     
     batchUrlStatuses = urls.map(u => ({ url: u, status: 'pending' }));
     if (statusModal.style.display !== 'none') renderBatchStatusModal();
@@ -276,8 +281,6 @@
   });
 
   if (window.api && window.api.onBatchOutput) {
-    let completedCount = 0;
-    let batchTotal = 1;
     let _progressPending = false;
     log._batchStats = null;
 
@@ -310,29 +313,46 @@
       if (data.type === 'stderr' || data.type === 'stdout') {
         let statusChanged = false;
         data.text.split('\n').forEach(line => {
-          const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
+          const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:\s*(.*)/);
           if (m) {
             stopRestCountdown();
-            completedCount = parseInt(m[1], 10) - 1;
+            const currentItemIndex = parseInt(m[1], 10) - 1;
             batchTotal     = parseInt(m[2], 10);
-            lastProgressText = `${completedCount} / ${batchTotal}`;
+            const currentUrl = m[3] ? m[3].trim() : '';
             
-            if (batchUrlStatuses && batchUrlStatuses[completedCount]) {
-              batchUrlStatuses[completedCount].status = 'downloading';
+            if (batchUrlStatuses) {
+              while (batchUrlStatuses.length <= currentItemIndex) {
+                batchUrlStatuses.push({ url: currentUrl || 'URL', status: 'pending' });
+              }
+              batchUrlStatuses[currentItemIndex].status = 'downloading';
+              if (currentUrl) batchUrlStatuses[currentItemIndex].url = currentUrl;
               statusChanged = true;
             }
           }
-          if (/Finished processing media from|Download failed:/i.test(line)) {
-            if (/Download failed:/i.test(line)) {
-              if (batchUrlStatuses && batchUrlStatuses[completedCount]) batchUrlStatuses[completedCount].status = 'failed';
-            } else {
-              if (batchUrlStatuses && batchUrlStatuses[completedCount]) batchUrlStatuses[completedCount].status = 'done';
+
+          const finishMatch = line.match(/^\[Batch\]\s+(Finished processing|Download failed):\s*(.*)/i);
+          if (finishMatch) {
+            const action = finishMatch[1].toLowerCase();
+            const targetUrl = finishMatch[2].trim();
+            const isFailed = action.includes('failed');
+
+            if (batchUrlStatuses) {
+              const matchedItem = targetUrl ? batchUrlStatuses.find(item => item.url === targetUrl && item.status === 'downloading') : null;
+              if (matchedItem) {
+                matchedItem.status = isFailed ? 'failed' : 'done';
+              } else {
+                const downloadingItem = batchUrlStatuses.find(item => item.status === 'downloading');
+                if (downloadingItem) {
+                  downloadingItem.status = isFailed ? 'failed' : 'done';
+                }
+              }
             }
-            statusChanged = true;
-            
+
             completedCount = Math.min(completedCount + 1, batchTotal);
             lastProgressText = `${completedCount} / ${batchTotal}`;
+            statusChanged = true;
           }
+
           const restMatch = line.match(/Waiting\s+([\d.]+)\s+minutes?\s+before next download/i);
           if (restMatch && !isResting) {
             isResting = true;
@@ -361,7 +381,19 @@
         stopRestCountdown();
         if (code === 0 && progressBar && progressLbl) {
           progressBar.style.width = '100%';
+          if (completedCount < batchTotal) {
+            completedCount = batchTotal;
+          }
+          lastProgressText = `${batchTotal} / ${batchTotal}`;
           progressLbl.textContent = lastProgressText;
+          if (batchUrlStatuses) {
+            batchUrlStatuses.forEach(item => {
+              if (item.status === 'pending' || item.status === 'downloading') {
+                item.status = 'done';
+              }
+            });
+            renderBatchStatusModal();
+          }
         }
         runBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
