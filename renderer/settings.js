@@ -142,10 +142,16 @@ function applySetting(key, value) {
 }
 
 // Ensure remote access reacts to changes
+// ── Remote Web Access Controller ─────────────────────────────
 const remotePortInput = document.getElementById('remote-access-port');
 const remoteUserInput = document.getElementById('remote-access-user');
 const remotePassInput = document.getElementById('remote-access-pass');
 const remotePinInput = document.getElementById('remote-access-pin');
+const remotePassToggle = document.getElementById('remote-access-pass-toggle');
+const remotePinToggle = document.getElementById('remote-access-pin-toggle');
+const remoteSaveBtn = document.getElementById('remote-access-save-btn');
+const remoteResetBtn = document.getElementById('remote-access-reset-btn');
+const remoteStatusMsg = document.getElementById('remote-access-status-msg');
 
 function restartRemoteServer() {
   if (getSetting('remote-access')) {
@@ -160,31 +166,114 @@ function restartRemoteServer() {
   }
 }
 
-if (remotePortInput) remotePortInput.addEventListener('change', restartRemoteServer);
-if (remoteUserInput) remoteUserInput.addEventListener('change', restartRemoteServer);
-if (remotePassInput) remotePassInput.addEventListener('change', restartRemoteServer);
-if (remotePinInput) remotePinInput.addEventListener('change', restartRemoteServer);
+if (remotePassToggle && remotePassInput) {
+  remotePassToggle.addEventListener('click', () => {
+    remotePassInput.type = remotePassInput.type === 'password' ? 'text' : 'password';
+  });
+}
+
+if (remotePinToggle && remotePinInput) {
+  remotePinToggle.addEventListener('click', () => {
+    remotePinInput.type = remotePinInput.type === 'password' ? 'text' : 'password';
+  });
+}
+
+if (remoteSaveBtn) {
+  remoteSaveBtn.addEventListener('click', () => {
+    const port = parseInt(remotePortInput?.value) || (window.location && window.location.port ? parseInt(window.location.port) : 3000);
+    const user = remoteUserInput?.value?.trim() || 'admin';
+    const pass = remotePassInput?.value?.trim() || 'secret';
+    const pin = remotePinInput?.value?.trim() || '';
+
+    const prevPass = localStorage.getItem('remote-access-pass') || 'secret';
+    const prevPin = localStorage.getItem('remote-access-pin') || '';
+
+    if ((pass !== prevPass || pin !== prevPin) && !confirm('Save updated Remote Web Access credentials?\nYou will use these credentials on your next login.')) {
+      return;
+    }
+
+    localStorage.setItem('remote-access-port', String(port));
+    localStorage.setItem('remote-access-user', user);
+    localStorage.setItem('remote-access-pass', pass);
+    localStorage.setItem('remote-access-pin', pin);
+
+    if (window.api && window.api.syncUiState) {
+      window.api.syncUiState({ id: 'remote-access-port', type: 'text', value: String(port) });
+      window.api.syncUiState({ id: 'remote-access-user', type: 'text', value: user });
+      window.api.syncUiState({ id: 'remote-access-pass', type: 'text', value: pass });
+      window.api.syncUiState({ id: 'remote-access-pin', type: 'text', value: pin });
+    }
+
+    if (remoteStatusMsg) {
+      remoteStatusMsg.innerHTML = `<span style="color:#10b981; font-weight:500;">✔ Credentials saved successfully!</span>`;
+      setTimeout(() => {
+        if (remoteStatusMsg) remoteStatusMsg.innerHTML = `<span style="color:var(--text-muted);">Credentials saved</span>`;
+      }, 3000);
+    }
+
+    restartRemoteServer();
+  });
+}
+
+if (remoteResetBtn) {
+  remoteResetBtn.addEventListener('click', () => {
+    if (!confirm('Reset Remote Web Access credentials to default (admin / secret)?')) {
+      return;
+    }
+    if (remoteUserInput) remoteUserInput.value = 'admin';
+    if (remotePassInput) remotePassInput.value = 'secret';
+    if (remotePinInput) remotePinInput.value = '';
+
+    localStorage.setItem('remote-access-user', 'admin');
+    localStorage.setItem('remote-access-pass', 'secret');
+    localStorage.setItem('remote-access-pin', '');
+
+    if (window.api && window.api.syncUiState) {
+      window.api.syncUiState({ id: 'remote-access-user', type: 'text', value: 'admin' });
+      window.api.syncUiState({ id: 'remote-access-pass', type: 'text', value: 'secret' });
+      window.api.syncUiState({ id: 'remote-access-pin', type: 'text', value: '' });
+    }
+
+    if (remoteStatusMsg) {
+      remoteStatusMsg.innerHTML = `<span style="color:#f59e0b; font-weight:500;">Reset to defaults (admin / secret)</span>`;
+      setTimeout(() => {
+        if (remoteStatusMsg) remoteStatusMsg.innerHTML = `<span style="color:var(--text-muted);">Credentials saved</span>`;
+      }, 3000);
+    }
+
+    restartRemoteServer();
+  });
+}
 
 // Initialize settings correctly on startup
 document.addEventListener('DOMContentLoaded', () => {
+  const isBrowserRemote = !window.api || !window.api.setMinimizeToTray;
+  const activeLocationPort = window.location && window.location.port ? window.location.port : null;
+
   if (remotePortInput) {
-    remotePortInput.value = localStorage.getItem('remote-access-port') || '3000';
-    remotePortInput.addEventListener('input', e => localStorage.setItem('remote-access-port', e.target.value));
+    if (isBrowserRemote && activeLocationPort) {
+      remotePortInput.value = activeLocationPort;
+      localStorage.setItem('remote-access-port', activeLocationPort);
+    } else {
+      remotePortInput.value = localStorage.getItem('remote-access-port') || '3000';
+    }
   }
   if (remoteUserInput) {
     remoteUserInput.value = localStorage.getItem('remote-access-user') || 'admin';
-    remoteUserInput.addEventListener('input', e => localStorage.setItem('remote-access-user', e.target.value));
   }
   if (remotePassInput) {
     remotePassInput.value = localStorage.getItem('remote-access-pass') || 'secret';
-    remotePassInput.addEventListener('input', e => localStorage.setItem('remote-access-pass', e.target.value));
+  }
+  if (remotePinInput) {
+    remotePinInput.value = localStorage.getItem('remote-access-pin') || '';
   }
 
   if (getSetting('remote-access')) {
     const port = parseInt(remotePortInput?.value) || 3000;
     const user = remoteUserInput?.value || 'admin';
     const pass = remotePassInput?.value || 'secret';
-    if (window.api && window.api.startRemoteServer) window.api.startRemoteServer({ port, user, pass });
+    const pin = remotePinInput?.value || '';
+    if (window.api && window.api.startRemoteServer) window.api.startRemoteServer({ port, user, pass, pin });
   }
 
   // ── Updates Controller ──────────────────────────────────────
