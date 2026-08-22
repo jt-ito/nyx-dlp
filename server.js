@@ -416,6 +416,22 @@ function startServer(options, appPath) {
 
   server.listen(port, '0.0.0.0', () => {
     console.log(`Remote server listening on port ${port}`);
+    // Auto-start Discord bot if previously enabled
+    try {
+      const isDiscordEnabled = settingsStore.getSettingValue('discordEnabled', false);
+      const token = settingsStore.getSettingValue('discordToken', '');
+      const clientId = settingsStore.getSettingValue('discordClientId', '');
+      const downloadDir = settingsStore.getSettingValue('discordDownloadDir', '') || settingsStore.getSettingValue('discord-download-dir', '');
+      if (isDiscordEnabled && token) {
+        const discordBot = require('./lib/discord-bot.js');
+        discordBot.onStatusChange((statusObj) => broadcast('discord-bot-status', statusObj));
+        discordBot.start({ token, clientId, downloadDir }).then(() => {
+          console.log('[Discord Bot] Background bot auto-started on server boot.');
+        }).catch(err => {
+          console.error('[Discord Bot] Auto-start on server boot failed:', err.message);
+        });
+      }
+    } catch (_) {}
   });
 }
 
