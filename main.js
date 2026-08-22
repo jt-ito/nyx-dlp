@@ -274,7 +274,7 @@ function downloadAppUpdateFile(url, assetName, onProgress) {
     const download = (targetUrl, redirects = 5) => {
       if (redirects < 0) return reject(new Error('Too many redirects while downloading update'));
       const req = https.get(targetUrl, {
-        headers: { 'User-Agent': 'nyx-dlp-app/' + (app.getVersion() || '4.0.0') }
+        headers: { 'User-Agent': 'nyx-dlp-app/' + (app.getVersion() || '4.0.1') }
       }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           return download(res.headers.location, redirects - 1);

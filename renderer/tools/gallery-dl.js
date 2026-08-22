@@ -121,10 +121,7 @@
     stopBtn.classList.remove('hidden');
     incRunning('gallery-dl');
 
-    let urlIdx = 0;
-    if (urls.length > 1) appendLog(log, `▶ [1/${urls.length}] ${urls[0]}`, 'info');
-
-    window.api.runGalleryDl({ url: urls[0], outputDir, filetypes, metadata, cookiesPath, installGdl });
+    window.api.runGalleryDl({ urls, url: urls[0], outputDir, filetypes, metadata, cookiesPath, installGdl });
   });
 
   if (window.api && window.api.onGalleryDlOutput) {

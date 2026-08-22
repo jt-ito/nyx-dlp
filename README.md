@@ -9,7 +9,7 @@ yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive — nine tools,
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-4.0.0-orange)
+![Version](https://img.shields.io/badge/version-4.0.1-orange)
 
 </div>
 
@@ -28,24 +28,23 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 ## Features
 
 - 🧰 **9 built-in tools** — one unified interface for the download, archival, and video workflows you actually use
-- 🤖 **Discord Bot Integration** — run all 10 tools via Discord slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/status`, `/help`) with live progress embeds and automatic file uploads (≤ 24MB)
-- 🐍 **No Python, no manual dependencies** — pure Node.js execution; `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` are vendored and auto-updated for you
+- 🤖 **Discord Bot Integration** — run all tools via Discord slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/status`, `/help`) with live progress embeds, automatic file uploads (≤ 24MB), download history tracking, keep-alive heartbeat monitoring, and automatic gateway reconnection
+- 🐍 **No Python, no manual dependencies** — pure Node.js execution; `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` are vendored and auto-updated for you with permission-safe user data fallbacks
 - ⏯️ **Real process tree pause/resume** — genuine OS-level suspension. Freezes the entire process tree (including background ffmpeg/python threads) simultaneously across Windows, macOS, and Linux, not just a UI lock
 - 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock, and more) with live search
 - 🔑 **Automated PO Tokens** — natively integrates `yt-dlp-get-pot` to bypass `web_creator` challenges without manual token passing
 - 📡 **Live & VOD archiving for YouTube and Twitch** — DVR-style capture from the live edge, or from the start where the platform allows, with Twitch auth-token ad bypass
 - 🗄️ **Internet Archive integration** — authenticate, upload with full metadata (title, collection, subject tags, license, mediatype), or bulk-download an identifier, with automatic retry on failed uploads
 - 🎞️ **Encoder tool & Smart-Cut Clipping** — batch re-encode queues to chosen video/audio codecs with hardware GPU acceleration (NVENC, AMF, QSV) and exact start/end time trimming
-- 💾 **Form persistence & Download History** — every field is remembered; history captures resolved download titles and provides a smooth hover-to-shrink delete action
-- 🔄 **GitHub Auto-Updates** — checks for latest releases on startup or via one-click manual check in Settings
+- 💾 **Form persistence & Download History** — every field is remembered; unified history tracks Desktop, Web Remote, and Discord Bot jobs with title resolution and smooth hover-to-shrink delete actions
+- 🔄 **GitHub Auto-Updates** — checks for latest releases on startup or via one-click manual check in Settings with an interactive progress banner
 - 🚀 **Autostart & Startup Options** — configure launch on startup (Windows, macOS, Linux), start minimized, or minimize to system tray
 - 🚨 **Low Storage Notifications** — warns you via native OS notifications when the active download drive drops below a customizable threshold
 - 🩹 **Failed download recovery & Rate-limit protections** — interrupted downloads are logged, and Batch mode auto-injects required delays (e.g., 5s for YouTube) to prevent IP bans
 - 🛠️ **Twitch VOD Auto-Repair** — seamlessly intercepts CloudFront/HLS timestamp desyncs and missing initialization fragments, automatically rebuilding corrupted Twitch VODs perfectly
-- 🎨 **Color-coded output log** — warnings in yellow, errors in red, interactive prompts in white
-- 🌗 **Dark & light theme**, toggled from the title bar
+- 🎨 **Appearance & Theme Gallery** — curated Dark and Light theme presets, custom accent color picker, glassmorphism / translucent styling, and color-coded output logs
 - 🖥️ **System tray support** — minimize to tray instead of quitting
-- 🌐 **Remote web access & Headless Server** — host the web cockpit over HTTP/WebSocket (`nyx-dlp-cli server`) with PIN/password protection and LAN network discovery
+- 🌐 **Remote Web Cockpit & Headless Server** — host the web cockpit over HTTP/WebSocket (`nyx-dlp-cli server`) with PIN/password protection, real-time cross-client sync, and a themed remote host file browser
 - ⌨️ **Headless CLI mode** — drive every tool from a terminal or server script via `nyx-dlp-cli`, no window or GUI required
 - 🖱️ **Drag-and-drop reordering** in the Video Concatenator
 
@@ -57,9 +56,9 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 - **yt-dlp Downloader** `yt-dlp`  
   Single-video and audio downloads from 1,000+ sites with the full advanced options panel — 70+ flags across Network, Subtitles, Post-Processing, SponsorBlock, and more.
 - **Batch Downloader** `yt-dlp`  
-  Process multi-URL queues with customizable rest intervals, automatic rate-limit cooldowns, and live mid-run queue appending.
+  Process multi-URL queues with customizable rest intervals, automatic rate-limit cooldowns, live mid-run queue appending, and visual progress tracking.
 - **gallery-dl** `gallery-dl`  
-  Bulk-download high-resolution image galleries and albums from 300+ platforms in one click.
+  Bulk-download high-resolution image galleries, albums, and multi-URL batches from 300+ platforms in one click.
 
 ### 📡 Live Capture & Streams
 - **Live Archiver** `yt-dlp` · `streamlink`  
@@ -79,7 +78,7 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 - **Internet Archive** `ia`  
   Authenticate against archive.org to bulk-download items or upload media with full metadata (title, collection, license, mediatype).
 - **Discord Bot** `node`  
-  Full remote control of all tools via interactive Discord slash commands with live progress embeds and direct file uploads.
+  Full remote control of all tools via interactive Discord slash commands with live progress embeds, direct file uploads, and session persistence.
 
 <div align="center">
 
@@ -118,8 +117,9 @@ nyx-dlp-cli concat  -o <dir> --output <name> <file1> <file2> ...
 nyx-dlp-cli encoder -o <dir> [--vcodec libx264] [--acodec aac] <file1> ...
 nyx-dlp-cli encoders # Test and list available GPU hardware encoders
 
-# Remote Web Cockpit
-nyx-dlp-cli server --port 3000 --user admin --pass secret
+# Remote Web Cockpit & Configuration
+nyx-dlp-cli server --port 3050 --user admin --pass secret
+nyx-dlp-cli config # View or edit persistent CLI configuration
 ```
 
 ---
@@ -153,10 +153,13 @@ nyx-dlp/
 ├── preload.js             # Context bridge exposing window.api to renderer
 ├── server.js               # Remote HTTP/WebSocket server for browser-based control
 ├── cli.js                  # Headless CLI entry point — drives the exact same runners
-├── index.html / styles.css # App shell, dark/light theme, and UI subsystems
+├── index.html / styles.css # App shell, dark/light theme gallery, and UI subsystems
 ├── lib/
 │   ├── runners.js          # Centralized process spawning for every tool — execution core
 │   ├── discord-bot.js      # Zero-dependency Discord Gateway & REST client with slash commands
+│   ├── settings-store.js   # Centralized JSON configuration & settings store
+│   ├── vendor-dir.js       # Permission-safe vendor binary path resolver
+│   ├── download-helper.js  # Resilient download helper with curl fallback
 │   ├── runner-utils.js     # OS-level pause/resume/kill across Win/macOS/Linux
 │   ├── ensure-ytdlp.js      # Vendors & auto-updates standalone yt-dlp binary
 │   ├── ensure-ffmpeg.js     # Vendors ffmpeg, selectable by version for GPU support
@@ -164,6 +167,7 @@ nyx-dlp/
 │   └── ensure-streamlink.js # Vendors streamlink for live capture
 └── renderer/
     ├── tools/               # Per-tool UI logic (ytdlp.js, batch.js, ia.js, encoder.js, etc.)
+    ├── file-browser.js      # Themed remote host file browser with path auto-completion
     ├── settings.js, theme.js, sync.js, persistence.js  # Shared UI subsystems
     ├── history.js           # Download history manager with hover-to-shrink delete
     ├── terminal.js          # Custom log terminal with output coloring & stream parsing
@@ -173,22 +177,54 @@ nyx-dlp/
 ---
 
 <details>
-<summary><b>🐧 Quick Install on Headless Linux Server (CLI)</b></summary>
+<summary><b>🐧 Headless Linux Server: Install & systemd Setup</b></summary>
 <br>
 
+### 1. Global Installation
 Run the following commands on your headless Linux machine to download, extract, and link the CLI executable globally:
 
 ```bash
-# 1. Download and extract the latest CLI release directly into /opt/nyx-dlp
+# Download and extract the latest CLI release into /opt/nyx-dlp
 sudo mkdir -p /opt/nyx-dlp
 curl -fsSL $(curl -s https://api.github.com/repos/jt-ito/nyx-dlp/releases/latest | grep -o 'https://github.com/jt-ito/nyx-dlp/releases/download/[^"]*linux-cli.tar.gz' | head -n 1) | sudo tar -xz -C /opt/nyx-dlp --strip-components=1
 
-# 2. Symlink the executable to /usr/local/bin so you can run it from anywhere
+# Symlink the executable to /usr/local/bin
 sudo ln -sf /opt/nyx-dlp/nyx-dlp-cli /usr/local/bin/nyx-dlp-cli
 sudo chmod +x /opt/nyx-dlp/nyx-dlp-cli
 
-# 3. Verify installation
+# Verify installation
 nyx-dlp-cli --help
+```
+
+### 2. Run as a 24/7 background service (`systemd`)
+To have the web cockpit and Discord bot run automatically in the background on system boot:
+
+```bash
+# Create the systemd service file
+sudo tee /etc/systemd/system/nyx-dlp.service > /dev/null << 'EOF'
+[Unit]
+Description=nyx-dlp Headless Web & Media Server
+After=network.target
+
+[Service]
+Type=simple
+User=jt
+WorkingDirectory=/opt/nyx-dlp
+ExecStart=/usr/local/bin/nyx-dlp-cli server --port 3050
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd and enable the service
+sudo systemctl daemon-reload
+sudo systemctl enable --now nyx-dlp
+
+# Check service status
+sudo systemctl status nyx-dlp
 ```
 
 </details>
