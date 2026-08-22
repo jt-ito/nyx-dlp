@@ -9,6 +9,22 @@ if (typeof window.api === 'undefined') {
   const ws = new WebSocket(`ws://${window.location.host}`);
   const pendingRequests = new Map();
   let nextReqId = 1;
+  const msgQueue = [];
+
+  function sendWs(obj) {
+    const json = JSON.stringify(obj);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(json);
+    } else {
+      msgQueue.push(json);
+    }
+  }
+
+  ws.onopen = () => {
+    while (msgQueue.length > 0) {
+      ws.send(msgQueue.shift());
+    }
+  };
 
   let remoteVersion = '3.0.11';
   fetch('/package.json').then(r => r.json()).then(pkg => {
@@ -84,7 +100,7 @@ if (typeof window.api === 'undefined') {
     _invokeRaw: (channel, data) => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);
-      ws.send(JSON.stringify({ type: 'ipc-invoke', channel, id, data }));
+      sendWs({ type: 'ipc-invoke', channel, id, data });
     }),
     invoke: (channel, data) => window.api._invokeRaw(channel, data),
 
@@ -97,47 +113,47 @@ if (typeof window.api === 'undefined') {
     getDiskSpace: (path) => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);
-      ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'get-disk-space', id, data: path }));
+      sendWs({ type: 'ipc-invoke', channel: 'get-disk-space', id, data: path });
     }),
     
     // Notifications & History
-    showNotification: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'show-notification', data: opts })),
+    showNotification: (opts) => sendWs({ type: 'ipc-send', channel: 'show-notification', data: opts }),
     getHistory: () => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);
-      ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'get-history', id }));
+      sendWs({ type: 'ipc-invoke', channel: 'get-history', id });
     }),
     addHistory: (entry) => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);
-      ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'add-history', id, data: entry }));
+      sendWs({ type: 'ipc-invoke', channel: 'add-history', id, data: entry });
     }),
     deleteHistoryItem: (idOrDate) => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);
-      ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'delete-history-item', id, data: idOrDate }));
+      sendWs({ type: 'ipc-invoke', channel: 'delete-history-item', id, data: idOrDate });
     }),
     clearHistory: () => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);
-      ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'clear-history', id }));
+      sendWs({ type: 'ipc-invoke', channel: 'clear-history', id });
     }),
     
     // Script runners
-    runLivestream: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-livestream', data: opts })),
-    runYtdlp:      (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-ytdlp', data: opts })),
-    runBatch:      (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-batch', data: opts })),
-    setBatchRest:  (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'set-batch-rest', data: opts })),
-    skipBatchRest: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'skip-batch-rest', data: opts })),
-    appendBatchQueue: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'append-batch-queue', data: opts })),
-    runM3u8:       (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-m3u8', data: opts })),
-    runGalleryDl:  (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-gallery-dl', data: opts })),
-    runSplitter:   (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-splitter', data: opts })),
-    runConcatenator: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-concatenator', data: opts })),
-    runEncoder:    (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-encoder', data: opts })),
-    runIaUpload:   (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-ia-upload', data: opts })),
-    runIaEdit:     (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-ia-edit', data: opts })),
-    runIaDownload: (opts) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'run-ia-download', data: opts })),
+    runLivestream: (opts) => sendWs({ type: 'ipc-send', channel: 'run-livestream', data: opts }),
+    runYtdlp:      (opts) => sendWs({ type: 'ipc-send', channel: 'run-ytdlp', data: opts }),
+    runBatch:      (opts) => sendWs({ type: 'ipc-send', channel: 'run-batch', data: opts }),
+    setBatchRest:  (opts) => sendWs({ type: 'ipc-send', channel: 'set-batch-rest', data: opts }),
+    skipBatchRest: (opts) => sendWs({ type: 'ipc-send', channel: 'skip-batch-rest', data: opts }),
+    appendBatchQueue: (opts) => sendWs({ type: 'ipc-send', channel: 'append-batch-queue', data: opts }),
+    runM3u8:       (opts) => sendWs({ type: 'ipc-send', channel: 'run-m3u8', data: opts }),
+    runGalleryDl:  (opts) => sendWs({ type: 'ipc-send', channel: 'run-gallery-dl', data: opts }),
+    runSplitter:   (opts) => sendWs({ type: 'ipc-send', channel: 'run-splitter', data: opts }),
+    runConcatenator: (opts) => sendWs({ type: 'ipc-send', channel: 'run-concatenator', data: opts }),
+    runEncoder:    (opts) => sendWs({ type: 'ipc-send', channel: 'run-encoder', data: opts }),
+    runIaUpload:   (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-upload', data: opts }),
+    runIaEdit:     (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-edit', data: opts }),
+    runIaDownload: (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-download', data: opts }),
 
     // Output listeners
     _listeners: {},
@@ -157,11 +173,11 @@ if (typeof window.api === 'undefined') {
     onSyncUiState:      function(cb) { this._addListener('sync-ui-state', cb) },
     onFullState:        function(cb) { this._addListener('full-state', cb) },
 
-    stopScript:   (pid) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'stop-script', data: { pid } })),
-    pauseScript:  (pid) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'pause-script', data: { pid } })),
-    resumeScript: (pid) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'resume-script', data: { pid } })),
-    syncUiState:  (data) => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'sync-ui-state', data })),
-    requestFullState: () => ws.send(JSON.stringify({ type: 'ipc-send', channel: 'request-full-state' })),
+    stopScript:   (pid) => sendWs({ type: 'ipc-send', channel: 'stop-script', data: { pid } }),
+    pauseScript:  (pid) => sendWs({ type: 'ipc-send', channel: 'pause-script', data: { pid } }),
+    resumeScript: (pid) => sendWs({ type: 'ipc-send', channel: 'resume-script', data: { pid } }),
+    syncUiState:  (data) => sendWs({ type: 'ipc-send', channel: 'sync-ui-state', data }),
+    requestFullState: () => sendWs({ type: 'ipc-send', channel: 'request-full-state' }),
 
     removeAllListeners: function(channel) {
        this._listeners[channel] = [];
