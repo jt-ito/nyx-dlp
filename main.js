@@ -858,6 +858,7 @@ ipcMain.handle('start-discord-bot', async (event, opts) => {
       discordClientId: opts.clientId || '',
       discordDownloadDir: opts.downloadDir || ''
     });
+    settingsStore.updateSetting('discord-download-dir', opts.downloadDir || '');
     await discordBot.start(opts);
     return discordBot.getStatus();
   } catch (err) {

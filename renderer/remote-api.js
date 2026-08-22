@@ -189,6 +189,13 @@ if (typeof window.api === 'undefined') {
        this._listeners[channel] = [];
     },
     
+    // Discord Bot
+    startDiscordBot: (opts) => window.api.invoke('start-discord-bot', opts),
+    stopDiscordBot: () => window.api.invoke('stop-discord-bot'),
+    getDiscordBotStatus: () => window.api.invoke('get-discord-bot-status'),
+    syncDiscordCommands: () => window.api.invoke('sync-discord-commands'),
+    onDiscordBotStatus: function(cb) { this._addListener('discord-bot-status', cb); },
+
     startRemoteServer: () => {},
     stopRemoteServer: () => {}
   };

@@ -12,7 +12,8 @@
     'sp-output',
     'concat-output-dir',
     'dep-bgutil-url',
-    'ntf-storage-threshold'
+    'ntf-storage-threshold',
+    'discord-download-dir'
   ];
 
   // Select dropdowns — save on change

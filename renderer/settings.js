@@ -437,9 +437,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (discordBrowseDirBtn && discordDownloadDir) {
     discordBrowseDirBtn.addEventListener('click', async () => {
+      let folder = null;
       if (window.api && window.api.pickFolder) {
-        const folder = await window.api.pickFolder();
-        if (folder) discordDownloadDir.value = folder;
+        folder = await window.api.pickFolder();
+      } else if (typeof window.pickRemoteDirectory === 'function') {
+        folder = await window.pickRemoteDirectory(discordDownloadDir.value || '');
+      }
+      if (folder) {
+        discordDownloadDir.value = folder;
+        discordDownloadDir.dispatchEvent(new Event('input', { bubbles: true }));
+        discordDownloadDir.dispatchEvent(new Event('change', { bubbles: true }));
+        localStorage.setItem('field:discord-download-dir', folder);
+        if (window.api && window.api.syncUiState) {
+          window.api.syncUiState({ id: 'discord-download-dir', type: 'text', value: folder });
+        }
+      }
+    });
+  }
+
+  if (discordDownloadDir) {
+    discordDownloadDir.addEventListener('input', () => {
+      localStorage.setItem('field:discord-download-dir', discordDownloadDir.value);
+      if (window.api && window.api.syncUiState) {
+        window.api.syncUiState({ id: 'discord-download-dir', type: 'text', value: discordDownloadDir.value });
+      }
+    });
+    discordDownloadDir.addEventListener('change', () => {
+      localStorage.setItem('field:discord-download-dir', discordDownloadDir.value);
+      if (window.api && window.api.syncUiState) {
+        window.api.syncUiState({ id: 'discord-download-dir', type: 'text', value: discordDownloadDir.value });
       }
     });
   }

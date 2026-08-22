@@ -348,11 +348,50 @@ function startServer(options, appPath) {
                result = { success: false, error: err.message };
              }
           } else if (msg.channel === 'fs-browse') {
-             result = await handleFsBrowse(msg.data);
+              result = await handleFsBrowse(msg.data);
           } else if (msg.channel === 'fs-create-folder') {
-             result = await handleFsCreateFolder(msg.data);
+              result = await handleFsCreateFolder(msg.data);
+          } else if (msg.channel === 'start-discord-bot') {
+              try {
+                const discordBot = require('./lib/discord-bot.js');
+                discordBot.onStatusChange((statusObj) => broadcast('discord-bot-status', statusObj));
+                const opts = msg.data || {};
+                settingsStore.updateSetting('discordEnabled', true);
+                settingsStore.updateSetting('discordToken', opts.token || '');
+                settingsStore.updateSetting('discordClientId', opts.clientId || '');
+                settingsStore.updateSetting('discordDownloadDir', opts.downloadDir || '');
+                settingsStore.updateSetting('discord-download-dir', opts.downloadDir || '');
+                await discordBot.start(opts);
+                result = discordBot.getStatus();
+              } catch (err) {
+                result = { status: 'error', error: err.message };
+              }
+          } else if (msg.channel === 'stop-discord-bot') {
+              const discordBot = require('./lib/discord-bot.js');
+              settingsStore.updateSetting('discordEnabled', false);
+              discordBot.stop();
+              result = discordBot.getStatus();
+          } else if (msg.channel === 'get-discord-bot-status') {
+              const discordBot = require('./lib/discord-bot.js');
+              discordBot.onStatusChange((statusObj) => broadcast('discord-bot-status', statusObj));
+              const status = discordBot.getStatus();
+              result = {
+                ...status,
+                savedToken: settingsStore.getSettingValue('discordToken', ''),
+                savedClientId: settingsStore.getSettingValue('discordClientId', ''),
+                savedDownloadDir: settingsStore.getSettingValue('discordDownloadDir', '') || settingsStore.getSettingValue('discord-download-dir', ''),
+                savedEnabled: !!settingsStore.getSettingValue('discordEnabled', false)
+              };
+          } else if (msg.channel === 'sync-discord-commands') {
+              try {
+                const discordBot = require('./lib/discord-bot.js');
+                await discordBot.registerSlashCommands();
+                result = { success: true };
+              } catch (err) {
+                result = { success: false, error: err.message };
+              }
           } else if (msg.channel.startsWith('pick-')) {
-             result = null;
+              result = null;
           }
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ipc-invoke-reply', id: msg.id, result }));
