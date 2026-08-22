@@ -276,6 +276,7 @@
       doLogin({ username, password });
     }
 
+    userInp.addEventListener('keydown', e => { if (e.key === 'Enter') { if (passInp.value) submitAccount(); else passInp.focus(); } });
     pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitPin(); });
     passInp.addEventListener('keydown', e => { if (e.key === 'Enter') submitAccount(); });
   </script>
