@@ -254,12 +254,98 @@ function startServer(options, appPath) {
         } else if (msg.type === 'ipc-invoke') {
           // Handlers for ipcMain.handle
           let result = null;
+          const historyFile = path.join(settingsStore.getConfigDir(), 'history.json');
+
           if (msg.channel === 'get-disk-space') {
              try {
                 const stats = await fs.promises.statfs(msg.data);
                 result = { free: stats.bfree * stats.bsize, total: stats.blocks * stats.bsize };
              } catch {
                 result = null;
+             }
+          } else if (msg.channel === 'get-history') {
+             try {
+               if (fs.existsSync(historyFile)) {
+                 result = JSON.parse(await fs.promises.readFile(historyFile, 'utf8'));
+               } else {
+                 result = [];
+               }
+             } catch (_) {
+               result = [];
+             }
+          } else if (msg.channel === 'add-history') {
+             try {
+               let history = [];
+               if (fs.existsSync(historyFile)) {
+                 try { history = JSON.parse(await fs.promises.readFile(historyFile, 'utf8')); } catch (_) {}
+               }
+               history.unshift(msg.data);
+               if (history.length > 1000) history = history.slice(0, 1000);
+               await fs.promises.writeFile(historyFile, JSON.stringify(history, null, 2), 'utf8');
+               result = true;
+             } catch (_) {
+               result = false;
+             }
+          } else if (msg.channel === 'delete-history-item') {
+             try {
+               if (fs.existsSync(historyFile)) {
+                 let history = JSON.parse(await fs.promises.readFile(historyFile, 'utf8'));
+                 const idOrDate = msg.data;
+                 if (typeof idOrDate === 'string') {
+                   history = history.filter(item => item.id !== idOrDate && item.date !== idOrDate);
+                 } else if (typeof idOrDate === 'number') {
+                   history.splice(idOrDate, 1);
+                 }
+                 await fs.promises.writeFile(historyFile, JSON.stringify(history, null, 2), 'utf8');
+                 result = true;
+               } else {
+                 result = false;
+               }
+             } catch (_) {
+               result = false;
+             }
+          } else if (msg.channel === 'clear-history') {
+             try {
+               await fs.promises.writeFile(historyFile, JSON.stringify([]), 'utf8');
+               result = true;
+             } catch (_) {
+               result = false;
+             }
+          } else if (msg.channel === 'check-ia-auth') {
+             try {
+               result = await runners.checkIaAuth(msg.data?.autoIa);
+             } catch (_) {
+               result = false;
+             }
+          } else if (msg.channel === 'config-ia') {
+             try {
+               result = await runners.configIa(msg.data);
+             } catch (err) {
+               result = { success: false, error: err.message };
+             }
+          } else if (msg.channel === 'unlink-ia') {
+             try {
+               result = await runners.unlinkIa(msg.data);
+             } catch (err) {
+               result = { success: false, error: err.message };
+             }
+          } else if (msg.channel === 'get-ia-config') {
+             try {
+               result = await runners.getIaConfig();
+             } catch (err) {
+               result = { success: false, error: err.message };
+             }
+          } else if (msg.channel === 'list-ia-item') {
+             try {
+               result = await runners.listIaItem(msg.data?.identifier);
+             } catch (err) {
+               result = { success: false, error: err.message };
+             }
+          } else if (msg.channel === 'get-ia-metadata') {
+             try {
+               result = await runners.getIaMetadata(msg.data?.identifier);
+             } catch (err) {
+               result = { success: false, error: err.message };
              }
           } else if (msg.channel === 'fs-browse') {
              result = await handleFsBrowse(msg.data);

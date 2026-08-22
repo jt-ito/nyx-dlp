@@ -154,6 +154,12 @@ if (typeof window.api === 'undefined') {
     runIaUpload:   (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-upload', data: opts }),
     runIaEdit:     (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-edit', data: opts }),
     runIaDownload: (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-download', data: opts }),
+    checkIaAuth:   (autoIa) => window.api.invoke('check-ia-auth', { autoIa }),
+    configIa:      (opts) => window.api.invoke('config-ia', opts),
+    unlinkIa:      (opts) => window.api.invoke('unlink-ia', opts),
+    getIaConfig:   () => window.api.invoke('get-ia-config'),
+    listIaItem:    (identifier) => window.api.invoke('list-ia-item', { identifier }),
+    getIaMetadata: (identifier) => window.api.invoke('get-ia-metadata', { identifier }),
 
     // Output listeners
     _listeners: {},

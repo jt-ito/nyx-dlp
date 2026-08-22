@@ -1,10 +1,19 @@
 /* ── UI State Synchronization ────────────────────────────── */
 let isSyncingState = false;
 
+const TRANSIENT_SYNC_IDS = new Set([
+  'yd-url', 'batch-urls', 'ls-url', 'm3-url', 'gdl-url',
+  'yd-start', 'yd-end', 'm3-start', 'm3-end',
+  'concat-output-name',
+  'ia-identifier-up', 'ia-identifier-edit', 'ia-identifier-dl',
+  'ia-title', 'ia-description', 'ia-creator', 'ia-date', 'ia-collection', 'ia-mediatype', 'ia-subject',
+  'ia-auth-email', 'ia-auth-password'
+]);
+
 function broadcastState(el) {
   if (isSyncingState || !window.api || !window.api.syncUiState) return;
   const id = el.id || el.dataset?.setting;
-  if (!id) return;
+  if (!id || TRANSIENT_SYNC_IDS.has(id)) return;
   window.api.syncUiState({
     id,
     type: el.type,

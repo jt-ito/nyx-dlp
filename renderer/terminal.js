@@ -268,19 +268,23 @@ function flushPendingLogsSync(logEl) {
         }
     }
     
-    if (!logEl._progressContainer) {
+    if (!logEl._progressContainer || logEl._progressContainer.parentNode !== logEl) {
         logEl._progressContainer = document.createElement('div');
         logEl._progressContainer.className = 'progress-container';
         logEl.appendChild(logEl._progressContainer);
     }
-    if (!logEl._statusContainer) {
+    if (!logEl._statusContainer || logEl._statusContainer.parentNode !== logEl) {
         logEl._statusContainer = document.createElement('div');
         logEl._statusContainer.className = 'status-container';
         logEl.appendChild(logEl._statusContainer);
     }
 
     if (frag.childNodes.length > 0) {
-        logEl.insertBefore(frag, logEl._progressContainer);
+        if (logEl._progressContainer && logEl._progressContainer.parentNode === logEl) {
+            logEl.insertBefore(frag, logEl._progressContainer);
+        } else {
+            logEl.appendChild(frag);
+        }
     }
     if (statusFrag.childNodes.length > 0) {
         logEl._statusContainer.appendChild(statusFrag);

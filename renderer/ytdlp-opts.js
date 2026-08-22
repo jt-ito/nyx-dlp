@@ -22,7 +22,7 @@ const YTDLP_OPTS = [
   // Post-Processing
   { cat:'Post-Processing', key:'extract-audio',         flag:'--extract-audio',          hasVal:false, label:'Extract audio only',           desc:'Convert video to audio-only output (requires ffmpeg)',      type:'toggle' },
   { cat:'Post-Processing', key:'audio-format',          flag:'--audio-format',           hasVal:true,  label:'Audio format',                 desc:'Format for extracted audio',                               type:'select', opts:[{value:'',label:'Default'},{value:'best',label:'Best'},{value:'aac',label:'AAC'},{value:'alac',label:'ALAC'},{value:'flac',label:'FLAC'},{value:'m4a',label:'M4A'},{value:'mp3',label:'MP3'},{value:'opus',label:'Opus'},{value:'wav',label:'WAV'}] },
-  { cat:'Post-Processing', key:'audio-quality',         flag:'--audio-quality',          hasVal:true,  label:'Audio quality',                desc:'0 (best) – 10 (worst) for VBR, or bitrate e.g. 128K',      type:'text',   placeholder:'5' },
+  { cat:'Post-Processing', key:'audio-quality',         flag:'--audio-quality',          hasVal:true,  label:'Audio quality',                desc:'0 (best) - 10 (worst) for VBR, or bitrate e.g. 128K',      type:'text',   placeholder:'5' },
   { cat:'Post-Processing', key:'remux-video',           flag:'--remux-video',            hasVal:true,  label:'Remux to container',           desc:'Remux without re-encoding (e.g. mp4, mkv, webm)',           type:'select', opts:[{value:'',label:'Disabled'},{value:'mp4',label:'MP4'},{value:'mkv',label:'MKV'},{value:'webm',label:'WebM'},{value:'mov',label:'MOV'},{value:'avi',label:'AVI'},{value:'flv',label:'FLV'}] },
   { cat:'Post-Processing', key:'recode-video',          flag:'--recode-video',           hasVal:true,  label:'Re-encode video',              desc:'Re-encode into another format, e.g. mp4 or mkv',            type:'text',   placeholder:'mp4' },
   { cat:'Post-Processing', key:'keep-video',            flag:'--keep-video',             hasVal:false, label:'Keep intermediate video',      desc:'Keep original video file after post-processing',            type:'toggle' },
@@ -81,7 +81,7 @@ const YTDLP_OPTS = [
   { cat:'Playlist & Selection', key:'dateafter',        flag:'--dateafter',             hasVal:true,  label:'Date after (YYYYMMDD)',        desc:'Only download videos uploaded on or after this date',                 type:'text',   placeholder:'20240101' },
   { cat:'Playlist & Selection', key:'datebefore',       flag:'--datebefore',            hasVal:true,  label:'Date before (YYYYMMDD)',       desc:'Only download videos uploaded on or before this date',                type:'text',   placeholder:'20241231' },
   { cat:'Playlist & Selection', key:'download-sections', flag:'--download-sections',   hasVal:true,  label:'Download sections',           desc:'Download only specific time range or chapter, e.g. *10:15-20:30',     type:'text',   placeholder:'*10:15-20:30' },
-  { cat:'Playlist & Selection', key:'flat-playlist',    flag:'--flat-playlist',         hasVal:false, label:'Flat playlist (list only)',    desc:'List playlist entries without downloading each video — useful for inspection', type:'toggle' },
+  { cat:'Playlist & Selection', key:'flat-playlist',    flag:'--flat-playlist',         hasVal:false, label:'Flat playlist (list only)',    desc:'List playlist entries without downloading each video - useful for inspection', type:'toggle' },
   // Thumbnails
   { cat:'Thumbnails', key:'write-thumbnail',        flag:'--write-thumbnail',           hasVal:false, label:'Write thumbnail',             desc:'Save the best available thumbnail image to disk',                     type:'toggle' },
   { cat:'Thumbnails', key:'write-all-thumbnails',   flag:'--write-all-thumbnails',      hasVal:false, label:'Write all thumbnails',        desc:'Save every available thumbnail resolution/format to disk',            type:'toggle' },
@@ -291,14 +291,10 @@ function updateOptsForTab(tabName) {
     Object.entries(cats).forEach(([catName, opts]) => {
       let catVisible = false;
       const group = document.createElement('div');
-      group.className = 'ytdlp-opts-group adv-grid';
-      group.style.paddingTop = '0';
-      group.style.rowGap = '24px';
+      group.className = 'ytdlp-opts-group';
 
       const title = document.createElement('div');
       title.className = 'ytdlp-opts-group-title';
-      title.style.gridColumn = '1 / -1';
-      title.style.margin = '0 -12px 0';
       title.textContent = catName;
       group.appendChild(title);
 

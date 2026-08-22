@@ -133,8 +133,8 @@
           <div class="nav-indicator"></div>
         </button>
         <button class="nav-item" data-tab="ia">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2 20h20v2H2v-2zm1-2h18v1.5H3V18zm2-8.5h2.5v7.5H5V9.5zm4.5 0H12v7.5H9.5V9.5zm4.5 0h2.5v7.5H14V9.5zm4.5 0H21v7.5h-2.5V9.5zm-15-2h17v1.5H3.5V7.5zm8.5-4.5L22 6.5H2L12 3z"/>
+          <svg width="18" height="18" viewBox="0 0 76 86" xmlns="http://www.w3.org/2000/svg" style="margin-left: -1px; margin-right: 1px;">
+            <path d="m76 82v4h-76l.00080851-4zm-3-6v5h-70v-5zm-62.6696277-54 .8344146.4217275.4176066 6.7436084.4176065 10.9576581v10.5383496l-.4176065 13.1364492-.0694681 8.8498268-1.1825531.3523804h-4.17367003l-1.25202116-.3523804-.48627608-8.8498268-.41840503-13.0662957v-10.5375432l.41840503-11.028618.38167482-6.7798947.87034634-.3854412zm60.0004653 0 .8353798.4217275.4168913 6.7436084.4168913 10.9576581v10.5383496l-.4168913 13.1364492-.0686832 8.8498268-1.1835879.3523804h-4.1737047l-1.2522712-.3523804-.4879704-8.8498268-.4168913-13.0662957v-10.5375432l.4168913-11.028618.3833483-6.7798947.8697215-.3854412zm-42.000632 0 .8344979.4217275.4176483 6.7436084.4176482 10.9576581v10.5383496l-.4176482 13.1364492-.0686764 8.8498268-1.1834698.3523804h-4.1740866l-1.2529447-.3523804-.4863246-8.8498268-.4168497-13.0662957v-10.5375432l.4168497-11.028618.38331-6.7798947.8688361-.3854412zm23 0 .8344979.4217275.4176483 6.7436084.4176482 10.9576581v10.5383496l-.4176482 13.1364492-.0686764 8.8498268-1.1834698.3523804h-4.1740866l-1.2521462-.3523804-.4871231-8.8498268-.4168497-13.0662957v-10.5375432l.4168497-11.028618.38331-6.7798947.8696347-.3854412zm21.6697944-9v7h-70v-7zm-35.7200748-13 36.7200748 8.4088317-1.4720205 2.5911683h-70.32799254l-2.19998696-2.10140371z" fill="currentColor" fill-rule="evenodd"/>
           </svg>
           <span>Internet Archive</span>
           <div class="nav-indicator"></div>
@@ -2071,17 +2071,21 @@
               </label>
           </div>
             <div id="batch-modified-opts"></div>
-            <div class="ytdlp-adv-wrapper">
-              <button class="ytdlp-advanced-toggle" id="batch-advanced-toggle" aria-expanded="false">
-                <span>Advanced Options</span>
-                <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+            <div class="settings-adv-card">
+              <button class="settings-adv-header" id="batch-advanced-toggle" aria-expanded="false">
+                <div class="toggle-card-left">
+                  <div class="toggle-label">Advanced Options</div>
+                  <div class="toggle-desc">Extra flags and fine-tuning applied to Batch Downloader runs</div>
+                </div>
+                <div class="settings-adv-chevron-wrap">
+                  <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
               </button>
-              <div class="ytdlp-advanced-body" id="batch-advanced-body">
-                <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to Batch Downloader runs only</p>
+              <div class="settings-adv-body" id="batch-advanced-body">
                 <div class="ytdlp-opts-search-wrap">
-                  <input type="text" id="batch-opts-search" class="form-input" placeholder="Search optionsâ€¦" />
+                  <input type="text" id="batch-opts-search" class="form-input" placeholder="Search options..." />
                 </div>
                 <div class="ytdlp-opts-container" id="batch-opts-container"></div>
               </div>
@@ -2159,17 +2163,21 @@
               </label>
             </div>
             <div id="yd-modified-opts"></div>
-            <div class="ytdlp-adv-wrapper">
-              <button class="ytdlp-advanced-toggle" id="ytdlp-advanced-toggle" aria-expanded="false">
-                <span>Advanced Options</span>
-                <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+            <div class="settings-adv-card">
+              <button class="settings-adv-header" id="ytdlp-advanced-toggle" aria-expanded="false">
+                <div class="toggle-card-left">
+                  <div class="toggle-label">Advanced Options</div>
+                  <div class="toggle-desc">Extra flags and fine-tuning applied to yt-dlp Downloader runs</div>
+                </div>
+                <div class="settings-adv-chevron-wrap">
+                  <svg class="ytdlp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
               </button>
-              <div class="ytdlp-advanced-body" id="ytdlp-advanced-body">
-                <p class="settings-section-desc" style="margin-top:10px">Extra flags applied to yt-dlp Downloader runs only</p>
+              <div class="settings-adv-body" id="ytdlp-advanced-body">
                 <div class="ytdlp-opts-search-wrap">
-                  <input type="text" id="ytdlp-opts-search" class="form-input" placeholder="Search optionsâ€¦" />
+                  <input type="text" id="ytdlp-opts-search" class="form-input" placeholder="Search options..." />
                 </div>
                 <div class="ytdlp-opts-container" id="ytdlp-opts-container"></div>
               </div>
@@ -2434,11 +2442,17 @@
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
-                <div class="toggle-label">Run on Startup</div>
+                <div class="toggle-label" style="display: flex; align-items: center; gap: 8px;">
+                  <span>Run on Startup</span>
+                  <a href="#" id="view-linux-svc-guide" style="color: var(--accent); font-size: 11px; font-weight: normal; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    Linux Service Guide
+                  </a>
+                </div>
                 <div class="toggle-desc">Automatically launch nyx-dlp when your computer starts</div>
               </div>
               <label class="toggle-switch">
-                <input type="checkbox" data-setting="run-on-startup" />
+                <input type="checkbox" data-setting="run-on-startup" id="run-on-startup-toggle" />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
@@ -2604,6 +2618,72 @@
       </div>
       <div id="batch-status-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
         <!-- Status items populated by batch.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Linux systemd Service Guide Modal -->
+  <div class="rfb-modal-overlay" id="linux-service-modal" style="display: none;">
+    <div class="rfb-modal" style="max-width: 680px; height: auto; max-height: 90vh;">
+      <div class="rfb-header">
+        <div class="rfb-title-group">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+          <span class="rfb-title">Linux systemd Service Setup</span>
+        </div>
+        <button class="rfb-close-btn" id="close-linux-service-modal" title="Close">✕</button>
+      </div>
+
+      <div style="padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin: 0;">
+          To run nyx-dlp automatically on Linux boot (without requiring an active desktop login), you can register a standard <code>systemd</code> service using the template below.
+        </p>
+
+        <!-- Service Configurator -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--bg-elevated); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+          <div>
+            <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Service User</label>
+            <input type="text" id="svc-user" class="form-input" placeholder="e.g. jt" style="font-size: 12px;" />
+          </div>
+          <div>
+            <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Server Port</label>
+            <input type="number" id="svc-port" class="form-input" placeholder="3050" style="font-size: 12px;" />
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Service Mode</label>
+            <select id="svc-mode" class="form-select" style="font-size: 12px;">
+              <option value="server">Remote Web Access Server (nyx-dlp-cli server)</option>
+              <option value="discord">Discord Bot Background Service (nyx-dlp-cli discord)</option>
+              <option value="gui">Desktop GUI Session (Freedesktop XDG Autostart)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Generated Unit File Preview -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="font-size: 11px; margin: 0;">1. Generated Service File (/etc/systemd/system/nyx-dlp.service)</label>
+            <button type="button" class="btn btn-ghost" id="copy-svc-file-btn" style="padding: 4px 10px; font-size: 11px;">Copy Service File</button>
+          </div>
+          <textarea id="svc-file-preview" class="form-textarea" readonly style="min-height: 140px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.4;"></textarea>
+        </div>
+
+        <!-- Single-Command Quick Setup -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="font-size: 11px; margin: 0;">2. Quick Setup Commands (Terminal)</label>
+            <button type="button" class="btn btn-primary" id="copy-svc-cmd-btn" style="padding: 4px 12px; font-size: 11px;">Copy Commands</button>
+          </div>
+          <textarea id="svc-cmd-preview" class="form-textarea" readonly style="min-height: 80px; font-family: var(--font-mono); font-size: 11.5px; color: var(--terminal-stdout); line-height: 1.4;"></textarea>
+        </div>
+      </div>
+
+      <div class="rfb-footer" style="justify-content: flex-end;">
+        <button class="btn btn-primary" id="done-linux-service-modal">Got it</button>
       </div>
     </div>
   </div>

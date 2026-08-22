@@ -97,6 +97,12 @@ function applySetting(key, value) {
     if (window.api && window.api.setRunOnStartup) {
       window.api.setRunOnStartup(value);
     }
+    const isLinux = (navigator.platform && navigator.platform.toLowerCase().includes('linux')) || 
+                    (navigator.userAgent && navigator.userAgent.toLowerCase().includes('linux')) ||
+                    (typeof process !== 'undefined' && process.platform === 'linux');
+    if (value && isLinux && typeof openLinuxServiceModal === 'function') {
+      openLinuxServiceModal();
+    }
   } else if (cfg.custom === 'start-minimized') {
     if (window.api && window.api.setStartMinimized) {
       window.api.setStartMinimized(value);
@@ -291,11 +297,57 @@ document.addEventListener('DOMContentLoaded', () => {
     return `https://discord.com/oauth2/authorize?client_id=${clientId}&scope=bot%20applications.commands&permissions=274878024704`;
   }
 
+  function extractClientIdFromToken(token) {
+    if (!token || typeof token !== 'string') return '';
+    const trimmed = token.trim();
+    const parts = trimmed.split('.');
+    if (parts.length >= 2) {
+      try {
+        const decoded = atob(parts[0]);
+        if (/^\d{17,21}$/.test(decoded)) {
+          return decoded;
+        }
+      } catch (_) {}
+    }
+    return '';
+  }
+
+  function handleTokenOrClientChange() {
+    const token = discordTokenInput?.value?.trim() || '';
+    const extractedId = extractClientIdFromToken(token);
+    
+    if (extractedId && discordClientIdInput && !discordClientIdInput.value) {
+      discordClientIdInput.value = extractedId;
+    }
+    
+    const clientId = discordClientIdInput?.value?.trim() || extractedId;
+    if (discordInviteUrlInput) {
+      discordInviteUrlInput.value = calculateInviteUrl(clientId);
+    }
+  }
+
+  if (discordTokenInput) {
+    discordTokenInput.addEventListener('input', handleTokenOrClientChange);
+    discordTokenInput.addEventListener('change', handleTokenOrClientChange);
+    discordTokenInput.addEventListener('paste', () => setTimeout(handleTokenOrClientChange, 50));
+  }
+
+  if (discordClientIdInput) {
+    discordClientIdInput.addEventListener('input', () => {
+      const clientId = discordClientIdInput.value.trim();
+      if (discordInviteUrlInput) {
+        discordInviteUrlInput.value = calculateInviteUrl(clientId);
+      }
+    });
+  }
+
   function updateDiscordStatusUI(data) {
     if (!data) return;
     const status = data.status || 'disconnected';
     const botUser = data.botUser;
-    const clientId = data.clientId || data.savedClientId || '';
+    const token = discordTokenInput?.value?.trim() || '';
+    const extractedId = extractClientIdFromToken(token);
+    const clientId = data.clientId || data.savedClientId || extractedId || '';
     const inviteUrl = data.inviteUrl || calculateInviteUrl(clientId);
 
     if (discordInviteUrlInput && inviteUrl) {
@@ -358,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (discordTokenInput && statusObj.savedToken) discordTokenInput.value = statusObj.savedToken;
       if (discordClientIdInput && statusObj.savedClientId) discordClientIdInput.value = statusObj.savedClientId;
       if (discordDownloadDir && statusObj.savedDownloadDir) discordDownloadDir.value = statusObj.savedDownloadDir;
+      handleTokenOrClientChange();
       updateDiscordStatusUI(statusObj);
     }).catch(() => {});
   }
@@ -457,6 +510,116 @@ document.addEventListener('DOMContentLoaded', () => {
         discordSyncCmdsBtn.disabled = false;
         discordSyncCmdsBtn.textContent = orig;
       }
+    });
+  }
+
+  // ── Linux systemd Service Modal ──────────────────────────────
+  const linuxSvcModal = document.getElementById('linux-service-modal');
+  const closeLinuxSvcBtn = document.getElementById('close-linux-service-modal');
+  const doneLinuxSvcBtn = document.getElementById('done-linux-service-modal');
+  const viewLinuxSvcLink = document.getElementById('view-linux-svc-guide');
+  const svcUserInput = document.getElementById('svc-user');
+  const svcPortInput = document.getElementById('svc-port');
+  const svcModeSelect = document.getElementById('svc-mode');
+  const svcFilePreview = document.getElementById('svc-file-preview');
+  const svcCmdPreview = document.getElementById('svc-cmd-preview');
+  const copySvcFileBtn = document.getElementById('copy-svc-file-btn');
+  const copySvcCmdBtn = document.getElementById('copy-svc-cmd-btn');
+
+  function renderLinuxServiceTemplate() {
+    const user = svcUserInput?.value?.trim() || 'jt';
+    const port = svcPortInput?.value?.trim() || '3050';
+    const mode = svcModeSelect?.value || 'server';
+
+    let execCmd = `/usr/local/bin/nyx-dlp-cli server --port ${port}`;
+    let desc = 'nyx-dlp Remote Web Access Server';
+
+    if (mode === 'discord') {
+      execCmd = '/usr/local/bin/nyx-dlp-cli discord';
+      desc = 'nyx-dlp Discord Bot Background Service';
+    } else if (mode === 'gui') {
+      execCmd = '/opt/nyx-dlp/nyx-dlp --minimized';
+      desc = 'nyx-dlp Desktop Application';
+    }
+
+    const homeDir = user === 'root' ? '/root' : `/home/${user}`;
+
+    const serviceContent = `[Unit]
+Description=${desc}
+After=network.target
+
+[Service]
+Type=simple
+User=${user}
+WorkingDirectory=${homeDir}
+ExecStart=${execCmd}
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target`;
+
+    if (svcFilePreview) svcFilePreview.value = serviceContent;
+
+    const quickCmd = `sudo tee /etc/systemd/system/nyx-dlp.service > /dev/null << 'EOF'
+${serviceContent}
+EOF
+sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
+
+    if (svcCmdPreview) svcCmdPreview.value = quickCmd;
+  }
+
+  window.openLinuxServiceModal = function() {
+    if (!linuxSvcModal) return;
+    if (svcUserInput && !svcUserInput.value) {
+      svcUserInput.value = (typeof os !== 'undefined' && os.userInfo ? os.userInfo().username : '') || 'jt';
+    }
+    if (svcPortInput && !svcPortInput.value) {
+      const portVal = document.getElementById('remote-access-port')?.value || '3050';
+      svcPortInput.value = portVal;
+    }
+    renderLinuxServiceTemplate();
+    linuxSvcModal.style.display = 'flex';
+  };
+
+  if (viewLinuxSvcLink) {
+    viewLinuxSvcLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.openLinuxServiceModal();
+    });
+  }
+
+  if (closeLinuxSvcBtn) closeLinuxSvcBtn.addEventListener('click', () => { linuxSvcModal.style.display = 'none'; });
+  if (doneLinuxSvcBtn) doneLinuxSvcBtn.addEventListener('click', () => { linuxSvcModal.style.display = 'none'; });
+  if (linuxSvcModal) {
+    linuxSvcModal.addEventListener('click', (e) => {
+      if (e.target === linuxSvcModal) linuxSvcModal.style.display = 'none';
+    });
+  }
+
+  [svcUserInput, svcPortInput, svcModeSelect].forEach(el => {
+    if (el) {
+      el.addEventListener('input', renderLinuxServiceTemplate);
+      el.addEventListener('change', renderLinuxServiceTemplate);
+    }
+  });
+
+  if (copySvcFileBtn && svcFilePreview) {
+    copySvcFileBtn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(svcFilePreview.value);
+      const orig = copySvcFileBtn.textContent;
+      copySvcFileBtn.textContent = 'Copied!';
+      setTimeout(() => copySvcFileBtn.textContent = orig, 1800);
+    });
+  }
+
+  if (copySvcCmdBtn && svcCmdPreview) {
+    copySvcCmdBtn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(svcCmdPreview.value);
+      const orig = copySvcCmdBtn.textContent;
+      copySvcCmdBtn.textContent = 'Copied Commands!';
+      setTimeout(() => copySvcCmdBtn.textContent = orig, 1800);
     });
   }
 });
