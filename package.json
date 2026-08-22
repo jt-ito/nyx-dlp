@@ -1,10 +1,14 @@
 {
     "name": "nyx-dlp",
-    "version": "3.0.10",
+    "version": "3.0.11",
     "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
     "main": "main.js",
+    "bin": {
+        "nyx-dlp-cli": "./cli.js"
+    },
     "scripts": {
         "start": "electron .",
+        "cli": "node cli.js",
         "build:portable": "node build.js portable",
         "build:installer": "node build.js installer",
         "build:mac": "node build.js mac",

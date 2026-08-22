@@ -3,7 +3,15 @@ const WebSocket = require('ws');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { ipcMain } = require('electron');
+const runners = require('./lib/runners.js');
+
+let ipcMain = null;
+try {
+  const electron = require('electron');
+  if (electron && typeof electron === 'object' && electron.ipcMain) {
+    ipcMain = electron.ipcMain;
+  }
+} catch (_) {}
 
 let server = null;
 let wss = null;
@@ -144,8 +152,54 @@ function startServer(options, appPath) {
       try {
         const msg = JSON.parse(message);
         if (msg.type === 'ipc-send') {
-          // Trigger standard ipcMain.on handlers
-          ipcMain.emit(msg.channel, fakeEvent, msg.data);
+          if (ipcMain) {
+            ipcMain.emit(msg.channel, fakeEvent, msg.data);
+          } else {
+            // Direct standalone fallback for Node CLI
+            const opts = msg.data || {};
+            const broadcastChannel = (c, d) => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ipc-reply', channel: c, data: d }));
+              }
+            };
+            const outputChan = (name) => (data) => broadcastChannel(name, data);
+
+            switch (msg.channel) {
+              case 'run-ytdlp':
+                runners.runYtdlp(opts, outputChan('ytdlp-output'));
+                break;
+              case 'run-livestream':
+                runners.runLivestream(opts, outputChan('livestream-output'));
+                break;
+              case 'run-batch':
+                runners.runBatch(opts, outputChan('batch-output'));
+                break;
+              case 'run-m3u8':
+                runners.runM3u8(opts, outputChan('m3u8-output'));
+                break;
+              case 'run-gallery-dl':
+                runners.runGalleryDl(opts, outputChan('gallery-dl-output'));
+                break;
+              case 'run-splitter':
+                runners.runSplitter(opts, outputChan('splitter-output'));
+                break;
+              case 'run-concatenator':
+                runners.runConcatenator(opts, outputChan('concatenator-output'));
+                break;
+              case 'run-encoder':
+                runners.runEncoder(opts, outputChan('encoder-output'));
+                break;
+              case 'stop-script':
+                if (opts.pid) runners.stopScript(opts.pid);
+                break;
+              case 'pause-script':
+                if (opts.pid) runners.pauseScript(opts.pid);
+                break;
+              case 'resume-script':
+                if (opts.pid) runners.resumeScript(opts.pid);
+                break;
+            }
+          }
         } else if (msg.type === 'ipc-invoke') {
           // Handlers for ipcMain.handle
           let result = null;

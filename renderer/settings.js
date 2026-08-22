@@ -24,6 +24,10 @@ const SETTINGS_MAP = {
   'dep-use-bgutil':       { el: 'dep-bgutil-url-group' },
   'show-disk-space':      { custom: 'disk-space' },
   'minimize-to-tray':     { custom: 'tray' },
+  'run-on-startup':       { custom: 'startup' },
+  'start-minimized':      { custom: 'start-minimized' },
+  'auto-update':          { custom: 'auto-update' },
+  'discord-bot-enable':   { custom: 'discord-bot' },
   'remote-access':        { custom: 'remote-access' },
   'ntf-storage':          { el: 'ntf-storage-group' },
 };
@@ -54,6 +58,10 @@ const SETTINGS_DEFAULTS = {
   'dep-install-gdl':      true,
   'show-disk-space':      false,
   'minimize-to-tray':     false,
+  'run-on-startup':       false,
+  'start-minimized':      false,
+  'auto-update':          false,
+  'discord-bot-enable':   false,
   'remote-access':        false,
   'ntf-storage':          true,
 };
@@ -84,6 +92,24 @@ function applySetting(key, value) {
   } else if (cfg.custom === 'tray') {
     if (window.api && window.api.setMinimizeToTray) {
       window.api.setMinimizeToTray(value);
+    }
+  } else if (cfg.custom === 'startup') {
+    if (window.api && window.api.setRunOnStartup) {
+      window.api.setRunOnStartup(value);
+    }
+  } else if (cfg.custom === 'start-minimized') {
+    if (window.api && window.api.setStartMinimized) {
+      window.api.setStartMinimized(value);
+    }
+  } else if (cfg.custom === 'auto-update') {
+    if (window.api && window.api.setAutoUpdate) {
+      window.api.setAutoUpdate(value);
+    }
+  } else if (cfg.custom === 'discord-bot') {
+    const configGroup = document.getElementById('discord-bot-config-group');
+    if (configGroup) configGroup.style.display = value ? 'flex' : 'none';
+    if (!value) {
+      if (window.api && window.api.stopDiscordBot) window.api.stopDiscordBot();
     }
   } else if (cfg.custom === 'remote-access') {
     const portGroup = document.getElementById('remote-access-port-group');
@@ -154,4 +180,307 @@ document.addEventListener('DOMContentLoaded', () => {
     const pass = remotePassInput?.value || 'secret';
     if (window.api && window.api.startRemoteServer) window.api.startRemoteServer({ port, user, pass });
   }
+
+  // ── Updates Controller ──────────────────────────────────────
+  const checkUpdatesBtn   = document.getElementById('check-updates-btn');
+  const downloadUpdateBtn = document.getElementById('download-update-btn');
+  const updateStatusText  = document.getElementById('update-status-text');
+  const updateDetailsText = document.getElementById('update-details-text');
+  const appVersion = (window.api && window.api.appVersion) ? 'v' + window.api.appVersion : '';
+
+  let latestReleaseUrl = 'https://github.com/jt-ito/nyx-dlp/releases';
+
+  if (updateStatusText && appVersion) {
+    updateStatusText.textContent = `Current version: ${appVersion}`;
+  }
+
+  function handleUpdateResult(res) {
+    if (!res) return;
+    if (res.error) {
+      if (updateStatusText) updateStatusText.innerHTML = `<span style="color: var(--accent-danger);">Check failed:</span> ${res.error}`;
+      if (updateDetailsText) updateDetailsText.textContent = 'Please check your internet connection.';
+      return;
+    }
+
+    if (res.hasUpdate) {
+      latestReleaseUrl = res.releaseUrl || latestReleaseUrl;
+      if (updateStatusText) {
+        updateStatusText.innerHTML = `<span style="color: #68d391; font-weight: 600;">Update Available:</span> v${res.latestVersion}`;
+      }
+      if (updateDetailsText) {
+        updateDetailsText.innerHTML = res.releaseName ? `<strong>${res.releaseName}</strong>` : `Latest version on GitHub is ready to download.`;
+      }
+      if (downloadUpdateBtn) {
+        downloadUpdateBtn.style.display = 'inline-flex';
+      }
+
+      // Show top-level update banner if present
+      showUpdateBanner(res);
+    } else {
+      if (updateStatusText) {
+        updateStatusText.innerHTML = `<span style="color: #68d391;">✔ nyx-dlp is up to date</span> (${appVersion || 'v' + res.currentVersion})`;
+      }
+      if (updateDetailsText) {
+        updateDetailsText.textContent = 'You have the latest release installed.';
+      }
+      if (downloadUpdateBtn) {
+        downloadUpdateBtn.style.display = 'none';
+      }
+    }
+  }
+
+  if (checkUpdatesBtn) {
+    checkUpdatesBtn.addEventListener('click', async () => {
+      checkUpdatesBtn.disabled = true;
+      const originalHtml = checkUpdatesBtn.innerHTML;
+      checkUpdatesBtn.innerHTML = `
+        <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <span>Checking...</span>
+      `;
+      if (updateStatusText) updateStatusText.textContent = 'Connecting to GitHub...';
+      if (updateDetailsText) updateDetailsText.textContent = '';
+
+      try {
+        if (window.api && window.api.checkForUpdates) {
+          const result = await window.api.checkForUpdates();
+          handleUpdateResult(result);
+        }
+      } catch (err) {
+        handleUpdateResult({ error: err.message });
+      } finally {
+        checkUpdatesBtn.disabled = false;
+        checkUpdatesBtn.innerHTML = originalHtml;
+      }
+    });
+  }
+
+  if (downloadUpdateBtn) {
+    downloadUpdateBtn.addEventListener('click', () => {
+      if (window.api && window.api.openExternal) {
+        window.api.openExternal(latestReleaseUrl);
+      } else {
+        window.open(latestReleaseUrl, '_blank');
+      }
+    });
+  }
+
+  // Handle background auto-update event on startup
+  if (window.api && window.api.onUpdateAvailable) {
+    window.api.onUpdateAvailable((info) => {
+      handleUpdateResult(info);
+    });
+  }
+
+  // ── Discord Bot Controller ──────────────────────────────────
+  const discordTokenInput    = document.getElementById('discord-bot-token');
+  const discordClientIdInput = document.getElementById('discord-bot-client-id');
+  const discordDownloadDir   = document.getElementById('discord-download-dir');
+  const discordBrowseDirBtn  = document.getElementById('discord-browse-dir');
+  const discordInviteUrlInput= document.getElementById('discord-invite-url');
+  const discordCopyInviteBtn = document.getElementById('discord-copy-invite');
+  const discordOpenInviteBtn = document.getElementById('discord-open-invite');
+  const discordConnectBtn    = document.getElementById('discord-connect-btn');
+  const discordSyncCmdsBtn   = document.getElementById('discord-sync-commands-btn');
+  const discordStatusBadge   = document.getElementById('discord-status-badge');
+  const discordLogStatus     = document.getElementById('discord-log-status');
+  const discordToggleTokenVis= document.getElementById('discord-toggle-token-vis');
+  const discordDevPortalLink = document.getElementById('discord-dev-portal-link');
+
+  function calculateInviteUrl(clientId) {
+    if (!clientId) return '';
+    return `https://discord.com/oauth2/authorize?client_id=${clientId}&scope=bot%20applications.commands&permissions=274878024704`;
+  }
+
+  function updateDiscordStatusUI(data) {
+    if (!data) return;
+    const status = data.status || 'disconnected';
+    const botUser = data.botUser;
+    const clientId = data.clientId || data.savedClientId || '';
+    const inviteUrl = data.inviteUrl || calculateInviteUrl(clientId);
+
+    if (discordInviteUrlInput && inviteUrl) {
+      discordInviteUrlInput.value = inviteUrl;
+    }
+    if (discordClientIdInput && clientId && !discordClientIdInput.value) {
+      discordClientIdInput.value = clientId;
+    }
+
+    if (discordStatusBadge) {
+      if (status === 'connected') {
+        const name = botUser?.username ? `@${botUser.username}` : 'Online';
+        discordStatusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+        discordStatusBadge.style.color = '#10b981';
+        discordStatusBadge.textContent = `● Connected (${name})`;
+      } else if (status === 'connecting') {
+        discordStatusBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+        discordStatusBadge.style.color = '#3b82f6';
+        discordStatusBadge.textContent = '● Connecting...';
+      } else if (status === 'error') {
+        discordStatusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+        discordStatusBadge.style.color = '#ef4444';
+        discordStatusBadge.textContent = '● Error';
+      } else {
+        discordStatusBadge.style.background = 'rgba(255, 255, 255, 0.06)';
+        discordStatusBadge.style.color = 'var(--text-muted)';
+        discordStatusBadge.textContent = 'Disconnected';
+      }
+    }
+
+    if (discordConnectBtn) {
+      if (status === 'connected') {
+        discordConnectBtn.textContent = 'Disconnect';
+        discordConnectBtn.className = 'btn btn-ghost';
+      } else if (status === 'connecting') {
+        discordConnectBtn.textContent = 'Connecting...';
+        discordConnectBtn.className = 'btn btn-primary';
+      } else {
+        discordConnectBtn.textContent = 'Connect Bot';
+        discordConnectBtn.className = 'btn btn-primary';
+      }
+    }
+
+    if (discordLogStatus) {
+      if (status === 'connected') {
+        discordLogStatus.innerHTML = `<span style="color:#10b981;">✔ Online and listening for slash commands</span>`;
+      } else if (status === 'error') {
+        discordLogStatus.innerHTML = `<span style="color:#ef4444;">${data.error || 'Connection failed'}</span>`;
+      } else if (status === 'connecting') {
+        discordLogStatus.textContent = 'Connecting to Discord Gateway...';
+      } else {
+        discordLogStatus.textContent = 'Ready to connect';
+      }
+    }
+  }
+
+  // Load saved state on startup
+  if (window.api && window.api.getDiscordBotStatus) {
+    window.api.getDiscordBotStatus().then(statusObj => {
+      if (discordTokenInput && statusObj.savedToken) discordTokenInput.value = statusObj.savedToken;
+      if (discordClientIdInput && statusObj.savedClientId) discordClientIdInput.value = statusObj.savedClientId;
+      if (discordDownloadDir && statusObj.savedDownloadDir) discordDownloadDir.value = statusObj.savedDownloadDir;
+      updateDiscordStatusUI(statusObj);
+    }).catch(() => {});
+  }
+
+  // Real-time Gateway status updates
+  if (window.api && window.api.onDiscordBotStatus) {
+    window.api.onDiscordBotStatus(updateDiscordStatusUI);
+  }
+
+  if (discordToggleTokenVis && discordTokenInput) {
+    discordToggleTokenVis.addEventListener('click', () => {
+      discordTokenInput.type = discordTokenInput.type === 'password' ? 'text' : 'password';
+    });
+  }
+
+  if (discordDevPortalLink) {
+    discordDevPortalLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = 'https://discord.com/developers/applications';
+      if (window.api && window.api.openExternal) window.api.openExternal(url);
+      else window.open(url, '_blank');
+    });
+  }
+
+  if (discordBrowseDirBtn && discordDownloadDir) {
+    discordBrowseDirBtn.addEventListener('click', async () => {
+      if (window.api && window.api.pickFolder) {
+        const folder = await window.api.pickFolder();
+        if (folder) discordDownloadDir.value = folder;
+      }
+    });
+  }
+
+  if (discordCopyInviteBtn && discordInviteUrlInput) {
+    discordCopyInviteBtn.addEventListener('click', async () => {
+      if (discordInviteUrlInput.value) {
+        await navigator.clipboard.writeText(discordInviteUrlInput.value);
+        const orig = discordCopyInviteBtn.textContent;
+        discordCopyInviteBtn.textContent = 'Copied!';
+        setTimeout(() => discordCopyInviteBtn.textContent = orig, 2000);
+      }
+    });
+  }
+
+  if (discordOpenInviteBtn && discordInviteUrlInput) {
+    discordOpenInviteBtn.addEventListener('click', () => {
+      if (discordInviteUrlInput.value) {
+        if (window.api && window.api.openExternal) window.api.openExternal(discordInviteUrlInput.value);
+        else window.open(discordInviteUrlInput.value, '_blank');
+      }
+    });
+  }
+
+  if (discordConnectBtn) {
+    discordConnectBtn.addEventListener('click', async () => {
+      if (discordConnectBtn.textContent === 'Disconnect') {
+        if (window.api && window.api.stopDiscordBot) {
+          const res = await window.api.stopDiscordBot();
+          updateDiscordStatusUI(res);
+        }
+      } else {
+        const token = discordTokenInput?.value || '';
+        const clientId = discordClientIdInput?.value || '';
+        const downloadDir = discordDownloadDir?.value || '';
+        if (!token) {
+          if (discordLogStatus) discordLogStatus.innerHTML = `<span style="color:#ef4444;">Please paste a Bot Token</span>`;
+          return;
+        }
+        if (window.api && window.api.startDiscordBot) {
+          discordConnectBtn.disabled = true;
+          try {
+            const res = await window.api.startDiscordBot({ token, clientId, downloadDir });
+            updateDiscordStatusUI(res);
+          } finally {
+            discordConnectBtn.disabled = false;
+          }
+        }
+      }
+    });
+  }
+
+  if (discordSyncCmdsBtn) {
+    discordSyncCmdsBtn.addEventListener('click', async () => {
+      discordSyncCmdsBtn.disabled = true;
+      const orig = discordSyncCmdsBtn.textContent;
+      discordSyncCmdsBtn.textContent = 'Syncing...';
+      try {
+        if (window.api && window.api.syncDiscordCommands) {
+          const res = await window.api.syncDiscordCommands();
+          if (res && res.success) {
+            if (discordLogStatus) discordLogStatus.innerHTML = `<span style="color:#10b981;">✔ All slash commands re-synced with Discord!</span>`;
+          } else {
+            if (discordLogStatus) discordLogStatus.innerHTML = `<span style="color:#ef4444;">Sync failed: ${res?.error || 'Unknown error'}</span>`;
+          }
+        }
+      } finally {
+        discordSyncCmdsBtn.disabled = false;
+        discordSyncCmdsBtn.textContent = orig;
+      }
+    });
+  }
 });
+
+function showUpdateBanner(info) {
+  const banner = document.getElementById('update-notification-banner');
+  if (!banner) return;
+  const verSpan = document.getElementById('update-banner-version');
+  if (verSpan) verSpan.textContent = 'v' + info.latestVersion;
+  banner.style.display = 'flex';
+
+  const viewBtn = document.getElementById('update-banner-view-btn');
+  if (viewBtn) {
+    viewBtn.onclick = () => {
+      const url = info.releaseUrl || 'https://github.com/jt-ito/nyx-dlp/releases';
+      if (window.api && window.api.openExternal) window.api.openExternal(url);
+      else window.open(url, '_blank');
+    };
+  }
+
+  const dismissBtn = document.getElementById('update-banner-dismiss-btn');
+  if (dismissBtn) {
+    dismissBtn.onclick = () => {
+      banner.style.display = 'none';
+    };
+  }
+}

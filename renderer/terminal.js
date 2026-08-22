@@ -6,7 +6,7 @@ function classifyLine(text, streamType, logEl) {
     return 'info';
   }
   if (/^\[debug\]/i.test(t))                    return 'debug';
-  if (/^warning:/i.test(t))                      return 'warning';
+  if (/^warning:/i.test(t) || /keepalive request failed/i.test(t) || /retrying with new connection/i.test(t) || /will reconnect/i.test(t)) return 'warning';
   if (/^error:/i.test(t))                        return 'error';
   if (/has already been downloaded/i.test(t))    return 'info';
   if (/\berror\b.*:/i.test(t) && streamType === 'stderr') return 'error';
@@ -46,7 +46,44 @@ function appendLog(logEl, text, cls) {
   if (!logEl._pendingLines) logEl._pendingLines = [];
   logEl._lastRenderedLine = null;
 
+  const unpinProgress = (threadId) => {
+    if (logEl._liveProgresses && logEl._liveProgresses.has(threadId)) {
+      const prog = logEl._liveProgresses.get(threadId);
+      logEl._liveProgresses.delete(threadId);
+      if (prog && prog.text) {
+        logEl._pendingLines.push({ text: prog.text, cls: 'stdout', count: 1 });
+      }
+    }
+  };
+
+  const unpinAllProgress = () => {
+    if (logEl._liveProgresses && logEl._liveProgresses.size > 0) {
+      for (const [id, prog] of logEl._liveProgresses.entries()) {
+        if (prog && prog.text) {
+          logEl._pendingLines.push({ text: prog.text, cls: 'stdout', count: 1 });
+        }
+      }
+      logEl._liveProgresses.clear();
+    }
+  };
+
   const isStatus = text.includes('⏸ Paused') || text.includes('▶ Resumed') || text.includes('✔ Process finished') || text.includes('✖ Process exited');
+
+  // Unpin progress when transitioning to post-processing, embedding metadata/thumbnails/subtitles, smart-cut, or completion
+  const isPostDownload = text.includes('▶ [Post-Process]') ||
+    text.includes('✔ [Post-Process]') ||
+    text.includes('▶ [Smart-Cut]') ||
+    text.includes('✔ Completed') ||
+    text.includes('[Metadata]') ||
+    text.includes('[EmbedSubtitle]') ||
+    text.includes('[EmbedThumbnail]') ||
+    text.includes('[Merger]') ||
+    text.includes('[Fixup') ||
+    isStatus;
+
+  if (isPostDownload) {
+    unpinAllProgress();
+  }
 
   // 1. Check for Destination line (Start of a new file)
   const destMatch = text.match(/^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:(\d+):\s*)?\[(?:download|ExtractAudio)\]\s+Destination:\s+(.+)/i);
@@ -309,19 +346,6 @@ function triggerRaf(logEl) {
       requestAnimationFrame(() => {
         logEl._rafPending = false;
         const count = flushPendingLogsSync(logEl);
-        if (count === 0) {
-          if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
-            const scrollEl = logEl._scrollEl || logEl;
-            const target = scrollEl.scrollHeight - scrollEl.clientHeight;
-            if (Math.abs(scrollEl.scrollTop - target) > 1) {
-              scrollEl.scrollTo({ top: target, behavior: 'auto' });
-              logEl._lastScrollTop = target;
-            }
-          }
-          logEl._updateScrollBtn?.();
-          return;
-        }
-
         if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
           const scrollEl = logEl._scrollEl || logEl;
           scrollEl.scrollTop = scrollEl.scrollHeight;
@@ -355,6 +379,7 @@ function clearLog(logEl) {
   logEl._liveProgressMap = null;
   logEl._liveProgressEls = null;
   logEl._currentAutoCollapse = null;
+  logEl._lastCapturedName = null;
 
   logEl.closest('.terminal-wrap')?.classList.remove('collapsed');
 }
@@ -526,6 +551,20 @@ function handleOutput(logEl, data, onExit) {
       lines.forEach(line => {
         if (line === '') return;
         
+        // Capture download filename / destination from stdout
+        const nameMatch = line.match(/\[download\]\s+Destination:\s*(.+)/i)
+          || line.match(/\[Merger\]\s+Merging formats into "([^"]+)"/i)
+          || line.match(/\[ExtractAudio\]\s+Destination:\s*(.+)/i)
+          || line.match(/\[Fixup.+\]\s+Fixing.+into "([^"]+)"/i)
+          || line.match(/Output #0,\s*[^,]+,\s*to '([^']+)'/i)
+          || line.match(/\[download\]\s+([^\n\r]+?)\s+has already been downloaded/i);
+
+        if (nameMatch && nameMatch[1]) {
+          const rawName = nameMatch[1].trim();
+          const baseName = rawName.split(/[\\/]/).pop();
+          if (baseName) logEl._lastCapturedName = baseName;
+        }
+
         let cls = classifyLine(line, stream, logEl);
         
         // Intercept access restrictions (members-only, private, age-gated)
@@ -586,7 +625,9 @@ function handleOutput(logEl, data, onExit) {
           let toolName = 'Unknown Tool';
           let source = '';
           let output = '';
+          let downloadName = logEl._lastCapturedName || '';
           const ts = new Date().toISOString();
+          const id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
           
           if (logEl.id === 'yd-log') {
             toolName = 'yt-dlp';
@@ -613,20 +654,42 @@ function handleOutput(logEl, data, onExit) {
             toolName = 'Video Splitter';
             source = document.getElementById('sp-file')?.value.trim();
             output = document.getElementById('sp-output')?.value.trim() || source;
+            if (!downloadName && source) downloadName = source.split(/[\\/]/).pop();
           } else if (logEl.id === 'concat-log') {
             toolName = 'Video Concatenator';
             const list = document.getElementById('concat-list');
             const items = list ? Array.from(list.querySelectorAll('.sortable-item')).length : 0;
             source = `${items} File(s)`;
             output = document.getElementById('concat-output-dir')?.value.trim();
+            const customOut = document.getElementById('concat-output')?.value.trim();
+            if (customOut) downloadName = customOut;
           } else if (logEl.id === 'enc-log') {
             toolName = 'Video Encoder';
             source = document.getElementById('enc-file')?.value.trim();
             output = source; // Encoder usually outputs next to source
+            if (!downloadName && source) downloadName = source.split(/[\\/]/).pop();
           }
           
+          if (!downloadName && source) {
+            try {
+              const urlObj = new URL(source);
+              const pathPart = urlObj.pathname.split('/').filter(Boolean).pop();
+              if (pathPart) downloadName = decodeURIComponent(pathPart);
+            } catch (_) {
+              downloadName = source.split(/[\\/]/).pop() || '';
+            }
+          }
+
           if (source || output) {
-            window.api.addHistory({ date: ts, tool: toolName, source, output, status: (bs && bs.failed > 0) ? 'partial' : 'success' }).then(() => {
+            window.api.addHistory({
+              id,
+              date: ts,
+              tool: toolName,
+              name: downloadName,
+              source,
+              output,
+              status: (bs && bs.failed > 0) ? 'partial' : 'success'
+            }).then(() => {
               if (window._refreshHistory) window._refreshHistory();
             });
           }

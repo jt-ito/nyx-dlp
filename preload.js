@@ -8,6 +8,12 @@ contextBridge.exposeInMainWorld('api', {
   maximize: () => ipcRenderer.send('window-maximize'),
   close:    () => ipcRenderer.send('window-close'),
   setMinimizeToTray: (val) => ipcRenderer.send('set-minimize-to-tray', val),
+  setRunOnStartup:   (val) => ipcRenderer.send('set-run-on-startup', val),
+  setStartMinimized: (val) => ipcRenderer.send('set-start-minimized', val),
+  setAutoUpdate:     (val) => ipcRenderer.send('set-auto-update', val),
+  checkForUpdates:   () => ipcRenderer.invoke('check-for-updates'),
+  openExternal:      (url) => ipcRenderer.send('open-external', url),
+  onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_e, d) => cb(d)),
 
   // Folder picker
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
@@ -17,11 +23,13 @@ contextBridge.exposeInMainWorld('api', {
   pickAnyFiles: () => ipcRenderer.invoke('pick-any-files'),
   pickFolders: () => ipcRenderer.invoke('pick-folders'),
   getDiskSpace: (drivePath) => ipcRenderer.invoke('get-disk-space', drivePath),
+  saveTextFile: (opts) => ipcRenderer.invoke('save-text-file', opts),
   
   // Notifications & History
   showNotification: (opts) => ipcRenderer.send('show-notification', opts),
   getHistory: () => ipcRenderer.invoke('get-history'),
   addHistory: (entry) => ipcRenderer.invoke('add-history', entry),
+  deleteHistoryItem: (idOrDate) => ipcRenderer.invoke('delete-history-item', idOrDate),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
 
   // Script runners
@@ -62,6 +70,13 @@ contextBridge.exposeInMainWorld('api', {
   // Remote server
   startRemoteServer: (port) => ipcRenderer.send('start-remote-server', { port }),
   stopRemoteServer:  () => ipcRenderer.send('stop-remote-server'),
+
+  // Discord Bot
+  startDiscordBot: (opts) => ipcRenderer.invoke('start-discord-bot', opts),
+  stopDiscordBot:  () => ipcRenderer.invoke('stop-discord-bot'),
+  getDiscordBotStatus: () => ipcRenderer.invoke('get-discord-bot-status'),
+  syncDiscordCommands: () => ipcRenderer.invoke('sync-discord-commands'),
+  onDiscordBotStatus: (cb) => ipcRenderer.on('discord-bot-status', (_e, d) => cb(d)),
 
   // State synchronization
   syncUiState: (data) => ipcRenderer.send('sync-ui-state', data),

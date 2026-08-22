@@ -13,6 +13,15 @@ if (typeof window.api === 'undefined') {
   window.api = {
     appVersion: 'remote',
     minimize: () => {}, maximize: () => {}, close: () => {}, setMinimizeToTray: () => {},
+    setRunOnStartup: () => {}, setStartMinimized: () => {}, setAutoUpdate: () => {},
+    checkForUpdates: () => Promise.resolve({ hasUpdate: false, currentVersion: 'remote', latestVersion: 'remote' }),
+    openExternal: (url) => window.open(url, '_blank'),
+    onUpdateAvailable: () => {},
+    startDiscordBot: () => Promise.resolve({ status: 'disconnected' }),
+    stopDiscordBot: () => Promise.resolve(true),
+    getDiscordBotStatus: () => Promise.resolve({ status: 'disconnected', botUser: null, clientId: '', inviteUrl: '' }),
+    syncDiscordCommands: () => Promise.resolve(true),
+    onDiscordBotStatus: () => {},
     pickFolder: () => new Promise(r => r(null)),
     pickFile: () => new Promise(r => r(null)),
     pickVideo: () => new Promise(r => r(null)),
@@ -34,6 +43,11 @@ if (typeof window.api === 'undefined') {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);
       ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'add-history', id, data: entry }));
+    }),
+    deleteHistoryItem: (idOrDate) => new Promise(resolve => {
+      const id = nextReqId++;
+      pendingRequests.set(id, resolve);
+      ws.send(JSON.stringify({ type: 'ipc-invoke', channel: 'delete-history-item', id, data: idOrDate }));
     }),
     clearHistory: () => new Promise(resolve => {
       const id = nextReqId++;

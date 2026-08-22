@@ -168,6 +168,18 @@
 
     <!-- Content Area -->
     <main class="content">
+      <!-- Update Banner Notification -->
+      <div id="update-notification-banner" style="display: none; background: linear-gradient(90deg, #1e3a8a, #3b82f6); color: #ffffff; padding: 10px 16px; border-radius: 8px; margin: 0 0 16px 0; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 100;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          <span style="font-size: 13px; font-weight: 500;">A new version of nyx-dlp (<span id="update-banner-version"></span>) is available!</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="update-banner-view-btn" class="btn" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 12px; border-radius: 4px; cursor: pointer;">View Release</button>
+          <button id="update-banner-dismiss-btn" class="btn btn-ghost" style="color: #fff; padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer;" title="Dismiss">&times;</button>
+        </div>
+      </div>
+
       <!-- ── Tab: Live Stream Archiver ──────────────────────────── -->
       <section class="tab-panel" id="tab-livestream">
         <div class="panel-header">
@@ -406,11 +418,11 @@
               </div>
               <div class="form-group" id="yd-start-group">
                 <label class="form-label">Start Time <span class="label-optional">(optional)</span></label>
-                <input type="text" id="yd-start" class="form-input" placeholder="HH:MM:SS" />
+                <input type="text" id="yd-start" class="form-input" placeholder="HH:MM:SS or HH:MM:SS.ms" />
               </div>
               <div class="form-group" id="yd-end-group">
                 <label class="form-label">End Time <span class="label-optional">(optional)</span></label>
-                <input type="text" id="yd-end" class="form-input" placeholder="HH:MM:SS" />
+                <input type="text" id="yd-end" class="form-input" placeholder="HH:MM:SS or HH:MM:SS.ms" />
               </div>
               <div class="form-group full-width" id="yd-cookies-group">
                 <label class="form-label">Cookies File <span class="label-optional">(optional)</span></label>
@@ -860,14 +872,14 @@
 
               <div class="form-group">
                 <label class="form-label">Start Time <span class="label-optional">(optional)</span></label>
-                <input type="text" id="m3-start" class="form-input" placeholder="e.g. 08:30:30" />
-                <div class="field-hint">Format: HH:MM:SS. Skips the beginning.</div>
+                <input type="text" id="m3-start" class="form-input" placeholder="e.g. 08:30:30 or 08:30:30.500" />
+                <div class="field-hint">Format: HH:MM:SS or HH:MM:SS.ms. Skips the beginning.</div>
               </div>
 
               <div class="form-group">
                 <label class="form-label">End Time <span class="label-optional">(optional)</span></label>
-                <input type="text" id="m3-end" class="form-input" placeholder="e.g. 09:30:00" />
-                <div class="field-hint">Format: HH:MM:SS. Stops downloading here.</div>
+                <input type="text" id="m3-end" class="form-input" placeholder="e.g. 09:30:00 or 09:30:00.500" />
+                <div class="field-hint">Format: HH:MM:SS or HH:MM:SS.ms. Stops downloading here.</div>
               </div>
 
               <div class="form-group">
@@ -1122,9 +1134,15 @@
             <h1 class="panel-title">Video Splitter</h1>
             <p class="panel-subtitle">Perfectly split a video into multiple parts</p>
           </div>
+          <div class="segmented-control" id="sp-mode-toggle">
+            <button class="segment active" data-mode="split">Splitter</button>
+            <button class="segment" data-mode="calc">Calculator</button>
+          </div>
         </div>
 
-        <div class="form-grid">
+        <div class="scrollable-content" style="display: flex; flex-direction: column; flex: 1;">
+          <div id="sp-split-view" style="display: flex; flex-direction: column; gap: 20px; flex: 1;">
+            <div class="form-grid">
           <div class="form-group full-width">
             <label class="form-label">Input Video File</label>
             <div class="input-folder-group">
@@ -1204,6 +1222,106 @@
           <div class="terminal-body" id="sp-log"></div>
         </div>
         </div>
+          </div> <!-- End sp-split-view -->
+
+          <div id="sp-calc-view" style="display: none; flex-direction: column; gap: 16px; flex: 1;">
+            <div class="segmented-control" id="sp-calc-mode-toggle" style="align-self: flex-start;">
+              <button class="segment active" data-calc-mode="parts">Split Parts</button>
+              <button class="segment" data-calc-mode="offset">Time Offset / Math</button>
+            </div>
+
+            <!-- Panel 1: Split Parts Calculator -->
+            <div id="sp-calc-parts-panel" style="display: flex; flex-direction: column; gap: 20px;">
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label class="form-label">Duration (HH:MM:SS or HH:MM:SS.ms)</label>
+                  <input type="text" id="sp-calc-duration" class="form-input" placeholder="e.g. 01:23:45 or 01:23:45.500" />
+                </div>
+                <div class="form-group full-width">
+                  <label class="form-label">Split into N Parts</label>
+                  <input type="number" id="sp-calc-parts" class="form-input" placeholder="e.g. 3" min="2" />
+                </div>
+                <div class="form-group full-width" style="margin-top: 4px;">
+                  <div class="field-hint" id="sp-calc-desc">Enter duration and parts to calculate time per part...</div>
+                  <div id="sp-calc-result-row" style="display: none; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+                    <span id="sp-calc-time" style="font-size: 24px; font-weight: 700; color: var(--accent); font-family: var(--font-mono); user-select: text; -webkit-user-select: text; cursor: text;"></span>
+                    <button class="btn btn-ghost" id="sp-calc-copy" style="padding: 4px 10px; font-size: 12px; gap: 5px; display: inline-flex; align-items: center;" title="Copy to clipboard">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                      <span id="sp-calc-copy-text">Copy</span>
+                    </button>
+                    <button class="btn btn-ghost" id="sp-calc-download-txt" style="padding: 4px 10px; font-size: 12px; gap: 5px; display: inline-flex; align-items: center;" title="Download durations.txt">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      <span id="sp-calc-download-text">Download .txt</span>
+                    </button>
+                    <button class="btn btn-ghost" id="sp-calc-parts-btn" style="padding: 4px 10px; font-size: 12px; gap: 5px; display: inline-flex; align-items: center;" title="Show duration of each part">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/>
+                        <line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18"/>
+                      </svg>
+                      <span id="sp-calc-parts-btn-text">Show Parts Breakdown</span>
+                    </button>
+                  </div>
+                  <div id="sp-calc-breakdown-wrap" style="display: none; margin-top: 14px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 2: Time Offset / Math Calculator -->
+            <div id="sp-calc-offset-panel" style="display: none; flex-direction: column; gap: 20px;">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Base Timestamp / Start Time</label>
+                  <input type="text" id="sp-calc-offset-base" class="form-input" placeholder="e.g. 35:57:44.25" />
+                  <div class="field-hint">Initial timestamp in HH:MM:SS or HH:MM:SS.ms</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Offset / Duration</label>
+                  <input type="text" id="sp-calc-offset-val" class="form-input" placeholder="e.g. 09:49:44" />
+                  <div class="field-hint">Duration to add or subtract</div>
+                </div>
+                <div class="form-group full-width" style="margin-top: -6px;">
+                  <div class="segmented-control" id="sp-calc-offset-op-toggle" style="align-self: flex-start;">
+                    <button class="segment active" data-op="add">+ Add Duration (After)</button>
+                    <button class="segment" data-op="sub">- Subtract Duration (Before)</button>
+                  </div>
+                </div>
+                <div class="form-group full-width" style="margin-top: 4px;">
+                  <div class="field-hint" id="sp-calc-offset-desc">Enter a base timestamp and offset duration to calculate...</div>
+                  <div id="sp-calc-offset-result-row" style="display: none; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+                    <span id="sp-calc-offset-time" style="font-size: 24px; font-weight: 700; color: var(--accent); font-family: var(--font-mono); user-select: text; -webkit-user-select: text; cursor: text;"></span>
+                    <button class="btn btn-ghost" id="sp-calc-offset-copy" style="padding: 4px 10px; font-size: 12px; gap: 5px; display: inline-flex; align-items: center;" title="Copy to clipboard">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                      <span id="sp-calc-offset-copy-text">Copy</span>
+                    </button>
+                    <button class="btn btn-ghost" id="sp-calc-offset-use-base" style="padding: 4px 10px; font-size: 12px; gap: 5px; display: inline-flex; align-items: center;" title="Use result as new base timestamp">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="17 1 21 5 17 9"/>
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                        <polyline points="7 23 3 19 7 15"/>
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                      </svg>
+                      <span>Use as Base</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div> <!-- End sp-calc-view -->
+        </div> <!-- End scrollable-content -->
       </section>
 
       <!-- ── Tab: Video Concatenator ────────────────────────────── -->
@@ -2199,6 +2317,77 @@
             </div>
           </div>
 
+          <!-- Discord Bot Settings Section -->
+          <div class="settings-section">
+            <div class="settings-section-title" style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                <span>Discord Bot</span>
+              </span>
+              <span id="discord-status-badge" class="badge" style="background: rgba(255,255,255,0.06); color: var(--text-muted); font-size: 11px; font-weight: normal; padding: 2px 8px; border-radius: 10px;">Disconnected</span>
+            </div>
+
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Enable Discord Bot</div>
+                <div class="toggle-desc">Control downloads, clipping, archiving, and conversions from your Discord server via slash (/) commands</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="discord-bot-enable" id="discord-bot-enable" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+
+            <div id="discord-bot-config-group" style="display: none; padding: 12px 16px 8px; flex-direction: column; gap: 14px;">
+              <!-- Bot Token -->
+              <div>
+                <label class="form-label" style="margin-bottom: 4px; display: flex; justify-content: space-between;">
+                  <span>Bot Token</span>
+                  <a href="https://discord.com/developers/applications" id="discord-dev-portal-link" style="font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer;">Get token from Discord Developer Portal &rarr;</a>
+                </label>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input type="password" id="discord-bot-token" class="form-input" placeholder="Paste your Discord Bot Token here" style="width: 100%; padding-right: 40px; font-family: monospace; font-size: 12px;" />
+                  <button type="button" id="discord-toggle-token-vis" class="btn btn-ghost" style="position: absolute; right: 4px; padding: 4px 8px; font-size: 12px;" title="Show/Hide Token">👁</button>
+                </div>
+              </div>
+
+              <!-- Application / Client ID & Output Dir -->
+              <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                  <label class="form-label" style="margin-bottom: 4px;">Application / Client ID (Auto-detected)</label>
+                  <input type="text" id="discord-bot-client-id" class="form-input" placeholder="Auto-detected from token" style="width: 100%; font-family: monospace; font-size: 12px;" />
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                  <label class="form-label" style="margin-bottom: 4px;">Default Output Directory</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="text" id="discord-download-dir" class="form-input" placeholder="Default downloads folder" style="flex: 1; font-size: 12px;" />
+                    <button type="button" class="btn btn-ghost" id="discord-browse-dir" style="padding: 6px 12px; font-size: 12px;">Browse</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bot Invite Link -->
+              <div>
+                <label class="form-label" style="margin-bottom: 4px;">Bot Invite URL (with Slash Command Permissions)</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="discord-invite-url" class="form-input" readonly placeholder="Enter token to generate OAuth2 invite link" style="flex: 1; font-size: 11px; background: rgba(0,0,0,0.25); color: var(--text-muted);" />
+                  <button type="button" class="btn btn-ghost" id="discord-copy-invite" style="white-space: nowrap; font-size: 12px;">Copy Link</button>
+                  <button type="button" class="btn btn-primary" id="discord-open-invite" style="white-space: nowrap; font-size: 12px;">Invite Bot</button>
+                </div>
+                <p class="settings-section-desc" style="margin: 4px 0 0;">Add the bot to your Discord server with application.commands and message permissions.</p>
+              </div>
+
+              <!-- Action Bar -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 10px;">
+                <div id="discord-log-status" style="font-size: 12px; color: var(--text-muted);">Ready to connect</div>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn btn-ghost" id="discord-sync-commands-btn" style="font-size: 12px;">Re-sync Slash Commands</button>
+                  <button type="button" class="btn btn-primary" id="discord-connect-btn" style="font-size: 12px;">Connect Bot</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="settings-section">
             <div class="settings-section-title">Console Logs</div>
             <div class="toggle-card">
@@ -2242,6 +2431,26 @@
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
+                <div class="toggle-label">Run on Startup</div>
+                <div class="toggle-desc">Automatically launch nyx-dlp when your computer starts</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="run-on-startup" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Start Minimized</div>
+                <div class="toggle-desc">Launch minimized to the taskbar or system tray in the background</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="start-minimized" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
                 <div class="toggle-label">Minimize to Tray</div>
                 <div class="toggle-desc">When closing the app, hide it to the system tray instead of exiting</div>
               </div>
@@ -2249,6 +2458,36 @@
                 <input type="checkbox" data-setting="minimize-to-tray" />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Updates</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Auto-Check for Updates</div>
+                <div class="toggle-desc">Automatically check GitHub for new versions on application startup</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="auto-update" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div style="padding: 12px 16px 4px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <div id="update-status-text" style="font-size: 13px; font-weight: 500; color: var(--text);">Current version: nyx-dlp</div>
+                <div id="update-details-text" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;"></div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-ghost" id="check-updates-btn" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                  <span>Check for Updates</span>
+                </button>
+                <button class="btn btn-primary" id="download-update-btn" style="display: none; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>View Release</span>
+                </button>
+              </div>
             </div>
           </div>
 

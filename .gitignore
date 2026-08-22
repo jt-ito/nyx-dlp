@@ -12,6 +12,7 @@ vendor/
 test_file.txt
 test_nsis/
 CLAUDE.md
+AGENTS.md
 internetarchive.log
 test2/
 test_ia_upload/
