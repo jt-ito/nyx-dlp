@@ -37,16 +37,27 @@ const TARGETS = {
     target: 'dir',
     artifactName: `nyx-dlp-v${version}-linux-cli.\${ext}`,
     afterPack: async (context) => {
-      // Copy CLI launcher and entry point into the unpacked dir
-      console.log('Injecting CLI launcher into dir build...');
-      const src = path.join(__dirname, 'cli-launcher.sh');
+      console.log('Injecting CLI executables and modules into dir build...');
       const clijs = path.join(__dirname, 'cli.js');
-      if (fs.existsSync(src)) {
-        fs.copyFileSync(src, path.join(context.appOutDir, 'nyx-dlp-cli'));
-        fs.chmodSync(path.join(context.appOutDir, 'nyx-dlp-cli'), 0o755);
-      }
+      const serverjs = path.join(__dirname, 'server.js');
+      const pkgJson = path.join(__dirname, 'package.json');
+      const libDir = path.join(__dirname, 'lib');
+
       if (fs.existsSync(clijs)) {
         fs.copyFileSync(clijs, path.join(context.appOutDir, 'cli.js'));
+        fs.chmodSync(path.join(context.appOutDir, 'cli.js'), 0o755);
+        // Also provide nyx-dlp-cli binary alias
+        fs.copyFileSync(clijs, path.join(context.appOutDir, 'nyx-dlp-cli'));
+        fs.chmodSync(path.join(context.appOutDir, 'nyx-dlp-cli'), 0o755);
+      }
+      if (fs.existsSync(serverjs)) {
+        fs.copyFileSync(serverjs, path.join(context.appOutDir, 'server.js'));
+      }
+      if (fs.existsSync(pkgJson)) {
+        fs.copyFileSync(pkgJson, path.join(context.appOutDir, 'package.json'));
+      }
+      if (fs.existsSync(libDir)) {
+        fs.cpSync(libDir, path.join(context.appOutDir, 'lib'), { recursive: true });
       }
     }
   }

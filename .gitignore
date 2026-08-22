@@ -14,5 +14,8 @@ test_nsis/
 CLAUDE.md
 AGENTS.md
 internetarchive.log
-test2/
-test_ia_upload/
+*.log
+*.m3u8
+*.ytdl
+*.ts
+scratch/

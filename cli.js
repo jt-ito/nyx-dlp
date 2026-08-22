@@ -22,7 +22,24 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const runners = require('./lib/runners.js');
+
+function resolveModule(relPath) {
+  const candidates = [
+    path.join(__dirname, relPath),
+    path.join(__dirname, 'resources', 'app.asar', relPath),
+    path.join(__dirname, 'resources', 'app', relPath)
+  ];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p) || p.includes('app.asar')) {
+        return require(p);
+      }
+    } catch (_) {}
+  }
+  return require(relPath);
+}
+
+const runners = resolveModule('lib/runners.js');
 
 // ── Argument parsing ─────────────────────────────────────────────────
 function parseArgs(argv) {
@@ -739,7 +756,7 @@ switch (toolName) {
     const pass = flags.pass || flags.password || 'secret';
     const pin  = flags.pin ? String(flags.pin) : null;
 
-    const serverModule = require('./server.js');
+    const serverModule = resolveModule('server.js');
     console.log(`\x1b[1mStarting nyx-dlp Remote Web Access Server...\x1b[0m\n`);
 
     serverModule.startServer({ port, user, pass, pin }, __dirname);
