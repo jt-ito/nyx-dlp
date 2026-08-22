@@ -42,7 +42,11 @@
     const el = document.getElementById(id);
     if (!el) return;
     const v = localStorage.getItem(fkey(id));
-    if (v !== null) el.value = v;
+    if (v !== null && v !== 'undefined' && v !== 'null') {
+      el.value = v;
+    } else if (v === 'undefined' || v === 'null') {
+      localStorage.removeItem(fkey(id));
+    }
     el.addEventListener('input', () => localStorage.setItem(fkey(id), el.value));
   });
 
