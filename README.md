@@ -53,34 +53,33 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 
 ## The toolbox
 
-**📥 Downloading**
+### 📥 Media Downloading
+- **yt-dlp Downloader** `yt-dlp`  
+  Single-video and audio downloads from 1,000+ sites with the full advanced options panel — 70+ flags across Network, Subtitles, Post-Processing, SponsorBlock, and more.
+- **Batch Downloader** `yt-dlp`  
+  Process multi-URL queues with customizable rest intervals, automatic rate-limit cooldowns, and live mid-run queue appending.
+- **gallery-dl** `gallery-dl`  
+  Bulk-download high-resolution image galleries and albums from 300+ platforms in one click.
 
-| Tool | Engine | What it does |
-|---|---|---|
-| **yt-dlp Downloader** | ![yt-dlp](https://img.shields.io/badge/-yt--dlp-red?style=flat-square) | Downloads from 1,000+ sites by URL, with the full advanced-options panel — 70+ flags across Network, Subtitles, Post-Processing, SponsorBlock, and more, all live-searchable |
-| **Batch Downloader** | ![yt-dlp](https://img.shields.io/badge/-yt--dlp-red?style=flat-square) | Paste in a list of URLs and work through the queue one at a time, with configurable rest intervals and the ability to append new URLs mid-run |
-| **gallery-dl** | ![gallery-dl](https://img.shields.io/badge/-gallery--dl-orange?style=flat-square) | Bulk-downloads image galleries from 300+ sites in a single run |
+### 📡 Live Capture & Streams
+- **Live Archiver** `yt-dlp` · `streamlink`  
+  Record live YouTube and Twitch broadcasts from the live edge or DVR-style from the start, with native Twitch auth token ad-bypass.
+- **M3U8 Downloader** `ffmpeg`  
+  Pull direct HLS playlists and streaming manifests with optional GPU-accelerated remuxing or re-encoding.
 
-**📡 Live capture**
+### 🎬 Video Processing & Editing
+- **Video Splitter** `ffmpeg`  
+  Split media into equal chunk counts or extract exact timestamp intervals with zero-loss stream copy or GPU transcoding.
+- **Video Concatenator** `ffmpeg`  
+  Merge multiple video and audio clips into a single file with interactive drag-and-drop reordering.
+- **Video Encoder** `ffmpeg`  
+  Batch re-encode video queues with automatic hardware GPU acceleration (NVIDIA NVENC, AMD AMF, Intel QSV).
 
-| Tool | Engine | What it does |
-|---|---|---|
-| **Live Archiver** | ![yt-dlp](https://img.shields.io/badge/-yt--dlp%20%2F%20streamlink-red?style=flat-square) | Records active YouTube and Twitch streams. Capture from the live edge, or DVR-style from the start where the platform allows, with Twitch auth-token support to bypass ads natively |
-
-**🎬 Video processing**
-
-| Tool | Engine | What it does |
-|---|---|---|
-| **M3U8 Downloader** | ![ffmpeg](https://img.shields.io/badge/-ffmpeg-blue?style=flat-square) | Pulls HLS playlists directly, with optional GPU/CPU re-encoding to MP4, MKV, MOV, MPEG-TS, or AVI |
-| **Video Concatenator** | ![ffmpeg](https://img.shields.io/badge/-ffmpeg-blue?style=flat-square) | Merges multiple clips into a single MP4, with drag-and-drop reordering |
-| **Video Splitter** | ![ffmpeg](https://img.shields.io/badge/-ffmpeg-blue?style=flat-square) | Splits a video into even chunks, or extracts specific time segments |
-| **Encoder** | ![ffmpeg](https://img.shields.io/badge/-ffmpeg-blue?style=flat-square) | Batch re-encodes a queue of files to a chosen video/audio codec, independent of the concatenator and splitter |
-
-**🗄️ Archiving**
-
-| Tool | Engine | What it does |
-|---|---|---|
-| **Internet Archive** | ![ia](https://img.shields.io/badge/-ia-6a5acd?style=flat-square) | Authenticates against archive.org, then uploads with full metadata (title, description, collection, subject tags, license, mediatype) with automatic retry on failure, or bulk-downloads an entire identifier |
+### 🗄️ Archival & Integrations
+- **Internet Archive** `ia`  
+  Authenticate against archive.org to bulk-download items or upload media with full metadata (title, collection, license, mediatype).
+- **Discord Bot** `node`  
+  Full remote control of all tools via interactive Discord slash commands with live progress embeds and direct file uploads.
 
 <div align="center">
 
