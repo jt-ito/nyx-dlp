@@ -696,9 +696,19 @@
     stopBtn.classList.remove('hidden');
     incRunning('Splitter');
 
-    window.api.removeAllListeners('splitter-output');
+    window.api.runSplitter({ file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '', containerFormat: container || '' });
+  });
+
+  if (window.api && window.api.onSplitterOutput) {
     window.api.onSplitterOutput((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        incRunning('Splitter');
+        return;
+      }
       handleOutput(log, data, () => {
         runBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
@@ -706,10 +716,9 @@
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
+        currentPid = null;
         decRunning('Splitter');
       });
     });
-
-    window.api.runSplitter({ file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '', containerFormat: container || '' });
-  });
+  }
 })();

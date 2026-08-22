@@ -139,6 +139,10 @@ npm run build:linux-cli    # Headless Linux CLI tarball
 
 Windows outputs land in `dist/portable/` and `dist/installer/`. Nothing beyond the app itself needs to be installed on the target machine — vendored dependencies download themselves on first launch.
 
+> [!NOTE]
+> **Antivirus & Microsoft Defender Notice**:
+> Because nyx-dlp automatically downloads and updates standalone CLI tools (such as `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia`) directly when enabled, Windows Defender or SmartScreen may occasionally trigger a false positive due to the nature of runtime binary fetching. All downloads are fetched directly and securely from official verified upstream releases.
+
 ---
 
 ## Under the hood
@@ -191,7 +195,14 @@ nyx-dlp-cli --help
 
 ---
 
+## Feedback & Issues
+
+Have a question, encountered a bug, or have ideas for new features and improvements? Feel free to open an [Issue](https://github.com/jt-ito/nyx-dlp/issues) or start a discussion on GitHub!
+
+---
+
 ## License
 
 MIT — do what you like with it.
+
 

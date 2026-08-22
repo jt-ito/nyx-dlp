@@ -10,22 +10,90 @@ if (typeof window.api === 'undefined') {
   const pendingRequests = new Map();
   let nextReqId = 1;
 
+  let remoteVersion = '3.0.11';
+  fetch('/package.json').then(r => r.json()).then(pkg => {
+    if (pkg && pkg.version) {
+      remoteVersion = pkg.version;
+      window.api.appVersion = pkg.version;
+      const statusEl = document.getElementById('update-status-text');
+      if (statusEl && statusEl.textContent.includes('Current version:')) {
+        statusEl.textContent = `Current version: v${pkg.version}`;
+      }
+    }
+  }).catch(() => {});
+
+  // Reflect active server status in the Settings page for browser clients
+  document.addEventListener('DOMContentLoaded', () => {
+    const remoteToggle = document.querySelector('input[data-setting="remote-access"]');
+    if (remoteToggle) {
+      remoteToggle.checked = true;
+      remoteToggle.disabled = true;
+      const card = remoteToggle.closest('.toggle-card');
+      if (card) {
+        const desc = card.querySelector('.toggle-desc');
+        if (desc) desc.innerHTML = `<span style="color:#10b981; font-weight:600;">● Active</span> &mdash; Serving this session on port ${window.location.port || '80'}`;
+      }
+    }
+    const portGroup = document.getElementById('remote-access-port-group');
+    if (portGroup) portGroup.style.display = 'flex';
+    const portInput = document.getElementById('remote-access-port');
+    if (portInput && window.location.port) portInput.value = window.location.port;
+  });
+
   window.api = {
-    appVersion: 'remote',
+    appVersion: remoteVersion,
     minimize: () => {}, maximize: () => {}, close: () => {}, setMinimizeToTray: () => {},
     setRunOnStartup: () => {}, setStartMinimized: () => {}, setAutoUpdate: () => {},
-    checkForUpdates: () => Promise.resolve({ hasUpdate: false, currentVersion: 'remote', latestVersion: 'remote' }),
+    checkForUpdates: async () => {
+      try {
+        const curVer = window.api.appVersion || remoteVersion;
+        const res = await fetch('https://api.github.com/repos/jt-ito/nyx-dlp/releases/latest');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const latestTag = data.tag_name || '';
+        const latestVersion = latestTag.replace(/^v/, '');
+        
+        const v1Parts = latestVersion.split('.').map(n => parseInt(n) || 0);
+        const v2Parts = curVer.split('.').map(n => parseInt(n) || 0);
+        let isNewer = false;
+        for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
+          const p1 = v1Parts[i] || 0;
+          const p2 = v2Parts[i] || 0;
+          if (p1 > p2) { isNewer = true; break; }
+          if (p1 < p2) { isNewer = false; break; }
+        }
+
+        return {
+          hasUpdate: isNewer,
+          currentVersion: curVer,
+          latestVersion: latestVersion,
+          releaseUrl: data.html_url || 'https://github.com/jt-ito/nyx-dlp/releases',
+          releaseName: data.name || latestTag,
+          releaseNotes: data.body || ''
+        };
+      } catch (e) {
+        return { hasUpdate: false, currentVersion: window.api.appVersion || remoteVersion, error: e.message };
+      }
+    },
     openExternal: (url) => window.open(url, '_blank'),
     onUpdateAvailable: () => {},
     startDiscordBot: () => Promise.resolve({ status: 'disconnected' }),
     stopDiscordBot: () => Promise.resolve(true),
     getDiscordBotStatus: () => Promise.resolve({ status: 'disconnected', botUser: null, clientId: '', inviteUrl: '' }),
     syncDiscordCommands: () => Promise.resolve(true),
-    onDiscordBotStatus: () => {},
-    pickFolder: () => new Promise(r => r(null)),
-    pickFile: () => new Promise(r => r(null)),
-    pickVideo: () => new Promise(r => r(null)),
-    pickFiles: () => new Promise(r => r(null)),
+    _invokeRaw: (channel, data) => new Promise(resolve => {
+      const id = nextReqId++;
+      pendingRequests.set(id, resolve);
+      ws.send(JSON.stringify({ type: 'ipc-invoke', channel, id, data }));
+    }),
+    invoke: (channel, data) => window.api._invokeRaw(channel, data),
+
+    pickFolder: (initial) => window.remoteFileBrowser ? window.remoteFileBrowser.show({ type: 'folder', multiple: false, initialPath: initial }) : Promise.resolve(null),
+    pickFile: (initial) => window.remoteFileBrowser ? window.remoteFileBrowser.show({ type: 'file', multiple: false, initialPath: initial }) : Promise.resolve(null),
+    pickVideo: (initial) => window.remoteFileBrowser ? window.remoteFileBrowser.show({ type: 'video', multiple: false, initialPath: initial }) : Promise.resolve(null),
+    pickFiles: (initial) => window.remoteFileBrowser ? window.remoteFileBrowser.show({ type: 'video', multiple: true, initialPath: initial }) : Promise.resolve([]),
+    pickAnyFiles: (initial) => window.remoteFileBrowser ? window.remoteFileBrowser.show({ type: 'any', multiple: true, initialPath: initial }) : Promise.resolve([]),
+    pickFolders: (initial) => window.remoteFileBrowser ? window.remoteFileBrowser.show({ type: 'folder', multiple: true, initialPath: initial }) : Promise.resolve([]),
     getDiskSpace: (path) => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);

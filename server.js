@@ -85,6 +85,12 @@ function startServer(options, appPath) {
         return;
       }
 
+      // Serve favicon.ico without auth
+      if (url.pathname === '/favicon.ico') {
+        res.writeHead(204);
+        return res.end();
+      }
+
       // Serve login.html without auth
       if (req.method === 'GET' && url.pathname === '/login.html') {
         const filePath = resolveStaticFilePath('login.html');
@@ -132,6 +138,9 @@ function startServer(options, appPath) {
     });
   }
 
+  const settingsStore = require('./lib/settings-store.js');
+  const activeLogBuffers = new Map(); // channel -> Array of recent data packets
+
   // WebSockets setup
   wss = new WebSocket.Server({ noServer: true });
 
@@ -148,6 +157,23 @@ function startServer(options, appPath) {
   });
 
   wss.on('connection', (ws) => {
+    // Send full persistent state immediately on connection
+    try {
+      const fullState = settingsStore.loadAllSettings();
+      ws.send(JSON.stringify({ type: 'ipc-reply', channel: 'full-state', data: fullState }));
+    } catch (_) {}
+
+    // Replay any currently active tool logs to this newly connected client
+    activeLogBuffers.forEach((buffer, channel) => {
+      if (buffer && buffer.length > 0) {
+        buffer.forEach(pkt => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ipc-reply', channel, data: pkt }));
+          }
+        });
+      }
+    });
+
     // Fake event object to pass to ipcMain handlers
     const fakeEvent = {
       sender: {
@@ -168,36 +194,50 @@ function startServer(options, appPath) {
           } else {
             // Direct standalone fallback for Node CLI
             const opts = msg.data || {};
-            const broadcastChannel = (c, d) => {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'ipc-reply', channel: c, data: d }));
-              }
+            const outputChan = (channelName) => (data) => {
+              recordAndBroadcast(channelName, data);
             };
-            const outputChan = (name) => (data) => broadcastChannel(name, data);
 
             switch (msg.channel) {
+              case 'sync-ui-state':
+                if (opts && opts.id) {
+                  settingsStore.updateSetting(opts.id, opts);
+                  broadcast('sync-ui-state', opts);
+                }
+                break;
+              case 'request-full-state':
+                ws.send(JSON.stringify({ type: 'ipc-reply', channel: 'full-state', data: settingsStore.loadAllSettings() }));
+                break;
               case 'run-ytdlp':
+                activeLogBuffers.set('ytdlp-output', []);
                 runners.runYtdlp(opts, outputChan('ytdlp-output'));
                 break;
               case 'run-livestream':
+                activeLogBuffers.set('livestream-output', []);
                 runners.runLivestream(opts, outputChan('livestream-output'));
                 break;
               case 'run-batch':
+                activeLogBuffers.set('batch-output', []);
                 runners.runBatch(opts, outputChan('batch-output'));
                 break;
               case 'run-m3u8':
+                activeLogBuffers.set('m3u8-output', []);
                 runners.runM3u8(opts, outputChan('m3u8-output'));
                 break;
               case 'run-gallery-dl':
+                activeLogBuffers.set('gallery-dl-output', []);
                 runners.runGalleryDl(opts, outputChan('gallery-dl-output'));
                 break;
               case 'run-splitter':
+                activeLogBuffers.set('splitter-output', []);
                 runners.runSplitter(opts, outputChan('splitter-output'));
                 break;
               case 'run-concatenator':
+                activeLogBuffers.set('concatenator-output', []);
                 runners.runConcatenator(opts, outputChan('concatenator-output'));
                 break;
               case 'run-encoder':
+                activeLogBuffers.set('encoder-output', []);
                 runners.runEncoder(opts, outputChan('encoder-output'));
                 break;
               case 'stop-script':
@@ -221,8 +261,11 @@ function startServer(options, appPath) {
              } catch {
                 result = null;
              }
+          } else if (msg.channel === 'fs-browse') {
+             result = await handleFsBrowse(msg.data);
+          } else if (msg.channel === 'fs-create-folder') {
+             result = await handleFsCreateFolder(msg.data);
           } else if (msg.channel.startsWith('pick-')) {
-             // Remote pickers are not natively supported
              result = null;
           }
           if (ws.readyState === WebSocket.OPEN) {
@@ -235,9 +278,148 @@ function startServer(options, appPath) {
     });
   });
 
+  function recordAndBroadcast(channel, data) {
+    if (!activeLogBuffers.has(channel)) activeLogBuffers.set(channel, []);
+    const buf = activeLogBuffers.get(channel);
+    buf.push(data);
+    if (buf.length > 200) buf.shift(); // keep recent 200 packets
+    if (data && data.type === 'exit') {
+      setTimeout(() => { activeLogBuffers.delete(channel); }, 60000); // clear after 1 min
+    }
+    broadcast(channel, data);
+  }
+
   server.listen(port, '0.0.0.0', () => {
     console.log(`Remote server listening on port ${port}`);
   });
+}
+
+async function handleFsBrowse(opts = {}) {
+  const os = require('os');
+  let targetPath = opts.path || '';
+  const filterType = opts.type || 'folder'; // 'folder' | 'file' | 'video' | 'any'
+
+  if (!targetPath || typeof targetPath !== 'string') {
+    targetPath = os.homedir() || process.cwd();
+  }
+
+  if (targetPath.startsWith('~')) {
+    targetPath = path.join(os.homedir(), targetPath.slice(1));
+  }
+
+  targetPath = path.resolve(targetPath);
+
+  if (!fs.existsSync(targetPath)) {
+    let fallback = path.dirname(targetPath);
+    while (fallback && !fs.existsSync(fallback) && fallback !== path.dirname(fallback)) {
+      fallback = path.dirname(fallback);
+    }
+    targetPath = (fallback && fs.existsSync(fallback)) ? fallback : (os.homedir() || process.cwd());
+  }
+
+  try {
+    const stat = await fs.promises.stat(targetPath);
+    if (!stat.isDirectory()) {
+      targetPath = path.dirname(targetPath);
+    }
+  } catch (_) {
+    targetPath = os.homedir() || process.cwd();
+  }
+
+  const parsed = path.parse(targetPath);
+  const isRoot = parsed.root === targetPath;
+  const parentPath = isRoot ? null : path.dirname(targetPath);
+
+  let roots = [];
+  if (process.platform === 'win32') {
+    for (let i = 65; i <= 90; i++) {
+      const drive = String.fromCharCode(i) + ':\\';
+      try {
+        if (fs.existsSync(drive)) roots.push(drive);
+      } catch (_) {}
+    }
+  } else {
+    roots = ['/', os.homedir()];
+  }
+
+  let items = [];
+  try {
+    const entries = await fs.promises.readdir(targetPath, { withFileTypes: true });
+    const videoExts = new Set(['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.m4v', '.ts', '.m3u8', '.wmv']);
+    const audioExts = new Set(['.mp3', '.m4a', '.aac', '.flac', '.wav', '.opus', '.ogg']);
+
+    for (const ent of entries) {
+      if (ent.name.startsWith('.') && ent.name !== '.config') continue;
+
+      const fullPath = path.join(targetPath, ent.name);
+      let isDir = false;
+      let size = 0;
+      let mtime = null;
+
+      try {
+        isDir = ent.isDirectory();
+        if (!isDir && ent.isSymbolicLink()) {
+          const s = await fs.promises.stat(fullPath);
+          isDir = s.isDirectory();
+        }
+      } catch (_) {
+        continue;
+      }
+
+      const ext = path.extname(ent.name).toLowerCase();
+      const isVideo = videoExts.has(ext);
+      const isAudio = audioExts.has(ext);
+
+      try {
+        if (!isDir) {
+          const st = await fs.promises.stat(fullPath);
+          size = st.size;
+          mtime = st.mtime.toISOString();
+        }
+      } catch (_) {}
+
+      items.push({
+        name: ent.name,
+        path: fullPath,
+        isDirectory: isDir,
+        isVideo,
+        isAudio,
+        size,
+        ext,
+        mtime
+      });
+    }
+
+    items.sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1;
+      if (!a.isDirectory && b.isDirectory) return 1;
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  } catch (err) {
+    return { error: err.message, currentPath: targetPath, parentPath, roots, homePath: os.homedir(), items: [] };
+  }
+
+  return {
+    currentPath: targetPath,
+    parentPath,
+    homePath: os.homedir(),
+    roots,
+    items
+  };
+}
+
+async function handleFsCreateFolder(opts = {}) {
+  try {
+    const { dirPath, folderName } = opts;
+    if (!dirPath || !folderName) return { success: false, error: 'Invalid parameters' };
+    const cleanName = folderName.replace(/[\\/:*?"<>|]/g, '').trim();
+    if (!cleanName) return { success: false, error: 'Invalid folder name' };
+    const newDir = path.join(dirPath, cleanName);
+    await fs.promises.mkdir(newDir, { recursive: true });
+    return { success: true, newPath: newDir };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }
 
 function stopServer() {
@@ -257,4 +439,4 @@ function broadcast(channel, data) {
   });
 }
 
-module.exports = { startServer, stopServer, broadcast };
+module.exports = { startServer, stopServer, broadcast, handleFsBrowse, handleFsCreateFolder };

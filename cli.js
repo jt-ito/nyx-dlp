@@ -40,6 +40,7 @@ function resolveModule(relPath) {
 }
 
 const runners = resolveModule('lib/runners.js');
+const settingsStore = resolveModule('lib/settings-store.js');
 
 // ── Argument parsing ─────────────────────────────────────────────────
 function parseArgs(argv) {
@@ -791,6 +792,58 @@ switch (toolName) {
       serverModule.stopServer();
       process.exit(0);
     });
+    break;
+  }
+
+  // ── 11. Config ──────────────────────────────────────────────────────────
+  case 'config': {
+    if (isHelp) {
+      console.log(`
+\x1b[1mTool: config\x1b[0m — Inspect or update persistent settings shared between CLI, Web, and App
+
+\x1b[1mUsage:\x1b[0m
+  nyx-dlp-cli config
+  nyx-dlp-cli config get <key>
+  nyx-dlp-cli config set <key> <value>
+
+\x1b[1mExamples:\x1b[0m
+  nyx-dlp-cli config
+  nyx-dlp-cli config get yd-output
+  nyx-dlp-cli config set yd-output /var/media/downloads
+  nyx-dlp-cli config set dep-ffmpeg-version latest
+`);
+      process.exit(0);
+    }
+
+    const sub = positional[0]?.toLowerCase();
+    if (!sub || sub === 'list') {
+      const all = settingsStore.loadAllSettings();
+      console.log(`\x1b[1mSettings File:\x1b[0m ${settingsStore.settingsFilePath}\n`);
+      if (Object.keys(all).length === 0) {
+        console.log('No settings saved yet.');
+      } else {
+        for (const [k, v] of Object.entries(all)) {
+          const valStr = typeof v === 'object' ? (v.type === 'checkbox' ? String(v.checked) : String(v.value)) : String(v);
+          console.log(`  \x1b[36m${k.padEnd(26)}\x1b[0m: ${valStr}`);
+        }
+      }
+    } else if (sub === 'get') {
+      const key = positional[1];
+      if (!key) die('Key required. Usage: nyx-dlp-cli config get <key>');
+      const val = settingsStore.getSettingValue(key);
+      console.log(val !== null ? val : `(not set)`);
+    } else if (sub === 'set') {
+      const key = positional[1];
+      const val = positional[2];
+      if (!key || val === undefined) die('Key and value required. Usage: nyx-dlp-cli config set <key> <value>');
+      const boolVal = val === 'true' ? true : (val === 'false' ? false : null);
+      if (boolVal !== null) {
+        settingsStore.updateSetting(key, { type: 'checkbox', checked: boolVal });
+      } else {
+        settingsStore.updateSetting(key, { type: 'text', value: val });
+      }
+      console.log(`\x1b[32m✔ Updated ${key} = ${val}\x1b[0m`);
+    }
     break;
   }
 

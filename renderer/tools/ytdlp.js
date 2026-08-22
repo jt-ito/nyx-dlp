@@ -92,25 +92,6 @@
 
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
-    stopBtn.classList.remove('hidden');
-    incRunning('yt-dlp');
-
-    window.api.removeAllListeners('ytdlp-output');
-    window.api.onYtdlpOutput((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
-      handleOutput(log, data, () => {
-        runBtn.classList.remove('hidden');
-        pauseBtn.classList.add('hidden');
-        stopBtn.classList.add('hidden');
-        pauseBtn.innerHTML = pauseIconHTML;
-        pauseBtn.classList.remove('paused');
-        isPaused = false;
-        document.getElementById('yd-start').value = '';
-        document.getElementById('yd-end').value   = '';
-        decRunning('yt-dlp');
-      });
-    });
-
     const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
     const autoYpdl  = getSetting('dep-auto-ypdl');
@@ -121,4 +102,28 @@
     });
   });
 
+  if (window.api && window.api.onYtdlpOutput) {
+    window.api.onYtdlpOutput((data) => {
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        incRunning('yt-dlp');
+        return;
+      }
+      handleOutput(log, data, () => {
+        runBtn.classList.remove('hidden');
+        pauseBtn.classList.add('hidden');
+        stopBtn.classList.add('hidden');
+        pauseBtn.innerHTML = pauseIconHTML;
+        pauseBtn.classList.remove('paused');
+        isPaused = false;
+        currentPid = null;
+        document.getElementById('yd-start').value = '';
+        document.getElementById('yd-end').value   = '';
+        decRunning('yt-dlp');
+      });
+    });
+  }
 })();

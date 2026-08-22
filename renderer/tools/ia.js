@@ -343,17 +343,22 @@
       stopBtn.classList.remove('hidden');
       incRunning('Internet Archive');
 
-      window.api.removeAllListeners('ia-output');
-      window.api.onIaOutput((data) => {
-        if (data.type === 'pid') { currentPid = data.pid; return; }
-        handleOutput(log, data, () => {
-          runBtn.classList.remove('hidden');
-          stopBtn.classList.add('hidden');
-          decRunning('Internet Archive');
-        });
-      });
-
       apiCall(opts);
+    });
+  }
+
+  if (window.api && window.api.onIaOutput) {
+    window.api.onIaOutput((data) => {
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        return;
+      }
+      handleOutput(log, data, () => {
+        document.querySelectorAll('#ia-upload-run, #ia-edit-run, #ia-download-run').forEach(b => b.classList.remove('hidden'));
+        document.querySelectorAll('#ia-upload-stop, #ia-edit-stop, #ia-download-stop').forEach(b => b.classList.add('hidden'));
+        currentPid = null;
+        decRunning('Internet Archive');
+      });
     });
   }
 

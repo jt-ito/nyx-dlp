@@ -67,9 +67,19 @@
     stopBtn.classList.remove('hidden');
     incRunning('Encoder');
 
-    window.api.removeAllListeners('encoder-output');
+    window.api.runEncoder({ files, mode, vcodec, acodec, quality, outputDir: outputDir || '' });
+  });
+
+  if (window.api && window.api.onEncoderOutput) {
     window.api.onEncoderOutput((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        incRunning('Encoder');
+        return;
+      }
       handleOutput(log, data, () => {
         runBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
@@ -77,10 +87,9 @@
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
+        currentPid = null;
         decRunning('Encoder');
       });
     });
-
-    window.api.runEncoder({ files, mode, vcodec, acodec, quality, outputDir: outputDir || '' });
-  });
+  }
 })();

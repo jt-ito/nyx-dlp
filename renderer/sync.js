@@ -75,16 +75,9 @@ if (window.api) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (window.api) {
-    if (window.api.appVersion !== 'remote') {
-      setTimeout(() => {
-        const inputs = document.querySelectorAll('.form-input, .form-select, .form-textarea, .toggle-switch input, input[type="radio"]');
-        inputs.forEach(el => broadcastState(el));
-      }, 500);
-    } else {
-      setTimeout(() => {
-        if (window.api.requestFullState) window.api.requestFullState();
-      }, 500);
-    }
+  if (window.api && window.api.requestFullState) {
+    setTimeout(() => {
+      window.api.requestFullState();
+    }, 150);
   }
 });

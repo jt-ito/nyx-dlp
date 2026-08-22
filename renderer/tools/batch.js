@@ -245,101 +245,6 @@
     updateSkipRestBtn();
     incRunning('Batch Downloader');
 
-    let completedCount = 0;
-    let batchTotal = urls.length;
-    let _progressPending = false;
-    log._batchStats = null;
-    window.api.removeAllListeners('batch-output');
-    window.api.onBatchOutput((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
-      if (data.type === 'rest-start') {
-        isResting = true;
-        updateSkipRestBtn();
-        // If skip-next was pre-armed, fire it now
-        if (skipNextRest) {
-          skipNextRest = false;
-          const outputDir = document.getElementById('batch-output').value.trim();
-          if (outputDir && window.api.skipBatchRest) window.api.skipBatchRest({ outputDir });
-        } else {
-          startRestCountdown(Math.round(data.minutes * 60));
-        }
-        return;
-      }
-      if (data.type === 'rest-end') {
-        stopRestCountdown();
-        return;
-      }
-      if (data.type === 'stderr' || data.type === 'stdout') {
-        let statusChanged = false;
-        data.text.split('\n').forEach(line => {
-          const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
-          if (m) {
-            stopRestCountdown();
-            completedCount = parseInt(m[1], 10) - 1;
-            batchTotal     = parseInt(m[2], 10);
-            lastProgressText = `${completedCount} / ${batchTotal}`;
-            
-            if (batchUrlStatuses[completedCount]) {
-              batchUrlStatuses[completedCount].status = 'downloading';
-              statusChanged = true;
-            }
-          }
-          if (/Finished processing media from|Download failed:/i.test(line)) {
-            if (/Download failed:/i.test(line)) {
-              if (batchUrlStatuses[completedCount]) batchUrlStatuses[completedCount].status = 'failed';
-            } else {
-              if (batchUrlStatuses[completedCount]) batchUrlStatuses[completedCount].status = 'done';
-            }
-            statusChanged = true;
-            
-            completedCount = Math.min(completedCount + 1, batchTotal);
-            lastProgressText = `${completedCount} / ${batchTotal}`;
-          }
-          // Fallback: also parse the waiting message for countdown (e.g. if rest-start is missed)
-          const restMatch = line.match(/Waiting\s+([\d.]+)\s+minutes?\s+before next download/i);
-          if (restMatch && !isResting) {
-            isResting = true;
-            updateSkipRestBtn();
-            startRestCountdown(Math.round(parseFloat(restMatch[1]) * 60));
-          }
-          if (/Rest skipped|Rest disabled/i.test(line)) {
-            stopRestCountdown();
-          }
-          const fm = line.match(/(\d+)\s+downloads?\s+failed/i);
-          if (fm) log._batchStats = { failed: parseInt(fm[1], 10), total: urls.length };
-        });
-        
-        if (statusChanged) renderBatchStatusModal();
-        
-        if (!_progressPending) {
-          _progressPending = true;
-          requestAnimationFrame(() => {
-            _progressPending = false;
-            progressBar.style.width = (completedCount / batchTotal * 100) + '%';
-            progressLbl.textContent = lastProgressText;
-          });
-        }
-      }
-      handleOutput(log, data, (code) => {
-        stopRestCountdown();
-        if (code === 0) {
-          progressBar.style.width = '100%';
-          lastProgressText = `${urls.length} / ${urls.length}`;
-          progressLbl.textContent = lastProgressText;
-        }
-        runBtn.classList.remove('hidden');
-        pauseBtn.classList.add('hidden');
-        stopBtn.classList.add('hidden');
-        skipRestBtn.classList.add('hidden');
-        pauseBtn.innerHTML = pauseIconHTML;
-        pauseBtn.classList.remove('paused');
-        isPaused = false;
-        isResting = false;
-        skipNextRest = false;
-        decRunning('Batch Downloader');
-      });
-    });
-
     try {
       console.log('[BATCH DEBUG] About to call getBatchExtraArgs');
       const extraArgs = getBatchExtraArgs();
@@ -363,12 +268,113 @@
   skipRestBtn.addEventListener('click', () => {
     const outputDir = document.getElementById('batch-output').value.trim();
     if (isResting) {
-      // Currently resting — skip it immediately
       if (outputDir && window.api.skipBatchRest) window.api.skipBatchRest({ outputDir });
     } else {
-      // Not resting yet — arm it so the next rest is auto-skipped
       skipNextRest = !skipNextRest;
       skipRestBtn.textContent = skipNextRest ? 'Skip next rest ✓' : 'Skip next rest';
     }
   });
+
+  if (window.api && window.api.onBatchOutput) {
+    let completedCount = 0;
+    let batchTotal = 1;
+    let _progressPending = false;
+    log._batchStats = null;
+
+    window.api.onBatchOutput((data) => {
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        skipRestBtn.classList.remove('hidden');
+        incRunning('Batch Downloader');
+        return;
+      }
+      if (data.type === 'rest-start') {
+        isResting = true;
+        updateSkipRestBtn();
+        if (skipNextRest) {
+          skipNextRest = false;
+          const outputDir = document.getElementById('batch-output').value.trim();
+          if (outputDir && window.api.skipBatchRest) window.api.skipBatchRest({ outputDir });
+        } else {
+          startRestCountdown(Math.round(data.minutes * 60));
+        }
+        return;
+      }
+      if (data.type === 'rest-end') {
+        stopRestCountdown();
+        return;
+      }
+      if (data.type === 'stderr' || data.type === 'stdout') {
+        let statusChanged = false;
+        data.text.split('\n').forEach(line => {
+          const m = line.match(/^\[(\d+)\/(\d+)\]\s+Processing:/);
+          if (m) {
+            stopRestCountdown();
+            completedCount = parseInt(m[1], 10) - 1;
+            batchTotal     = parseInt(m[2], 10);
+            lastProgressText = `${completedCount} / ${batchTotal}`;
+            
+            if (batchUrlStatuses && batchUrlStatuses[completedCount]) {
+              batchUrlStatuses[completedCount].status = 'downloading';
+              statusChanged = true;
+            }
+          }
+          if (/Finished processing media from|Download failed:/i.test(line)) {
+            if (/Download failed:/i.test(line)) {
+              if (batchUrlStatuses && batchUrlStatuses[completedCount]) batchUrlStatuses[completedCount].status = 'failed';
+            } else {
+              if (batchUrlStatuses && batchUrlStatuses[completedCount]) batchUrlStatuses[completedCount].status = 'done';
+            }
+            statusChanged = true;
+            
+            completedCount = Math.min(completedCount + 1, batchTotal);
+            lastProgressText = `${completedCount} / ${batchTotal}`;
+          }
+          const restMatch = line.match(/Waiting\s+([\d.]+)\s+minutes?\s+before next download/i);
+          if (restMatch && !isResting) {
+            isResting = true;
+            updateSkipRestBtn();
+            startRestCountdown(Math.round(parseFloat(restMatch[1]) * 60));
+          }
+          if (/Rest skipped|Rest disabled/i.test(line)) {
+            stopRestCountdown();
+          }
+        });
+        
+        if (statusChanged) renderBatchStatusModal();
+        
+        if (!_progressPending) {
+          _progressPending = true;
+          requestAnimationFrame(() => {
+            _progressPending = false;
+            if (progressBar && progressLbl) {
+              progressBar.style.width = (completedCount / batchTotal * 100) + '%';
+              progressLbl.textContent = lastProgressText;
+            }
+          });
+        }
+      }
+      handleOutput(log, data, (code) => {
+        stopRestCountdown();
+        if (code === 0 && progressBar && progressLbl) {
+          progressBar.style.width = '100%';
+          progressLbl.textContent = lastProgressText;
+        }
+        runBtn.classList.remove('hidden');
+        pauseBtn.classList.add('hidden');
+        stopBtn.classList.add('hidden');
+        skipRestBtn.classList.add('hidden');
+        pauseBtn.innerHTML = pauseIconHTML;
+        pauseBtn.classList.remove('paused');
+        isPaused = false;
+        isResting = false;
+        currentPid = null;
+        skipNextRest = false;
+        decRunning('Batch Downloader');
+      });
+    });
+  }
 })();

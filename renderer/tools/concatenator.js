@@ -73,9 +73,19 @@
     stopBtn.classList.remove('hidden');
     incRunning('Concatenator');
 
-    window.api.removeAllListeners('concatenator-output');
+    window.api.runConcatenator({ files, output, forceEncode: !!forceEncode, useMkvFix: !!useMkvFix, quality, outputDir: outputDir || '' });
+  });
+
+  if (window.api && window.api.onConcatenatorOutput) {
     window.api.onConcatenatorOutput((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        incRunning('Concatenator');
+        return;
+      }
       handleOutput(log, data, () => {
         runBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
@@ -83,10 +93,9 @@
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
+        currentPid = null;
         decRunning('Concatenator');
       });
     });
-
-    window.api.runConcatenator({ files, output, forceEncode: !!forceEncode, useMkvFix: !!useMkvFix, quality, outputDir: outputDir || '' });
-  });
+  }
 })();

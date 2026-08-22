@@ -199,35 +199,30 @@
     let urlIdx = 0;
     if (urls.length > 1) appendLog(log, `▶ [1/${urls.length}] ${urls[0]}`, 'info');
 
-    window.api.removeAllListeners('m3u8-output');
-    window.api.onM3u8Output((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
-      if (data.type === 'exit' && urlIdx < urls.length - 1) {
-        if (log._liveProgresses && log._liveProgresses.size > 0) {
-          log._liveProgresses.clear();
-          if (typeof triggerRaf === 'function') triggerRaf(log);
-        }
-        const failed = data.code !== 0 || !!log._hasError;
-        log._hasError = false;
-        if (failed) appendLog(log, `✖ URL ${urlIdx + 1}/${urls.length} failed (code ${data.code})`, 'error');
-        else        appendLog(log, `✔ URL ${urlIdx + 1}/${urls.length} complete.`, 'success');
-        urlIdx++;
-        currentPid = null;
-        appendLog(log, `▶ [${urlIdx + 1}/${urls.length}] ${urls[urlIdx]}`, 'info');
-        window.api.runM3u8({ url: urls[urlIdx], outputDir, startTime, endTime, encode, codec, quality, bitrate, resolution, fps, audioBitrate, container, cookiesPath, autoRepair });
-      } else {
-        handleOutput(log, data, () => {
-          runBtn.classList.remove('hidden');
-          pauseBtn.classList.add('hidden');
-          stopBtn.classList.add('hidden');
-          pauseBtn.innerHTML = pauseIconHTML;
-          pauseBtn.classList.remove('paused');
-          isPaused = false;
-          decRunning('M3U8 Downloader');
-        });
-      }
-    });
-
     window.api.runM3u8({ url: urls[0], outputDir, startTime, endTime, encode, codec, quality, bitrate, resolution, fps, audioBitrate, container, cookiesPath, autoRepair });
   });
-})()
+
+  if (window.api && window.api.onM3u8Output) {
+    let urlIdx = 0;
+    window.api.onM3u8Output((data) => {
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        incRunning('M3U8 Downloader');
+        return;
+      }
+      handleOutput(log, data, () => {
+        runBtn.classList.remove('hidden');
+        pauseBtn.classList.add('hidden');
+        stopBtn.classList.add('hidden');
+        pauseBtn.innerHTML = pauseIconHTML;
+        pauseBtn.classList.remove('paused');
+        isPaused = false;
+        currentPid = null;
+        decRunning('M3U8 Downloader');
+      });
+    });
+  }
+})();

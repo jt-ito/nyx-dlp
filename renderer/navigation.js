@@ -55,19 +55,21 @@ document.addEventListener('click', e => {
 document.querySelectorAll('.btn-folder').forEach(btn => {
   btn.addEventListener('click', async () => {
     const type = btn.dataset.pickType;
+    const targetEl = document.getElementById(btn.dataset.target);
+    const initVal = targetEl && targetEl.value ? targetEl.value.trim() : '';
     let res;
     if (type === 'file') {
-        res = await window.api.pickFile();
-      } else if (type === 'video') {
-        res = await window.api.pickVideo();
-      } else if (type === 'multi-file') {
-      res = await window.api.pickFiles();
+      res = await window.api.pickFile(initVal);
+    } else if (type === 'video') {
+      res = await window.api.pickVideo(initVal);
+    } else if (type === 'multi-file') {
+      res = await window.api.pickFiles(initVal);
     } else if (type === 'multi-any-file') {
-      res = await window.api.pickAnyFiles();
+      res = await window.api.pickAnyFiles(initVal);
     } else if (type === 'multi-folders') {
-      res = await window.api.pickFolders();
+      res = await window.api.pickFolders(initVal);
     } else {
-      res = await window.api.pickFolder();
+      res = await window.api.pickFolder(initVal);
     }
     if (res) {
       const target = document.getElementById(btn.dataset.target);

@@ -625,6 +625,14 @@ ipcMain.handle('delete-history-item', async (e, idOrDate) => {
   return false;
 });
 
+const remoteServerModule = require('./server.js');
+ipcMain.handle('fs-browse', async (_e, opts) => {
+  return remoteServerModule.handleFsBrowse(opts);
+});
+ipcMain.handle('fs-create-folder', async (_e, opts) => {
+  return remoteServerModule.handleFsCreateFolder(opts);
+});
+
 
 // ── Protected-path guard (main process) ──────────────────────────────
 function isProtectedPath(p) {
@@ -885,16 +893,18 @@ ipcMain.handle('sync-discord-commands', async () => {
 });
 
 // ── State Synchronization ──────────────────────────────────────────────────
-let fullUiState = {};
+const settingsStore = require('./lib/settings-store.js');
+let fullUiState = settingsStore.loadAllSettings();
 
 ipcMain.on('sync-ui-state', (event, data) => {
   if (data && data.id) {
     if (data.type === 'checkbox') fullUiState[data.id] = { type: data.type, checked: data.checked };
     else fullUiState[data.id] = { type: data.type, value: data.value };
+    settingsStore.updateSetting(data.id, fullUiState[data.id]);
   }
   broadcastIPC('sync-ui-state', data);
 });
 
 ipcMain.on('request-full-state', (event) => {
-  event.sender.send('full-state', fullUiState);
+  event.sender.send('full-state', settingsStore.loadAllSettings());
 });

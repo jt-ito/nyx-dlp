@@ -72,25 +72,6 @@
     pauseBtn.innerHTML = pauseIconHTML;
     pauseBtn.classList.remove('paused');
 
-    runBtn.classList.add('hidden');
-    pauseBtn.classList.remove('hidden');
-    stopBtn.classList.remove('hidden');
-    incRunning('Live Stream Archiver');
-
-    window.api.removeAllListeners('livestream-output');
-    window.api.onLivestreamOutput((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
-      handleOutput(log, data, () => {
-        runBtn.classList.remove('hidden');
-        pauseBtn.classList.add('hidden');
-        stopBtn.classList.add('hidden');
-        pauseBtn.innerHTML = pauseIconHTML;
-        pauseBtn.classList.remove('paused');
-        isPaused = false;
-        decRunning('Live Stream Archiver');
-      });
-    });
-
     const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
     const client = document.getElementById('ls-client')?.value || 'default';
@@ -100,4 +81,27 @@
     const autoStreamlink = getSetting('dep-auto-streamlink');
     window.api.runLivestream({ url, outputDir, format, cookiesPath, container, client, fromStart, twitchToken, concurrent, bgutilUrl, useDeno, autoStreamlink });
   });
+
+  if (window.api && window.api.onLivestreamOutput) {
+    window.api.onLivestreamOutput((data) => {
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        incRunning('Live Stream Archiver');
+        return;
+      }
+      handleOutput(log, data, () => {
+        runBtn.classList.remove('hidden');
+        pauseBtn.classList.add('hidden');
+        stopBtn.classList.add('hidden');
+        pauseBtn.innerHTML = pauseIconHTML;
+        pauseBtn.classList.remove('paused');
+        isPaused = false;
+        currentPid = null;
+        decRunning('Live Stream Archiver');
+      });
+    });
+  }
 })();

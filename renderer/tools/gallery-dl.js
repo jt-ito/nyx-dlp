@@ -124,31 +124,30 @@
     let urlIdx = 0;
     if (urls.length > 1) appendLog(log, `▶ [1/${urls.length}] ${urls[0]}`, 'info');
 
-    window.api.removeAllListeners('gallery-dl-output');
-    window.api.onGalleryDlOutput((data) => {
-      if (data.type === 'pid') { currentPid = data.pid; return; }
-      if (data.type === 'exit' && urlIdx < urls.length - 1) {
-        const failed = data.code !== 0 || !!log._hasError;
-        log._hasError = false;
-        if (failed) appendLog(log, `✖ URL ${urlIdx + 1}/${urls.length} failed (code ${data.code})`, 'error');
-        else        appendLog(log, `✔ URL ${urlIdx + 1}/${urls.length} complete.`, 'success');
-        urlIdx++;
-        currentPid = null;
-        appendLog(log, `▶ [${urlIdx + 1}/${urls.length}] ${urls[urlIdx]}`, 'info');
-        window.api.runGalleryDl({ url: urls[urlIdx], outputDir, filetypes, metadata, cookiesPath, installGdl });
-      } else {
-        handleOutput(log, data, () => {
-          runBtn.classList.remove('hidden');
-          pauseBtn.classList.add('hidden');
-          stopBtn.classList.add('hidden');
-          pauseBtn.innerHTML = pauseIconHTML;
-          pauseBtn.classList.remove('paused');
-          isPaused = false;
-          decRunning('gallery-dl');
-        });
-      }
-    });
-
     window.api.runGalleryDl({ url: urls[0], outputDir, filetypes, metadata, cookiesPath, installGdl });
   });
+
+  if (window.api && window.api.onGalleryDlOutput) {
+    let urlIdx = 0;
+    window.api.onGalleryDlOutput((data) => {
+      if (data.type === 'pid') {
+        currentPid = data.pid;
+        runBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        stopBtn.classList.remove('hidden');
+        incRunning('gallery-dl');
+        return;
+      }
+      handleOutput(log, data, () => {
+        runBtn.classList.remove('hidden');
+        pauseBtn.classList.add('hidden');
+        stopBtn.classList.add('hidden');
+        pauseBtn.innerHTML = pauseIconHTML;
+        pauseBtn.classList.remove('paused');
+        isPaused = false;
+        currentPid = null;
+        decRunning('gallery-dl');
+      });
+    });
+  }
 })();

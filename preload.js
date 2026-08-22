@@ -86,4 +86,6 @@ contextBridge.exposeInMainWorld('api', {
 
   // Remove listeners
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+  invoke: (channel, data) => ipcRenderer.invoke(channel, data),
+  _invokeRaw: (channel, data) => ipcRenderer.invoke(channel, data),
 });
