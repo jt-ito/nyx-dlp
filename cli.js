@@ -752,10 +752,15 @@ switch (toolName) {
       process.exit(0);
     }
 
-    const port = parseInt(flags.p || flags.port) || 3000;
-    const user = flags.u || flags.user || 'admin';
-    const pass = flags.pass || flags.password || 'secret';
-    const pin  = flags.pin ? String(flags.pin) : null;
+    const savedUser = settingsStore.getSettingValue('remote-access-user', 'admin');
+    const savedPass = settingsStore.getSettingValue('remote-access-pass', 'secret');
+    const savedPin  = settingsStore.getSettingValue('remote-access-pin', null);
+    const savedPort = parseInt(settingsStore.getSettingValue('remote-access-port', 3000)) || 3000;
+
+    const port = parseInt(flags.p || flags.port) || savedPort;
+    const user = flags.u || flags.user || savedUser || 'admin';
+    const pass = flags.pass || flags.password || savedPass || 'secret';
+    const pin  = flags.pin ? String(flags.pin) : (savedPin ? String(savedPin) : null);
 
     const serverModule = resolveModule('server.js');
     console.log(`\x1b[1mStarting nyx-dlp Remote Web Access Server...\x1b[0m\n`);

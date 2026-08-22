@@ -470,10 +470,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+async function safeCopyToClipboard(text) {
+  if (!text) return false;
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_) {}
+  }
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '-9999px';
+    textArea.setAttribute('readonly', '');
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    if (successful) return true;
+  } catch (_) {}
+  return false;
+}
+window.safeCopyToClipboard = safeCopyToClipboard;
+
   if (discordCopyInviteBtn && discordInviteUrlInput) {
     discordCopyInviteBtn.addEventListener('click', async () => {
       if (discordInviteUrlInput.value) {
-        await navigator.clipboard.writeText(discordInviteUrlInput.value);
+        await safeCopyToClipboard(discordInviteUrlInput.value);
         const orig = discordCopyInviteBtn.textContent;
         discordCopyInviteBtn.textContent = 'Copied!';
         setTimeout(() => discordCopyInviteBtn.textContent = orig, 2000);
@@ -556,8 +582,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = svcUserInput?.value?.trim() || 'jt';
     const port = svcPortInput?.value?.trim() || '3050';
     const mode = svcModeSelect?.value || 'server';
+    const authUser = document.getElementById('remote-access-user')?.value?.trim() || 'admin';
+    const authPass = document.getElementById('remote-access-pass')?.value?.trim() || 'secret';
+    const authPin = document.getElementById('remote-access-pin')?.value?.trim() || '';
 
-    let execCmd = `/usr/local/bin/nyx-dlp-cli server --port ${port}`;
+    let credArgs = `--user ${authUser} --pass ${authPass}`;
+    if (authPin) {
+      credArgs += ` --pin ${authPin}`;
+    }
+
+    let execCmd = `/usr/local/bin/nyx-dlp-cli server --port ${port} ${credArgs}`;
     let desc = 'nyx-dlp Remote Web Access Server';
 
     if (mode === 'discord') {
@@ -633,7 +667,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
 
   if (copySvcFileBtn && svcFilePreview) {
     copySvcFileBtn.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(svcFilePreview.value);
+      await safeCopyToClipboard(svcFilePreview.value);
       const orig = copySvcFileBtn.textContent;
       copySvcFileBtn.textContent = 'Copied!';
       setTimeout(() => copySvcFileBtn.textContent = orig, 1800);
@@ -642,7 +676,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
 
   if (copySvcCmdBtn && svcCmdPreview) {
     copySvcCmdBtn.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(svcCmdPreview.value);
+      await safeCopyToClipboard(svcCmdPreview.value);
       const orig = copySvcCmdBtn.textContent;
       copySvcCmdBtn.textContent = 'Copied Commands!';
       setTimeout(() => copySvcCmdBtn.textContent = orig, 1800);
