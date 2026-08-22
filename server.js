@@ -42,6 +42,20 @@ function startServer(options, appPath) {
   const authPass = options.pass || 'secret';
   const authPin = options.pin || null;
 
+  function resolveStaticFilePath(relPath) {
+    const safePath = path.normalize(relPath).replace(/^(\.\.(\/|\\|$))+/, '');
+    const candidates = [
+      path.join(appPath, safePath),
+      path.join(__dirname, safePath),
+      path.join(appPath, 'resources', 'app', safePath),
+      path.join(__dirname, 'resources', 'app', safePath)
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+    return path.join(appPath, safePath);
+  }
+
   server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -73,7 +87,7 @@ function startServer(options, appPath) {
 
       // Serve login.html without auth
       if (req.method === 'GET' && url.pathname === '/login.html') {
-        const filePath = path.join(appPath, 'login.html');
+        const filePath = resolveStaticFilePath('login.html');
         return serveFile(res, filePath, MIME_TYPES['.html']);
       }
 
@@ -95,10 +109,7 @@ function startServer(options, appPath) {
         const ext = path.extname(pathname).toLowerCase();
         const contentType = MIME_TYPES[ext] || 'application/octet-stream';
         
-        // Prevent path traversal
-        const safePath = path.normalize(pathname).replace(/^(\.\.(\/|\\|$))+/, '');
-        const filePath = path.join(appPath, safePath);
-        
+        const filePath = resolveStaticFilePath(pathname);
         serveFile(res, filePath, contentType);
       }
     } catch (e) {
