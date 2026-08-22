@@ -9,7 +9,7 @@ yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive — nine tools,
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-3.0.1-orange)
+![Version](https://img.shields.io/badge/version-3.0.11-orange)
 
 </div>
 
@@ -28,22 +28,25 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 ## Features
 
 - 🧰 **9 built-in tools** — one unified interface for the download, archival, and video workflows you actually use
+- 🤖 **Discord Bot Integration** — run all 10 tools via Discord slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/status`, `/help`) with live progress embeds and automatic file uploads (≤ 24MB)
 - 🐍 **No Python, no manual dependencies** — pure Node.js execution; `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` are vendored and auto-updated for you
 - ⏯️ **Real process tree pause/resume** — genuine OS-level suspension. Freezes the entire process tree (including background ffmpeg/python threads) simultaneously across Windows, macOS, and Linux, not just a UI lock
 - 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock, and more) with live search
 - 🔑 **Automated PO Tokens** — natively integrates `yt-dlp-get-pot` to bypass `web_creator` challenges without manual token passing
 - 📡 **Live & VOD archiving for YouTube and Twitch** — DVR-style capture from the live edge, or from the start where the platform allows, with Twitch auth-token ad bypass
 - 🗄️ **Internet Archive integration** — authenticate, upload with full metadata (title, collection, subject tags, license, mediatype), or bulk-download an identifier, with automatic retry on failed uploads
-- 🎞️ **Encoder tool** — batch re-encode a queue of files to a chosen video/audio codec, independent of the concatenator/splitter
-- 💾 **Form persistence** — every field and setting is saved and restored between sessions
+- 🎞️ **Encoder tool & Smart-Cut Clipping** — batch re-encode queues to chosen video/audio codecs with hardware GPU acceleration (NVENC, AMF, QSV) and exact start/end time trimming
+- 💾 **Form persistence & Download History** — every field is remembered; history captures resolved download titles and provides a smooth hover-to-shrink delete action
+- 🔄 **GitHub Auto-Updates** — checks for latest releases on startup or via one-click manual check in Settings
+- 🚀 **Autostart & Startup Options** — configure launch on startup (Windows, macOS, Linux), start minimized, or minimize to system tray
 - 🚨 **Low Storage Notifications** — warns you via native OS notifications when the active download drive drops below a customizable threshold
 - 🩹 **Failed download recovery & Rate-limit protections** — interrupted downloads are logged, and Batch mode auto-injects required delays (e.g., 5s for YouTube) to prevent IP bans
-- 🛠️ **Twitch VOD Auto-Repair** — seamlessly intercepts CloudFront/HLS timestamp desyncs and missing initialization fragments, automatically rebuilding corrupted Twitch VODs perfectly using native Node.js concurrency without hanging or losing audio sync
+- 🛠️ **Twitch VOD Auto-Repair** — seamlessly intercepts CloudFront/HLS timestamp desyncs and missing initialization fragments, automatically rebuilding corrupted Twitch VODs perfectly
 - 🎨 **Color-coded output log** — warnings in yellow, errors in red, interactive prompts in white
 - 🌗 **Dark & light theme**, toggled from the title bar
 - 🖥️ **System tray support** — minimize to tray instead of quitting
-- 🌐 **Remote web access** — optionally host the app over HTTP/WebSocket so you can queue and monitor downloads from another device's browser, protected by username/password or PIN login
-- ⌨️ **Headless CLI mode** — drive every tool from a terminal or script via `nyx-dlp-cli`, no window required
+- 🌐 **Remote web access & Headless Server** — host the web cockpit over HTTP/WebSocket (`nyx-dlp-cli server`) with PIN/password protection and LAN network discovery
+- ⌨️ **Headless CLI mode** — drive every tool from a terminal or server script via `nyx-dlp-cli`, no window or GUI required
 - 🖱️ **Drag-and-drop reordering** in the Video Concatenator
 
 ---
@@ -81,7 +84,7 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 
 <div align="center">
 
-*Every tool above runs through the same execution core — `lib/runners.js` — so behavior is identical whether you're driving it from the GUI, the CLI, or a browser over remote access.*
+*Every tool above runs through the same execution core — `lib/runners.js` — so behavior is identical whether you're driving it from the GUI, Discord Bot, CLI, or a browser over remote access.*
 
 </div>
 
@@ -103,17 +106,22 @@ npm start
 Every tool is also reachable headlessly through the bundled CLI, useful for scripting or running on a machine with no display:
 
 ```bash
-nyx-dlp-cli ytdlp <url> -o <dir> [-f format] [-c cookies] [--container mp4]
+# Downloads
+nyx-dlp-cli ytdlp <url> -o <dir> [-f format] [-c cookies] [--container mp4] [--start-time 00:01:00] [--end-time 00:02:30]
 nyx-dlp-cli batch  -o <dir> [-f format] [--rest seconds] < urls.txt
 nyx-dlp-cli livestream <url> -o <dir> [-f format] [--container mp4]
 nyx-dlp-cli m3u8   <url> -o <dir> [--encode] [--codec h264] [--bitrate 5M]
 nyx-dlp-cli gallery-dl <url> -o <dir> [--filetypes "jpg,png,gif"]
+
+# Video Processing & Diagnostics
 nyx-dlp-cli splitter <file> -o <dir> --parts <n>
 nyx-dlp-cli concat  -o <dir> --output <name> <file1> <file2> ...
 nyx-dlp-cli encoder -o <dir> [--vcodec libx264] [--acodec aac] <file1> ...
-```
+nyx-dlp-cli encoders # Test and list available GPU hardware encoders
 
-It runs through the exact same execution engine as the GUI (`lib/runners.js`), so behavior is identical either way.
+# Remote Web Cockpit
+nyx-dlp-cli server --port 3000 --user admin --pass secret
+```
 
 ---
 
@@ -127,7 +135,7 @@ npm run build:installer    # NSIS installer
 # Other platforms
 npm run build:mac          # macOS .dmg (x64 + arm64)
 npm run build:linux        # Linux AppImage
-npm run build:linux-cli    # Headless Linux CLI build
+npm run build:linux-cli    # Headless Linux CLI tarball
 ```
 
 Windows outputs land in `dist/portable/` and `dist/installer/`. Nothing beyond the app itself needs to be installed on the target machine — vendored dependencies download themselves on first launch.
@@ -138,33 +146,53 @@ Windows outputs land in `dist/portable/` and `dist/installer/`. Nothing beyond t
 
 ```
 nyx-dlp/
-├── main.js               # Electron main process — window, tray, IPC routing, path guards
-├── preload.js             # Context bridge exposing window.api to the renderer (contextIsolation: true)
-├── server.js               # Optional remote HTTP/WebSocket server for browser-based control
-├── cli.js                  # Headless CLI entry point — drives the same runners as the GUI
-├── index.html / styles.css # App shell and dark/light theme
+├── main.js               # Electron main process — window, tray, auto-updates, IPC routing
+├── preload.js             # Context bridge exposing window.api to renderer
+├── server.js               # Remote HTTP/WebSocket server for browser-based control
+├── cli.js                  # Headless CLI entry point — drives the exact same runners
+├── index.html / styles.css # App shell, dark/light theme, and UI subsystems
 ├── lib/
-│   ├── runners.js          # Centralized process spawning for every tool — the execution core
-│   ├── runner-utils.js     # Pause/resume/kill, including native Windows process suspension via pssuspend
-│   ├── ensure-ytdlp.js      # Vendors & auto-updates the standalone yt-dlp binary
-│   ├── ensure-ffmpeg.js     # Vendors ffmpeg, selectable by version for older GPU/NVENC support
+│   ├── runners.js          # Centralized process spawning for every tool — execution core
+│   ├── discord-bot.js      # Zero-dependency Discord Gateway & REST client with slash commands
+│   ├── runner-utils.js     # OS-level pause/resume/kill across Win/macOS/Linux
+│   ├── ensure-ytdlp.js      # Vendors & auto-updates standalone yt-dlp binary
+│   ├── ensure-ffmpeg.js     # Vendors ffmpeg, selectable by version for GPU support
 │   ├── ensure-ia.js         # Vendors the archive.org `ia` CLI
-│   └── ensure-streamlink.js # Vendors streamlink for Twitch capture
+│   └── ensure-streamlink.js # Vendors streamlink for live capture
 └── renderer/
     ├── tools/               # Per-tool UI logic (ytdlp.js, batch.js, ia.js, encoder.js, etc.)
     ├── settings.js, theme.js, sync.js, persistence.js  # Shared UI subsystems
-    ├── terminal.js          # Custom log terminal with output coloring
-    └── remote-api.js         # Client-side glue for the remote web-access mode
+    ├── history.js           # Download history manager with hover-to-shrink delete
+    ├── terminal.js          # Custom log terminal with output coloring & stream parsing
+    └── remote-api.js         # Client-side glue for remote web-access mode
 ```
 
-**Design notes worth knowing if you're digging into the code:**
+---
 
-- The renderer never touches Node or the filesystem directly — everything goes through `window.api.*` in `preload.js`, keeping `contextIsolation` intact.
-- UI state (checkboxes, inputs, settings) is mirrored into the main process via `sync-ui-state` events, so the backend always has a current snapshot without needing to ask the frontend for it.
-- Remote web access reuses the exact same `ipcMain` handlers as the desktop UI — the WebSocket layer in `server.js` just fakes an IPC event object, so there's only one code path to maintain for "the app doing a thing," whether it's triggered locally or from a browser tab.
+<details>
+<summary><b>🐧 Quick Install on Headless Linux Server (CLI)</b></summary>
+<br>
+
+Run the following commands on your headless Linux machine to download, extract, and link the CLI executable globally:
+
+```bash
+# 1. Download and extract the latest CLI release directly into /opt/nyx-dlp
+sudo mkdir -p /opt/nyx-dlp
+curl -fsSL $(curl -s https://api.github.com/repos/jt-ito/nyx-dlp/releases/latest | grep -o 'https://github.com/jt-ito/nyx-dlp/releases/download/[^"]*linux-cli.tar.gz' | head -n 1) | sudo tar -xz -C /opt/nyx-dlp --strip-components=1
+
+# 2. Symlink the executable to /usr/local/bin so you can run it from anywhere
+sudo ln -sf /opt/nyx-dlp/nyx-dlp-cli /usr/local/bin/nyx-dlp-cli
+sudo chmod +x /opt/nyx-dlp/nyx-dlp-cli
+
+# 3. Verify installation
+nyx-dlp-cli --help
+```
+
+</details>
 
 ---
 
 ## License
 
 MIT — do what you like with it.
+
