@@ -54,6 +54,31 @@ if (typeof window.api === 'undefined') {
     if (portGroup) portGroup.style.display = 'flex';
     const portInput = document.getElementById('remote-access-port');
     if (portInput && window.location.port) portInput.value = window.location.port;
+
+    // Grey out Start Minimized & Minimize to Tray on CLI / Web Remote sessions
+    const startMinToggle = document.querySelector('input[data-setting="start-minimized"]');
+    if (startMinToggle) {
+      startMinToggle.disabled = true;
+      const card = startMinToggle.closest('.toggle-card');
+      if (card) {
+        card.style.opacity = '0.45';
+        card.style.pointerEvents = 'none';
+        const desc = card.querySelector('.toggle-desc');
+        if (desc) desc.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">Not applicable in headless CLI / remote web mode</span>`;
+      }
+    }
+
+    const minTrayToggle = document.querySelector('input[data-setting="minimize-to-tray"]');
+    if (minTrayToggle) {
+      minTrayToggle.disabled = true;
+      const card = minTrayToggle.closest('.toggle-card');
+      if (card) {
+        card.style.opacity = '0.45';
+        card.style.pointerEvents = 'none';
+        const desc = card.querySelector('.toggle-desc');
+        if (desc) desc.innerHTML = `<span style="color:var(--text-muted); font-style:italic;">Not applicable in headless CLI / remote web mode</span>`;
+      }
+    }
   });
 
   window.api = {
