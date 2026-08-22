@@ -37,7 +37,10 @@ const MIME_TYPES = {
 
 function startServer(options, appPath) {
   if (server) return;
-  const port = options.port || 3000;
+  const rawPort = (options && typeof options === 'object' && options.port)
+    ? (typeof options.port === 'object' ? options.port.port : options.port)
+    : (typeof options === 'number' ? options : 3000);
+  const port = parseInt(rawPort, 10) || 3000;
   const authUser = options.user || 'admin';
   const authPass = options.pass || 'secret';
   const authPin = options.pin || null;

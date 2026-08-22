@@ -150,6 +150,14 @@
           <span>History</span>
           <div class="nav-indicator"></div>
         </button>
+        <button class="nav-item" data-tab="appearance">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+          </svg>
+          <span>Appearance</span>
+          <div class="nav-indicator"></div>
+        </button>
         <button class="nav-item" data-tab="settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -172,14 +180,23 @@
     <!-- Content Area -->
     <main class="content">
       <!-- Update Banner Notification -->
-      <div id="update-notification-banner" style="display: none; background: linear-gradient(90deg, #1e3a8a, #3b82f6); color: #ffffff; padding: 10px 16px; border-radius: 8px; margin: 0 0 16px 0; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 100;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          <span style="font-size: 13px; font-weight: 500;">A new version of nyx-dlp (<span id="update-banner-version"></span>) is available!</span>
+      <div id="update-notification-banner" class="update-banner" style="display: none;">
+        <div class="update-banner-left">
+          <div class="update-banner-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          </div>
+          <div class="update-banner-text">
+            <div class="update-banner-title">A new version of nyx-dlp (<span id="update-banner-version"></span>) is available!</div>
+            <div class="update-banner-desc" id="update-banner-desc" style="display: none;"></div>
+            <div id="update-banner-progress-wrap" class="update-banner-progress-wrap" style="display: none;">
+              <div class="update-banner-progress-bar" id="update-banner-progress-bar"></div>
+            </div>
+          </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button id="update-banner-view-btn" class="btn" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 12px; border-radius: 4px; cursor: pointer;">View Release</button>
-          <button id="update-banner-dismiss-btn" class="btn btn-ghost" style="color: #fff; padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer;" title="Dismiss">&times;</button>
+        <div class="update-banner-actions">
+          <button id="update-banner-install-btn" class="btn btn-primary" style="display: none; padding: 5px 12px; font-size: 12px;">Update Now</button>
+          <button id="update-banner-view-btn" class="btn btn-ghost" style="padding: 5px 10px; font-size: 12px;">View Release</button>
+          <button id="update-banner-dismiss-btn" class="btn btn-ghost" style="padding: 4px 8px; font-size: 14px; line-height: 1;" title="Dismiss">&times;</button>
         </div>
       </div>
 
@@ -1899,7 +1916,36 @@
         </div>
       </div>
 
-      <!-- 11. Settings -->
+      <!-- 11. Appearance & Themes -->
+      <section class="tab-panel" id="tab-appearance">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Appearance & Themes</h1>
+            <p class="panel-subtitle">Select color palettes, contrast settings, and UI styling for your workspace</p>
+          </div>
+        </div>
+
+        <div class="settings-layout">
+          <!-- Dark Themes Section -->
+          <div class="settings-section">
+            <div class="settings-section-title">Dark Themes</div>
+            <p class="settings-section-desc">Low-light, OLED pitch black, and rich nighttime color schemes</p>
+            <div id="theme-grid-dark" class="theme-grid"></div>
+          </div>
+
+          <!-- Light Themes Section -->
+          <div class="settings-section">
+            <div class="settings-section-title">
+              Light Themes
+              <span class="flashbang-badge"><i class="ph ph-sun"></i> ⚠️ Flashbang Warning</span>
+            </div>
+            <p class="settings-section-desc">Clean porcelain, warm pastel, papyrus, and sage daytime color schemes</p>
+            <div id="theme-grid-light" class="theme-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12. Settings -->
       <section class="tab-panel" id="tab-settings">
         <div class="panel-header">
           <div class="panel-title-group">
@@ -2503,11 +2549,21 @@
             <div class="settings-section-title">Updates</div>
             <div class="toggle-card">
               <div class="toggle-card-left">
-                <div class="toggle-label">Auto-Check for Updates</div>
-                <div class="toggle-desc">Automatically check GitHub for new versions on application startup</div>
+                <div class="toggle-label">Auto-Update</div>
+                <div class="toggle-desc">Automatically download and prepare new versions in the background when available</div>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" data-setting="auto-update" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Update Available Popup</div>
+                <div class="toggle-desc">Show a banner notification at the top of the app when an update is available</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-update-popup" />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
@@ -2515,14 +2571,20 @@
               <div>
                 <div id="update-status-text" style="font-size: 13px; font-weight: 500; color: var(--text);">Current version: nyx-dlp</div>
                 <div id="update-details-text" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;"></div>
+                <div id="settings-update-progress-wrap" class="update-banner-progress-wrap" style="display: none; width: 220px; margin-top: 6px;">
+                  <div class="update-banner-progress-bar" id="settings-update-progress-bar"></div>
+                </div>
               </div>
-              <div style="display: flex; gap: 8px; align-items: center;">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-ghost" id="check-updates-btn" style="display: inline-flex; align-items: center; gap: 6px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                   <span>Check for Updates</span>
                 </button>
                 <button class="btn btn-primary" id="download-update-btn" style="display: none; align-items: center; gap: 6px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span id="download-update-btn-text">Install Update</span>
+                </button>
+                <button class="btn btn-ghost" id="view-release-btn" style="display: none; align-items: center; gap: 6px;">
                   <span>View Release</span>
                 </button>
               </div>

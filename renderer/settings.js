@@ -1,69 +1,71 @@
 /* ── Settings ─────────────────────────────────────────────── */
 const SETTINGS_MAP = {
   'show-tool-livestream': { navTab: 'livestream' },
-  'show-tool-ytdlp':      { navTab: 'ytdlp' },
-  'show-tool-batch':      { navTab: 'batch' },
-  'show-tool-m3u8':       { navTab: 'm3u8' },
-  'show-tool-gallery':    { navTab: 'gallery' },
-  'show-tool-splitter':   { navTab: 'splitter' },
+  'show-tool-ytdlp': { navTab: 'ytdlp' },
+  'show-tool-batch': { navTab: 'batch' },
+  'show-tool-m3u8': { navTab: 'm3u8' },
+  'show-tool-gallery': { navTab: 'gallery' },
+  'show-tool-splitter': { navTab: 'splitter' },
   'show-tool-concatenator': { navTab: 'concatenator' },
-  'show-tool-encoder':    { navTab: 'encoder' },
-  'show-tool-ia':         { navTab: 'ia' },
-  'show-ls-quality':      { el: 'ls-quality-group' },
-  'show-yd-format':       { el: 'yd-format-group' },
-  'show-yd-client':       { el: 'yd-client-group' },
-  'show-batch-format':    { el: 'batch-format-group' },
-  'show-batch-client':    { el: 'batch-client-group' },
-  'show-batch-rest':      { el: 'batch-rest-group' },
+  'show-tool-encoder': { navTab: 'encoder' },
+  'show-tool-ia': { navTab: 'ia' },
+  'show-ls-quality': { el: 'ls-quality-group' },
+  'show-yd-format': { el: 'yd-format-group' },
+  'show-yd-client': { el: 'yd-client-group' },
+  'show-batch-format': { el: 'batch-format-group' },
+  'show-batch-client': { el: 'batch-client-group' },
+  'show-batch-rest': { el: 'batch-rest-group' },
   'show-batch-skip-live': { el: 'batch-skip-live-group' },
-  'show-concat-format':   { el: 'concat-format-group' },
-  'show-m3-encode':       { el: 'm3-encode-group' },
-  'show-gdl-filetypes':   { el: 'gdl-filetypes-group' },
-  'show-gdl-meta':        { el: 'gdl-meta-group' },
-  'show-ls-client':       { el: 'ls-client-group' },
-  'dep-use-bgutil':       { el: 'dep-bgutil-url-group' },
-  'show-disk-space':      { custom: 'disk-space' },
-  'minimize-to-tray':     { custom: 'tray' },
-  'run-on-startup':       { custom: 'startup' },
-  'start-minimized':      { custom: 'start-minimized' },
-  'auto-update':          { custom: 'auto-update' },
-  'discord-bot-enable':   { custom: 'discord-bot' },
-  'remote-access':        { custom: 'remote-access' },
-  'ntf-storage':          { el: 'ntf-storage-group' },
+  'show-concat-format': { el: 'concat-format-group' },
+  'show-m3-encode': { el: 'm3-encode-group' },
+  'show-gdl-filetypes': { el: 'gdl-filetypes-group' },
+  'show-gdl-meta': { el: 'gdl-meta-group' },
+  'show-ls-client': { el: 'ls-client-group' },
+  'dep-use-bgutil': { el: 'dep-bgutil-url-group' },
+  'show-disk-space': { custom: 'disk-space' },
+  'minimize-to-tray': { custom: 'tray' },
+  'run-on-startup': { custom: 'startup' },
+  'start-minimized': { custom: 'start-minimized' },
+  'auto-update': { custom: 'auto-update' },
+  'show-update-popup': { custom: 'show-update-popup' },
+  'discord-bot-enable': { custom: 'discord-bot' },
+  'remote-access': { custom: 'remote-access' },
+  'ntf-storage': { el: 'ntf-storage-group' },
 };
 const SETTINGS_DEFAULTS = {
   'show-tool-livestream': true,
-  'show-tool-ytdlp':      true,
-  'show-tool-batch':      true,
-  'show-tool-m3u8':       true,
-  'show-tool-gallery':    true,
-  'show-tool-splitter':   true,
+  'show-tool-ytdlp': true,
+  'show-tool-batch': true,
+  'show-tool-m3u8': true,
+  'show-tool-gallery': true,
+  'show-tool-splitter': true,
   'show-tool-concatenator': true,
-  'show-tool-encoder':    true,
-  'show-tool-ia':         true,
-  'show-ls-quality':      true,
-  'show-yd-format':       true,
-  'show-yd-client':       true,
-  'show-batch-format':    true,
-  'show-batch-client':    true,
-  'show-batch-rest':      true,
+  'show-tool-encoder': true,
+  'show-tool-ia': true,
+  'show-ls-quality': true,
+  'show-yd-format': true,
+  'show-yd-client': true,
+  'show-batch-format': true,
+  'show-batch-client': true,
+  'show-batch-rest': true,
   'show-batch-skip-live': true,
-  'show-concat-format':   true,
-  'show-m3-encode':       true,
-  'show-gdl-filetypes':   true,
-  'show-gdl-meta':        true,
-  'show-ls-client':       true,
-  'dep-use-bgutil':       true,
-  'dep-use-deno':         true,
-  'dep-install-gdl':      true,
-  'show-disk-space':      false,
-  'minimize-to-tray':     false,
-  'run-on-startup':       false,
-  'start-minimized':      false,
-  'auto-update':          false,
-  'discord-bot-enable':   false,
-  'remote-access':        false,
-  'ntf-storage':          true,
+  'show-concat-format': true,
+  'show-m3-encode': true,
+  'show-gdl-filetypes': true,
+  'show-gdl-meta': true,
+  'show-ls-client': true,
+  'dep-use-bgutil': true,
+  'dep-use-deno': true,
+  'dep-install-gdl': true,
+  'show-disk-space': false,
+  'minimize-to-tray': false,
+  'run-on-startup': false,
+  'start-minimized': false,
+  'auto-update': false,
+  'show-update-popup': true,
+  'discord-bot-enable': false,
+  'remote-access': false,
+  'ntf-storage': true,
 };
 
 function getSetting(key) {
@@ -76,7 +78,7 @@ function applySetting(key, value) {
   const cfg = SETTINGS_MAP[key];
   if (!cfg) return;
   if (cfg.navTab) {
-    const navBtn   = document.querySelector(`.nav-item[data-tab="${cfg.navTab}"]`);
+    const navBtn = document.querySelector(`.nav-item[data-tab="${cfg.navTab}"]`);
     const tabPanel = document.getElementById('tab-' + cfg.navTab);
     if (navBtn) navBtn.style.display = value ? '' : 'none';
     if (tabPanel && !value && tabPanel.classList.contains('active')) {
@@ -97,9 +99,9 @@ function applySetting(key, value) {
     if (window.api && window.api.setRunOnStartup) {
       window.api.setRunOnStartup(value);
     }
-    const isLinux = (navigator.platform && navigator.platform.toLowerCase().includes('linux')) || 
-                    (navigator.userAgent && navigator.userAgent.toLowerCase().includes('linux')) ||
-                    (typeof process !== 'undefined' && process.platform === 'linux');
+    const isLinux = (navigator.platform && navigator.platform.toLowerCase().includes('linux')) ||
+      (navigator.userAgent && navigator.userAgent.toLowerCase().includes('linux')) ||
+      (typeof process !== 'undefined' && process.platform === 'linux');
     if (value && isLinux && typeof openLinuxServiceModal === 'function') {
       openLinuxServiceModal();
     }
@@ -111,6 +113,9 @@ function applySetting(key, value) {
     if (window.api && window.api.setAutoUpdate) {
       window.api.setAutoUpdate(value);
     }
+  } else if (cfg.custom === 'show-update-popup') {
+    const banner = document.getElementById('update-notification-banner');
+    if (!value && banner) banner.style.display = 'none';
   } else if (cfg.custom === 'discord-bot') {
     const configGroup = document.getElementById('discord-bot-config-group');
     if (configGroup) configGroup.style.display = value ? 'flex' : 'none';
@@ -120,18 +125,18 @@ function applySetting(key, value) {
   } else if (cfg.custom === 'remote-access') {
     const portGroup = document.getElementById('remote-access-port-group');
     if (portGroup) portGroup.style.display = value ? 'flex' : 'none';
-    
+
     if (value) {
       const portInput = document.getElementById('remote-access-port');
       const userInput = document.getElementById('remote-access-user');
       const passInput = document.getElementById('remote-access-pass');
       const pinInput = document.getElementById('remote-access-pin');
-      
+
       const port = parseInt(portInput?.value) || 3000;
       const user = userInput?.value || 'admin';
       const pass = passInput?.value || 'secret';
       const pin = pinInput?.value || '';
-      
+
       if (window.api && window.api.startRemoteServer) {
         window.api.startRemoteServer({ port, user, pass, pin });
       }
@@ -277,13 +282,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Updates Controller ──────────────────────────────────────
-  const checkUpdatesBtn   = document.getElementById('check-updates-btn');
+  const checkUpdatesBtn = document.getElementById('check-updates-btn');
   const downloadUpdateBtn = document.getElementById('download-update-btn');
-  const updateStatusText  = document.getElementById('update-status-text');
+  const downloadUpdateBtnText = document.getElementById('download-update-btn-text');
+  const viewReleaseBtn = document.getElementById('view-release-btn');
+  const updateStatusText = document.getElementById('update-status-text');
   const updateDetailsText = document.getElementById('update-details-text');
+  const settingsProgressWrap = document.getElementById('settings-update-progress-wrap');
+  const settingsProgressBar = document.getElementById('settings-update-progress-bar');
   const appVersion = (window.api && window.api.appVersion) ? 'v' + window.api.appVersion : '';
 
   let latestReleaseUrl = 'https://github.com/jt-ito/nyx-dlp/releases';
+  let activeUpdateInfo = null;
 
   if (updateStatusText && appVersion) {
     updateStatusText.textContent = `Current version: ${appVersion}`;
@@ -297,29 +307,45 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    activeUpdateInfo = res;
+
     if (res.hasUpdate) {
       latestReleaseUrl = res.releaseUrl || latestReleaseUrl;
       if (updateStatusText) {
-        updateStatusText.innerHTML = `<span style="color: #68d391; font-weight: 600;">Update Available:</span> v${res.latestVersion}`;
+        updateStatusText.innerHTML = `<span style="color: var(--success); font-weight: 600;">Update Available:</span> v${res.latestVersion}`;
       }
       if (updateDetailsText) {
-        updateDetailsText.innerHTML = res.releaseName ? `<strong>${res.releaseName}</strong>` : `Latest version on GitHub is ready to download.`;
+        updateDetailsText.innerHTML = res.releaseName ? `<strong>${res.releaseName}</strong>` : `Latest version on GitHub is ready to install.`;
       }
       if (downloadUpdateBtn) {
         downloadUpdateBtn.style.display = 'inline-flex';
+        if (downloadUpdateBtnText) {
+          downloadUpdateBtnText.textContent = res.downloadedPath ? 'Restart & Install' : (res.downloadUrl ? 'Install Update' : 'View Release');
+        }
+      }
+      if (viewReleaseBtn) {
+        viewReleaseBtn.style.display = 'inline-flex';
       }
 
-      // Show top-level update banner if present
-      showUpdateBanner(res);
+      // Show top-level update banner only if user has enabled the popup toggle
+      if (getSetting('show-update-popup')) {
+        showUpdateBanner(res);
+      }
     } else {
       if (updateStatusText) {
-        updateStatusText.innerHTML = `<span style="color: #68d391;">✔ nyx-dlp is up to date</span> (${appVersion || 'v' + res.currentVersion})`;
+        updateStatusText.innerHTML = `<span style="color: var(--success);">✔ nyx-dlp is up to date</span> (${appVersion || 'v' + res.currentVersion})`;
       }
       if (updateDetailsText) {
         updateDetailsText.textContent = 'You have the latest release installed.';
       }
       if (downloadUpdateBtn) {
         downloadUpdateBtn.style.display = 'none';
+      }
+      if (viewReleaseBtn) {
+        viewReleaseBtn.style.display = 'none';
+      }
+      if (settingsProgressWrap) {
+        settingsProgressWrap.style.display = 'none';
       }
     }
   }
@@ -350,7 +376,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (downloadUpdateBtn) {
-    downloadUpdateBtn.addEventListener('click', () => {
+    downloadUpdateBtn.addEventListener('click', async () => {
+      if (activeUpdateInfo?.downloadedPath) {
+        if (window.api && window.api.installAppUpdate) {
+          window.api.installAppUpdate(activeUpdateInfo.downloadedPath);
+        }
+        return;
+      }
+
+      if (activeUpdateInfo?.downloadUrl && window.api && window.api.downloadAppUpdate) {
+        downloadUpdateBtn.disabled = true;
+        if (downloadUpdateBtnText) downloadUpdateBtnText.textContent = 'Downloading... (0%)';
+        if (settingsProgressWrap) settingsProgressWrap.style.display = 'block';
+        if (settingsProgressBar) settingsProgressBar.style.width = '0%';
+
+        try {
+          const dlRes = await window.api.downloadAppUpdate(activeUpdateInfo);
+          activeUpdateInfo.downloadedPath = dlRes.filePath;
+          downloadUpdateBtn.disabled = false;
+          if (downloadUpdateBtnText) downloadUpdateBtnText.textContent = 'Restart & Install';
+          if (updateDetailsText) updateDetailsText.textContent = 'Update downloaded! Click Restart & Install to apply.';
+        } catch (err) {
+          downloadUpdateBtn.disabled = false;
+          if (downloadUpdateBtnText) downloadUpdateBtnText.textContent = 'Retry Install';
+          if (updateDetailsText) updateDetailsText.textContent = 'Download failed: ' + err.message;
+        }
+        return;
+      }
+
+      if (window.api && window.api.openExternal) {
+        window.api.openExternal(latestReleaseUrl);
+      } else {
+        window.open(latestReleaseUrl, '_blank');
+      }
+    });
+  }
+
+  if (viewReleaseBtn) {
+    viewReleaseBtn.addEventListener('click', () => {
       if (window.api && window.api.openExternal) {
         window.api.openExternal(latestReleaseUrl);
       } else {
@@ -366,19 +429,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Handle download progress & completion events from main process
+  if (window.api && window.api.onAppUpdateProgress) {
+    window.api.onAppUpdateProgress((prog) => {
+      const p = prog.percent || 0;
+      if (settingsProgressBar) settingsProgressBar.style.width = p + '%';
+      if (downloadUpdateBtnText && downloadUpdateBtn?.disabled) {
+        downloadUpdateBtnText.textContent = `Downloading... (${p}%)`;
+      }
+      const bannerBar = document.getElementById('update-banner-progress-bar');
+      if (bannerBar) bannerBar.style.width = p + '%';
+    });
+  }
+
+  if (window.api && window.api.onAppUpdateDownloaded) {
+    window.api.onAppUpdateDownloaded((data) => {
+      if (activeUpdateInfo) {
+        activeUpdateInfo.downloadedPath = data.filePath;
+      }
+      if (downloadUpdateBtn) {
+        downloadUpdateBtn.disabled = false;
+        if (downloadUpdateBtnText) downloadUpdateBtnText.textContent = 'Restart & Install';
+      }
+      if (updateDetailsText) {
+        updateDetailsText.textContent = 'Update downloaded and ready to install.';
+      }
+      // Update banner state if visible
+      const bannerInstallBtn = document.getElementById('update-banner-install-btn');
+      const bannerDesc = document.getElementById('update-banner-desc');
+      if (bannerInstallBtn) {
+        bannerInstallBtn.style.display = 'inline-flex';
+        bannerInstallBtn.disabled = false;
+        bannerInstallBtn.textContent = 'Restart & Install';
+        bannerInstallBtn.onclick = () => {
+          if (window.api && window.api.installAppUpdate) {
+            window.api.installAppUpdate(data.filePath);
+          }
+        };
+      }
+      if (bannerDesc) {
+        bannerDesc.textContent = 'Update is downloaded and ready to install.';
+        bannerDesc.style.display = 'block';
+      }
+    });
+  }
+
   // ── Discord Bot Controller ──────────────────────────────────
-  const discordTokenInput    = document.getElementById('discord-bot-token');
+  const discordTokenInput = document.getElementById('discord-bot-token');
   const discordClientIdInput = document.getElementById('discord-bot-client-id');
-  const discordDownloadDir   = document.getElementById('discord-download-dir');
-  const discordBrowseDirBtn  = document.getElementById('discord-browse-dir');
-  const discordInviteUrlInput= document.getElementById('discord-invite-url');
+  const discordDownloadDir = document.getElementById('discord-download-dir');
+  const discordBrowseDirBtn = document.getElementById('discord-browse-dir');
+  const discordInviteUrlInput = document.getElementById('discord-invite-url');
   const discordCopyInviteBtn = document.getElementById('discord-copy-invite');
   const discordOpenInviteBtn = document.getElementById('discord-open-invite');
-  const discordConnectBtn    = document.getElementById('discord-connect-btn');
-  const discordSyncCmdsBtn   = document.getElementById('discord-sync-commands-btn');
-  const discordStatusBadge   = document.getElementById('discord-status-badge');
-  const discordLogStatus     = document.getElementById('discord-log-status');
-  const discordToggleTokenVis= document.getElementById('discord-toggle-token-vis');
+  const discordConnectBtn = document.getElementById('discord-connect-btn');
+  const discordSyncCmdsBtn = document.getElementById('discord-sync-commands-btn');
+  const discordStatusBadge = document.getElementById('discord-status-badge');
+  const discordLogStatus = document.getElementById('discord-log-status');
+  const discordToggleTokenVis = document.getElementById('discord-toggle-token-vis');
   const discordDevPortalLink = document.getElementById('discord-dev-portal-link');
 
   function calculateInviteUrl(clientId) {
@@ -396,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (/^\d{17,21}$/.test(decoded)) {
           return decoded;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     return '';
   }
@@ -404,11 +512,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleTokenOrClientChange() {
     const token = discordTokenInput?.value?.trim() || '';
     const extractedId = extractClientIdFromToken(token);
-    
+
     if (extractedId && discordClientIdInput && !discordClientIdInput.value) {
       discordClientIdInput.value = extractedId;
     }
-    
+
     const clientId = discordClientIdInput?.value?.trim() || extractedId;
     if (discordInviteUrlInput) {
       discordInviteUrlInput.value = calculateInviteUrl(clientId);
@@ -504,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       handleTokenOrClientChange();
       updateDiscordStatusUI(statusObj);
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   // Real-time Gateway status updates
@@ -562,31 +670,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-async function safeCopyToClipboard(text) {
-  if (!text) return false;
-  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+  async function safeCopyToClipboard(text) {
+    if (!text) return false;
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_) { }
+    }
     try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (_) {}
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '-9999px';
+      textArea.setAttribute('readonly', '');
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (successful) return true;
+    } catch (_) { }
+    return false;
   }
-  try {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    textArea.style.top = '-9999px';
-    textArea.setAttribute('readonly', '');
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    const successful = document.execCommand('copy');
-    document.body.removeChild(textArea);
-    if (successful) return true;
-  } catch (_) {}
-  return false;
-}
-window.safeCopyToClipboard = safeCopyToClipboard;
+  window.safeCopyToClipboard = safeCopyToClipboard;
 
   if (discordCopyInviteBtn && discordInviteUrlInput) {
     discordCopyInviteBtn.addEventListener('click', async () => {
@@ -722,7 +830,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
     if (svcCmdPreview) svcCmdPreview.value = quickCmd;
   }
 
-  window.openLinuxServiceModal = function() {
+  window.openLinuxServiceModal = function () {
     if (!linuxSvcModal) return;
     if (svcUserInput && !svcUserInput.value) {
       svcUserInput.value = (typeof os !== 'undefined' && os.userInfo ? os.userInfo().username : '') || 'jt';
@@ -777,13 +885,68 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
 });
 
 function showUpdateBanner(info) {
+  if (!info) info = { latestVersion: '4.1.0', releaseName: 'v4.1.0 Preview' };
+  if (!info.force && !getSetting('show-update-popup')) return;
   const banner = document.getElementById('update-notification-banner');
   if (!banner) return;
   const verSpan = document.getElementById('update-banner-version');
-  if (verSpan) verSpan.textContent = 'v' + info.latestVersion;
+  if (verSpan) verSpan.textContent = 'v' + (info.latestVersion || '4.1.0');
   banner.style.display = 'flex';
 
+  const installBtn = document.getElementById('update-banner-install-btn');
   const viewBtn = document.getElementById('update-banner-view-btn');
+  const dismissBtn = document.getElementById('update-banner-dismiss-btn');
+  const bannerDesc = document.getElementById('update-banner-desc');
+  const progressWrap = document.getElementById('update-banner-progress-wrap');
+
+  if (info.downloadedPath) {
+    if (installBtn) {
+      installBtn.style.display = 'inline-flex';
+      installBtn.disabled = false;
+      installBtn.textContent = 'Restart & Install';
+      installBtn.onclick = () => {
+        if (window.api && window.api.installAppUpdate) window.api.installAppUpdate(info.downloadedPath);
+      };
+    }
+    if (bannerDesc) {
+      bannerDesc.textContent = 'Update is downloaded and ready to install.';
+      bannerDesc.style.display = 'block';
+    }
+  } else if (info.downloadUrl && window.api && window.api.downloadAppUpdate) {
+    if (installBtn) {
+      installBtn.style.display = 'inline-flex';
+      installBtn.disabled = false;
+      installBtn.textContent = 'Update Now';
+      installBtn.onclick = async () => {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Downloading...';
+        if (progressWrap) progressWrap.style.display = 'block';
+        try {
+          const dlRes = await window.api.downloadAppUpdate(info);
+          installBtn.disabled = false;
+          installBtn.textContent = 'Restart & Install';
+          info.downloadedPath = dlRes.filePath;
+          installBtn.onclick = () => {
+            if (window.api && window.api.installAppUpdate) window.api.installAppUpdate(dlRes.filePath);
+          };
+          if (bannerDesc) {
+            bannerDesc.textContent = 'Update downloaded! Click Restart & Install to apply.';
+            bannerDesc.style.display = 'block';
+          }
+        } catch (err) {
+          installBtn.disabled = false;
+          installBtn.textContent = 'Retry Update';
+          if (bannerDesc) {
+            bannerDesc.textContent = 'Download failed: ' + err.message;
+            bannerDesc.style.display = 'block';
+          }
+        }
+      };
+    }
+  } else if (installBtn) {
+    installBtn.style.display = 'none';
+  }
+
   if (viewBtn) {
     viewBtn.onclick = () => {
       const url = info.releaseUrl || 'https://github.com/jt-ito/nyx-dlp/releases';
@@ -792,10 +955,11 @@ function showUpdateBanner(info) {
     };
   }
 
-  const dismissBtn = document.getElementById('update-banner-dismiss-btn');
   if (dismissBtn) {
     dismissBtn.onclick = () => {
       banner.style.display = 'none';
     };
   }
 }
+
+window.showUpdateBanner = showUpdateBanner;

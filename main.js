@@ -108,6 +108,22 @@ function checkGitHubRelease() {
           const release = JSON.parse(data);
           const latestTag = release.tag_name || release.name || '';
           const hasUpdate = isNewerVersion(latestTag, currentVersion);
+          
+          const assets = release.assets || [];
+          let matchedAsset = null;
+          if (process.platform === 'win32') {
+            const isPortable = fs.existsSync(path.join(path.dirname(app.getPath('exe')), '.portable'));
+            if (isPortable) {
+              matchedAsset = assets.find(a => a.name.endsWith('-portable.zip')) || assets.find(a => a.name.endsWith('.zip'));
+            } else {
+              matchedAsset = assets.find(a => a.name.endsWith('-setup.exe')) || assets.find(a => a.name.endsWith('.exe'));
+            }
+          } else if (process.platform === 'darwin') {
+            matchedAsset = assets.find(a => a.name.endsWith('-macos.dmg')) || assets.find(a => a.name.endsWith('.dmg'));
+          } else if (process.platform === 'linux') {
+            matchedAsset = assets.find(a => a.name.endsWith('-linux.AppImage')) || assets.find(a => a.name.endsWith('.AppImage'));
+          }
+
           resolve({
             hasUpdate,
             currentVersion,
@@ -116,7 +132,10 @@ function checkGitHubRelease() {
             releaseName: release.name || latestTag,
             releaseUrl: release.html_url || 'https://github.com/jt-ito/nyx-dlp/releases',
             releaseNotes: release.body || '',
-            publishedAt: release.published_at
+            publishedAt: release.published_at,
+            assetName: matchedAsset ? matchedAsset.name : null,
+            downloadUrl: matchedAsset ? matchedAsset.browser_download_url : null,
+            assetSize: matchedAsset ? matchedAsset.size : null
           });
         } catch (e) {
           reject(e);
@@ -246,6 +265,123 @@ ipcMain.on('set-auto-update', (e, val) => {
   saveAppSettings({ autoUpdate: !!val });
 });
 
+function downloadAppUpdateFile(url, assetName, onProgress) {
+  const updatesDir = path.join(app.getPath('userData'), 'updates');
+  if (!fs.existsSync(updatesDir)) fs.mkdirSync(updatesDir, { recursive: true });
+  const targetPath = path.join(updatesDir, assetName || 'nyx-dlp-update');
+
+  return new Promise((resolve, reject) => {
+    const download = (targetUrl, redirects = 5) => {
+      if (redirects < 0) return reject(new Error('Too many redirects while downloading update'));
+      const req = https.get(targetUrl, {
+        headers: { 'User-Agent': 'nyx-dlp-app/' + (app.getVersion() || '4.0.0') }
+      }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          return download(res.headers.location, redirects - 1);
+        }
+        if (res.statusCode !== 200) {
+          return reject(new Error(`Update download failed with status ${res.statusCode}`));
+        }
+
+        const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+        let downloadedBytes = 0;
+        const fileStream = fs.createWriteStream(targetPath);
+
+        res.on('data', (chunk) => {
+          downloadedBytes += chunk.length;
+          const percent = totalBytes > 0 ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+          if (onProgress) onProgress({ percent, downloadedBytes, totalBytes, status: 'downloading' });
+        });
+
+        fileStream.on('finish', () => {
+          fileStream.close(() => {
+            if (onProgress) onProgress({ percent: 100, downloadedBytes: totalBytes, totalBytes, status: 'complete' });
+            resolve({ filePath: targetPath, assetName });
+          });
+        });
+
+        fileStream.on('error', (err) => {
+          try { fs.unlinkSync(targetPath); } catch (_) {}
+          reject(err);
+        });
+
+        res.pipe(fileStream);
+      });
+
+      req.on('error', (err) => {
+        try { fs.unlinkSync(targetPath); } catch (_) {}
+        reject(err);
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Update download request timed out'));
+      });
+    };
+
+    download(url);
+  });
+}
+
+ipcMain.handle('download-app-update', async (e, opts) => {
+  const downloadUrl = opts?.downloadUrl;
+  const assetName = opts?.assetName || 'nyx-dlp-update';
+  if (!downloadUrl) throw new Error('No update download URL found');
+
+  const result = await downloadAppUpdateFile(downloadUrl, assetName, (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app-update-progress', progress);
+    }
+  });
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('app-update-downloaded', {
+      filePath: result.filePath,
+      assetName: result.assetName
+    });
+  }
+  return result;
+});
+
+ipcMain.on('install-app-update', (e, filePath) => {
+  if (!filePath || !fs.existsSync(filePath)) {
+    console.error('[Auto-Update] Installer file not found:', filePath);
+    return;
+  }
+  const isWin = process.platform === 'win32';
+  const isMac = process.platform === 'darwin';
+  const isLinux = process.platform === 'linux';
+
+  try {
+    if (isWin) {
+      if (filePath.endsWith('.exe')) {
+        const child = spawn(filePath, [], { detached: true, stdio: 'ignore' });
+        child.unref();
+        isQuitting = true;
+        app.quit();
+        return;
+      } else {
+        shell.showItemInFolder(filePath);
+      }
+    } else if (isMac) {
+      shell.openPath(filePath);
+    } else if (isLinux) {
+      if (filePath.endsWith('.AppImage')) {
+        try { fs.chmodSync(filePath, 0o755); } catch (_) {}
+        const child = spawn(filePath, [], { detached: true, stdio: 'ignore' });
+        child.unref();
+        isQuitting = true;
+        app.quit();
+        return;
+      } else {
+        shell.showItemInFolder(filePath);
+      }
+    }
+  } catch (err) {
+    console.error('[Auto-Update] Failed to install update:', err);
+    shell.openPath(path.dirname(filePath));
+  }
+});
+
 ipcMain.handle('check-for-updates', async () => {
   try {
     return await checkGitHubRelease();
@@ -366,13 +502,8 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     if (launchMinimized) {
-      if (minimizeToTray) {
-        mainWindow.hide();
-        createTray();
-      } else {
-        mainWindow.show();
-        mainWindow.minimize();
-      }
+      mainWindow.hide();
+      createTray();
     } else {
       mainWindow.show();
     }
@@ -395,19 +526,34 @@ app.whenReady().then(() => {
   }
   createWindow();
 
-  // Background auto-update check on startup if enabled (delayed 3s)
-  if (appSettings.autoUpdate) {
-    setTimeout(async () => {
-      try {
-        const updateInfo = await checkGitHubRelease();
-        if (updateInfo && updateInfo.hasUpdate && mainWindow && !mainWindow.isDestroyed()) {
+  // Background auto-update check / auto-download on startup (delayed 3s)
+  setTimeout(async () => {
+    try {
+      const updateInfo = await checkGitHubRelease();
+      if (updateInfo && updateInfo.hasUpdate) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('update-available', updateInfo);
         }
-      } catch (err) {
-        console.log('[Auto-Update] Startup check skipped or offline:', err.message);
+        if (appSettings.autoUpdate && updateInfo.downloadUrl) {
+          console.log('[Auto-Update] Auto-downloading update in background:', updateInfo.assetName);
+          const dlRes = await downloadAppUpdateFile(updateInfo.downloadUrl, updateInfo.assetName, (progress) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('app-update-progress', progress);
+            }
+          });
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('app-update-downloaded', {
+              filePath: dlRes.filePath,
+              assetName: dlRes.assetName,
+              version: updateInfo.latestVersion
+            });
+          }
+        }
       }
-    }, 3000);
-  }
+    } catch (err) {
+      console.log('[Auto-Update] Startup check skipped or offline:', err.message);
+    }
+  }, 3000);
 
   // Auto-connect Discord bot on startup if configured (delayed 4s)
   if (appSettings.discordEnabled && appSettings.discordToken) {

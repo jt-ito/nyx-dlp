@@ -64,40 +64,738 @@
   --shadow-sm:    0 2px 8px rgba(0,0,0,0.4);
 }
 
-/* ── Light Theme ──────────────────────────────────────────────── */
+/* ── Light Themes (Pastel Collection) ────────────────────────── */
+
+/* 1. Nyx Light (Minimalist Cool Slate) */
 [data-theme="light"] {
-  --bg:           #f4f4f8;
-  --bg-surface:   #ffffff;
-  --bg-elevated:  #f9f9fc;
+  --bg:           #edf0f7;
+  --bg-surface:   #f8fafd;
+  --bg-elevated:  #ffffff;
   --bg-input:     #ffffff;
-  --bg-hover:     #ededf5;
-  --border:       #e0e0ec;
-  --border-focus: #6c63ff;
-  --text:         #1a1a2e;
-  --text-muted:   #6b6b88;
-  --text-subtle:  #a0a0bc;
-  --accent:       #6c63ff;
-  --accent-hover: #5a52e8;
-  --accent-glow:  rgba(108, 99, 255, 0.15);
-  --danger:       #e53e3e;
-  --success:      #2d9c6e;
+  --bg-hover:     #dde2f0;
+  --border:       #c8d0e5;
+  --border-focus: #584cf4;
+  --text:         #16192e;
+  --text-muted:   #525875;
+  --text-subtle:  #787e9c;
+  --accent:       #584cf4;
+  --accent-hover: #4437dc;
+  --accent-glow:  rgba(88, 76, 244, 0.2);
+  --danger:       #dc2626;
+  --success:      #16a34a;
   --warning:      #d97706;
-  --terminal-bg:       #f0f0f5;
-  --terminal-bg-header: rgba(0,0,0,0.04);
-  --terminal-border:    rgba(0,0,0,0.08);
-  --terminal-title:     rgba(0,0,0,0.35);
-  --terminal-txt:       #1a1a2e;
-  --terminal-stdout:    #1a6b1a;
-  --terminal-stderr:    #8a6800;
-  --terminal-debug:     #aaaabc;
+  --terminal-bg:       #ffffff;
+  --terminal-bg-header: rgba(88,76,244,0.06);
+  --terminal-border:    #c8d0e5;
+  --terminal-title:     #525875;
+  --terminal-txt:       #16192e;
+  --terminal-stdout:    #15803d;
+  --terminal-stderr:    #b45309;
+  --terminal-debug:     #787e9c;
   --terminal-warning:   #b45309;
   --terminal-info:      #1d4ed8;
   --terminal-input:     var(--text);
-  --terminal-cmd:       #6b6b88;
-  --scrollbar:    #e0e0ec;
-  --scrollbar-thumb: #c0c0d8;
-  --shadow:       0 4px 24px rgba(0,0,0,0.08);
-  --shadow-sm:    0 2px 8px rgba(0,0,0,0.06);
+  --terminal-cmd:       #525875;
+  --scrollbar:    #edf0f7;
+  --scrollbar-thumb: #c8d0e5;
+  --shadow:       0 4px 24px rgba(22,25,46,0.08);
+  --shadow-sm:    0 2px 8px rgba(22,25,46,0.05);
+}
+
+/* 2. Nord Snow Storm (Pastel Arctic Frost Ice Blue) */
+[data-theme="nord-light"] {
+  --bg:           #d5e0ee;
+  --bg-surface:   #e2ecf7;
+  --bg-elevated:  #edf4fc;
+  --bg-input:     #f6faff;
+  --bg-hover:     #c4d3e6;
+  --border:       #a6bdd8;
+  --border-focus: #2b6cb0;
+  --text:         #102235;
+  --text-muted:   #385270;
+  --text-subtle:  #627e9e;
+  --accent:       #2b6cb0;
+  --accent-hover: #1f5085;
+  --accent-glow:  rgba(43, 108, 176, 0.22);
+  --danger:       #be3a46;
+  --success:      #2b732b;
+  --warning:      #a85200;
+  --terminal-bg:       #edf4fc;
+  --terminal-bg-header: rgba(43,108,176,0.07);
+  --terminal-border:    #a6bdd8;
+  --terminal-title:     #385270;
+  --terminal-txt:       #102235;
+  --terminal-stdout:    #2b732b;
+  --terminal-stderr:    #a85200;
+  --terminal-debug:     #627e9e;
+  --terminal-warning:   #a85200;
+  --terminal-info:      #2b6cb0;
+  --terminal-input:     #102235;
+  --terminal-cmd:       #385270;
+  --scrollbar:    #d5e0ee;
+  --scrollbar-thumb: #a6bdd8;
+  --shadow:       0 4px 24px rgba(16,34,53,0.09);
+  --shadow-sm:    0 2px 8px rgba(16,34,53,0.05);
+}
+
+/* 3. Tokyo Day (Pastel Periwinkle Sky) */
+[data-theme="tokyonight-day"] {
+  --bg:           #ccd5f0;
+  --bg-surface:   #dbe3fa;
+  --bg-elevated:  #eaeffd;
+  --bg-input:     #f4f6fe;
+  --bg-hover:     #bac7eb;
+  --border:       #9db0e0;
+  --border-focus: #1c52b8;
+  --text:         #0f1e42;
+  --text-muted:   #364c7d;
+  --text-subtle:  #5e74a8;
+  --accent:       #1c52b8;
+  --accent-hover: #123d8c;
+  --accent-glow:  rgba(28, 82, 184, 0.22);
+  --danger:       #c71448;
+  --success:      #1a6b1e;
+  --warning:      #8c4d00;
+  --terminal-bg:       #eaeffd;
+  --terminal-bg-header: rgba(28,82,184,0.07);
+  --terminal-border:    #9db0e0;
+  --terminal-title:     #364c7d;
+  --terminal-txt:       #0f1e42;
+  --terminal-stdout:    #1a6b1e;
+  --terminal-stderr:    #8c4d00;
+  --terminal-debug:     #5e74a8;
+  --terminal-warning:   #8c4d00;
+  --terminal-info:      #1c52b8;
+  --terminal-input:     #0f1e42;
+  --terminal-cmd:       #364c7d;
+  --scrollbar:    #ccd5f0;
+  --scrollbar-thumb: #9db0e0;
+  --shadow:       0 4px 24px rgba(15,30,66,0.09);
+  --shadow-sm:    0 2px 8px rgba(15,30,66,0.05);
+}
+
+/* 4. Catppuccin Latte (Pastel Lavender Mauve) */
+[data-theme="catppuccin-latte"] {
+  --bg:           #dbd4ec;
+  --bg-surface:   #e7e1f5;
+  --bg-elevated:  #f2edfa;
+  --bg-input:     #faf7fd;
+  --bg-hover:     #cec5e4;
+  --border:       #b7a8d8;
+  --border-focus: #7e38db;
+  --text:         #221838;
+  --text-muted:   #544670;
+  --text-subtle:  #7d6f99;
+  --accent:       #7e38db;
+  --accent-hover: #6726bc;
+  --accent-glow:  rgba(126, 56, 219, 0.22);
+  --danger:       #c71440;
+  --success:      #2e8020;
+  --warning:      #b36800;
+  --terminal-bg:       #f2edfa;
+  --terminal-bg-header: rgba(126,56,219,0.07);
+  --terminal-border:    #b7a8d8;
+  --terminal-title:     #544670;
+  --terminal-txt:       #221838;
+  --terminal-stdout:    #2e8020;
+  --terminal-stderr:    #b36800;
+  --terminal-debug:     #7d6f99;
+  --terminal-warning:   #b36800;
+  --terminal-info:      #1a5cc7;
+  --terminal-input:     #221838;
+  --terminal-cmd:       #544670;
+  --scrollbar:    #dbd4ec;
+  --scrollbar-thumb: #b7a8d8;
+  --shadow:       0 4px 24px rgba(34,24,56,0.09);
+  --shadow-sm:    0 2px 8px rgba(34,24,56,0.05);
+}
+
+/* 5. Rosé Pine Dawn (Pastel Blush Rosé Petal) */
+[data-theme="rose-pine-dawn"] {
+  --bg:           #edd3cb;
+  --bg-surface:   #f6e2dc;
+  --bg-elevated:  #fcf0ec;
+  --bg-input:     #fff8f5;
+  --bg-hover:     #e4c1b7;
+  --border:       #d2a79b;
+  --border-focus: #b03859;
+  --text:         #331822;
+  --text-muted:   #683d4e;
+  --text-subtle:  #946577;
+  --accent:       #b03859;
+  --accent-hover: #962544;
+  --accent-glow:  rgba(176, 56, 89, 0.22);
+  --danger:       #b03859;
+  --success:      #1d6352;
+  --warning:      #aa5300;
+  --terminal-bg:       #fcf0ec;
+  --terminal-bg-header: rgba(176,56,89,0.07);
+  --terminal-border:    #d2a79b;
+  --terminal-title:     #683d4e;
+  --terminal-txt:       #331822;
+  --terminal-stdout:    #1d6352;
+  --terminal-stderr:    #aa5300;
+  --terminal-debug:     #946577;
+  --terminal-warning:   #aa5300;
+  --terminal-info:      #2b678c;
+  --terminal-input:     #331822;
+  --terminal-cmd:       #683d4e;
+  --scrollbar:    #edd3cb;
+  --scrollbar-thumb: #d2a79b;
+  --shadow:       0 4px 24px rgba(51,24,34,0.09);
+  --shadow-sm:    0 2px 8px rgba(51,24,34,0.05);
+}
+
+/* 6. Solarized Light (Pastel Warm Sunlit Papyrus) */
+[data-theme="solarized-light"] {
+  --bg:           #eadebe;
+  --bg-surface:   #f4ebd2;
+  --bg-elevated:  #fcf6e6;
+  --bg-input:     #fffdf7;
+  --bg-hover:     #dfd1ad;
+  --border:       #c8b78f;
+  --border-focus: #00628f;
+  --text:         #243338;
+  --text-muted:   #4a5e63;
+  --text-subtle:  #758b90;
+  --accent:       #00628f;
+  --accent-hover: #004a6d;
+  --accent-glow:  rgba(0, 98, 143, 0.22);
+  --danger:       #bd2420;
+  --success:      #506900;
+  --warning:      #8a6500;
+  --terminal-bg:       #fcf6e6;
+  --terminal-bg-header: rgba(0,98,143,0.07);
+  --terminal-border:    #c8b78f;
+  --terminal-title:     #4a5e63;
+  --terminal-txt:       #243338;
+  --terminal-stdout:    #475e00;
+  --terminal-stderr:    #8a6500;
+  --terminal-debug:     #758b90;
+  --terminal-warning:   #8a6500;
+  --terminal-info:      #00628f;
+  --terminal-input:     #243338;
+  --terminal-cmd:       #4a5e63;
+  --scrollbar:    #eadebe;
+  --scrollbar-thumb: #c8b78f;
+  --shadow:       0 4px 24px rgba(36,51,56,0.09);
+  --shadow-sm:    0 2px 8px rgba(36,51,56,0.05);
+}
+
+/* 7. Vintage Manuscript (Pastel Warm Book Sepia) */
+[data-theme="paper-sepia"] {
+  --bg:           #e2d2b8;
+  --bg-surface:   #ede1cb;
+  --bg-elevated:  #f7efdf;
+  --bg-input:     #fdf9f0;
+  --bg-hover:     #d5c2a4;
+  --border:       #bfa784;
+  --border-focus: #8a3814;
+  --text:         #26160a;
+  --text-muted:   #543b27;
+  --text-subtle:  #7d6148;
+  --accent:       #8a3814;
+  --accent-hover: #6e2a0c;
+  --accent-glow:  rgba(138, 56, 20, 0.22);
+  --danger:       #9e1b1b;
+  --success:      #2d5718;
+  --warning:      #8c4a00;
+  --terminal-bg:       #f7efdf;
+  --terminal-bg-header: rgba(138,56,20,0.07);
+  --terminal-border:    #bfa784;
+  --terminal-title:     #543b27;
+  --terminal-txt:       #26160a;
+  --terminal-stdout:    #2d5718;
+  --terminal-stderr:    #8c4a00;
+  --terminal-debug:     #7d6148;
+  --terminal-warning:   #8c4a00;
+  --terminal-info:      #124870;
+  --terminal-input:     #26160a;
+  --terminal-cmd:       #543b27;
+  --scrollbar:    #e2d2b8;
+  --scrollbar-thumb: #bfa784;
+  --shadow:       0 4px 24px rgba(38,22,10,0.09);
+  --shadow-sm:    0 2px 8px rgba(38,22,10,0.05);
+}
+
+/* 8. Matcha Zen (Pastel Sage Mint Green) */
+[data-theme="matcha-light"] {
+  --bg:           #c8e4d2;
+  --bg-surface:   #d8eedf;
+  --bg-elevated:  #e6f6ec;
+  --bg-input:     #f2fbf5;
+  --bg-hover:     #b5d9c2;
+  --border:       #97c4a7;
+  --border-focus: #157338;
+  --text:         #0a2616;
+  --text-muted:   #2a5238;
+  --text-subtle:  #507a5f;
+  --accent:       #157338;
+  --accent-hover: #0e5427;
+  --accent-glow:  rgba(21, 115, 56, 0.22);
+  --danger:       #b31d1d;
+  --success:      #157338;
+  --warning:      #9c4e00;
+  --terminal-bg:       #e6f6ec;
+  --terminal-bg-header: rgba(21,115,56,0.07);
+  --terminal-border:    #97c4a7;
+  --terminal-title:     #2a5238;
+  --terminal-txt:       #0a2616;
+  --terminal-stdout:    #157338;
+  --terminal-stderr:    #9c4e00;
+  --terminal-debug:     #507a5f;
+  --terminal-warning:   #9c4e00;
+  --terminal-info:      #0d576b;
+  --terminal-input:     #0a2616;
+  --terminal-cmd:       #2a5238;
+  --scrollbar:    #c8e4d2;
+  --scrollbar-thumb: #97c4a7;
+  --shadow:       0 4px 24px rgba(10,38,22,0.09);
+  --shadow-sm:    0 2px 8px rgba(10,38,22,0.05);
+}
+
+/* ── OLED Obsidian (Pure Pitch Black) ─────────────────────────── */
+[data-theme="oled"] {
+  color-scheme: dark;
+  --bg:           #000000;
+  --bg-surface:   #0a0a0d;
+  --bg-elevated:  #141419;
+  --bg-input:     #050507;
+  --bg-hover:     #1c1c24;
+  --border:       #1f1f2a;
+  --border-focus: #00e5ff;
+  --text:         #ffffff;
+  --text-muted:   #8e8ea0;
+  --text-subtle:  #525266;
+  --accent:       #00e5ff;
+  --accent-hover: #33ebff;
+  --accent-glow:  rgba(0, 229, 255, 0.25);
+  --danger:       #ff4455;
+  --success:      #00f59b;
+  --warning:      #ffb833;
+  --terminal-bg:       #000000;
+  --terminal-bg-header: rgba(255,255,255,0.02);
+  --terminal-border:    #1f1f2a;
+  --terminal-title:     #525266;
+  --terminal-txt:       #e0ffff;
+  --terminal-stdout:    #7dffc0;
+  --terminal-stderr:    #ffe27a;
+  --terminal-debug:     #4a4a60;
+  --terminal-warning:   #ffb833;
+  --terminal-info:      #70d6ff;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #8e8ea0;
+  --scrollbar:    #121217;
+  --scrollbar-thumb: #22222d;
+  --shadow:       0 4px 24px rgba(0,0,0,0.8);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.6);
+}
+
+/* ── Cyberpunk Neon (Night City Pulse) ────────────────────────── */
+[data-theme="cyberpunk"] {
+  color-scheme: dark;
+  --bg:           #0d0b18;
+  --bg-surface:   #161228;
+  --bg-elevated:  #1f1a3a;
+  --bg-input:     #100e1e;
+  --bg-hover:     #2a234e;
+  --border:       #2f2757;
+  --border-focus: #ff007f;
+  --text:         #f5f0ff;
+  --text-muted:   #9d93be;
+  --text-subtle:  #605680;
+  --accent:       #ff007f;
+  --accent-hover: #ff3399;
+  --accent-glow:  rgba(255, 0, 127, 0.28);
+  --danger:       #ff3864;
+  --success:      #00f5d4;
+  --warning:      #fee440;
+  --terminal-bg:       #080612;
+  --terminal-bg-header: rgba(255,0,127,0.05);
+  --terminal-border:    #2f2757;
+  --terminal-title:     #9d93be;
+  --terminal-txt:       #f0f8ff;
+  --terminal-stdout:    #00f5d4;
+  --terminal-stderr:    #fee440;
+  --terminal-debug:     #524b70;
+  --terminal-warning:   #fee440;
+  --terminal-info:      #00bbf9;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #9d93be;
+  --scrollbar:    #161228;
+  --scrollbar-thumb: #352b61;
+  --shadow:       0 4px 24px rgba(0,0,0,0.6);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ── Nord (Arctic Solitude) ──────────────────────────────────── */
+[data-theme="nord"] {
+  color-scheme: dark;
+  --bg:           #242933;
+  --bg-surface:   #2e3440;
+  --bg-elevated:  #3b4252;
+  --bg-input:     #1f232a;
+  --bg-hover:     #434c5e;
+  --border:       #4c566a;
+  --border-focus: #88c0d0;
+  --text:         #eceff4;
+  --text-muted:   #d8dee9;
+  --text-subtle:  #7b88a1;
+  --accent:       #88c0d0;
+  --accent-hover: #8fbcbb;
+  --accent-glow:  rgba(136, 192, 208, 0.25);
+  --danger:       #bf616a;
+  --success:      #a3be8c;
+  --warning:      #ebcb8b;
+  --terminal-bg:       #1e222a;
+  --terminal-bg-header: rgba(255,255,255,0.02);
+  --terminal-border:    #3b4252;
+  --terminal-title:     #7b88a1;
+  --terminal-txt:       #eceff4;
+  --terminal-stdout:    #a3be8c;
+  --terminal-stderr:    #ebcb8b;
+  --terminal-debug:     #4c566a;
+  --terminal-warning:   #ebcb8b;
+  --terminal-info:      #81a1c1;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #d8dee9;
+  --scrollbar:    #242933;
+  --scrollbar-thumb: #434c5e;
+  --shadow:       0 4px 24px rgba(0,0,0,0.45);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* ── Tokyo Night (Storm Twilight) ────────────────────────────── */
+[data-theme="tokyonight"] {
+  color-scheme: dark;
+  --bg:           #16161e;
+  --bg-surface:   #1a1b26;
+  --bg-elevated:  #24283b;
+  --bg-input:     #13141c;
+  --bg-hover:     #2f354f;
+  --border:       #2f354f;
+  --border-focus: #7aa2f7;
+  --text:         #c0caf5;
+  --text-muted:   #7982a9;
+  --text-subtle:  #565f89;
+  --accent:       #7aa2f7;
+  --accent-hover: #89b4fa;
+  --accent-glow:  rgba(122, 162, 247, 0.25);
+  --danger:       #f7768e;
+  --success:      #9ece6a;
+  --warning:      #e0af68;
+  --terminal-bg:       #13141f;
+  --terminal-bg-header: rgba(122,162,247,0.04);
+  --terminal-border:    #24283b;
+  --terminal-title:     #565f89;
+  --terminal-txt:       #c0caf5;
+  --terminal-stdout:    #9ece6a;
+  --terminal-stderr:    #e0af68;
+  --terminal-debug:     #414868;
+  --terminal-warning:   #e0af68;
+  --terminal-info:      #7dcfff;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #7982a9;
+  --scrollbar:    #16161e;
+  --scrollbar-thumb: #2f354f;
+  --shadow:       0 4px 24px rgba(0,0,0,0.5);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* ── Dracula (Classic Vampire) ───────────────────────────────── */
+[data-theme="dracula"] {
+  color-scheme: dark;
+  --bg:           #1e1f29;
+  --bg-surface:   #282a36;
+  --bg-elevated:  #343746;
+  --bg-input:     #191a21;
+  --bg-hover:     #44475a;
+  --border:       #44475a;
+  --border-focus: #bd93f9;
+  --text:         #f8f8f2;
+  --text-muted:   #bfbfd0;
+  --text-subtle:  #6272a4;
+  --accent:       #bd93f9;
+  --accent-hover: #caa9fa;
+  --accent-glow:  rgba(189, 147, 249, 0.28);
+  --danger:       #ff5555;
+  --success:      #50fa7b;
+  --warning:      #f1fa8c;
+  --terminal-bg:       #16171f;
+  --terminal-bg-header: rgba(189,147,249,0.04);
+  --terminal-border:    #343746;
+  --terminal-title:     #6272a4;
+  --terminal-txt:       #f8f8f2;
+  --terminal-stdout:    #50fa7b;
+  --terminal-stderr:    #f1fa8c;
+  --terminal-debug:     #44475a;
+  --terminal-warning:   #f1fa8c;
+  --terminal-info:      #8be9fd;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #bfbfd0;
+  --scrollbar:    #1e1f29;
+  --scrollbar-thumb: #44475a;
+  --shadow:       0 4px 24px rgba(0,0,0,0.5);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* ── Catppuccin Mocha ────────────────────────────────────────── */
+[data-theme="catppuccin"] {
+  color-scheme: dark;
+  --bg:           #181825;
+  --bg-surface:   #1e1e2e;
+  --bg-elevated:  #313244;
+  --bg-input:     #11111b;
+  --bg-hover:     #45475a;
+  --border:       #45475a;
+  --border-focus: #cba6f7;
+  --text:         #cdd6f4;
+  --text-muted:   #a6adc8;
+  --text-subtle:  #6c7086;
+  --accent:       #cba6f7;
+  --accent-hover: #b4befe;
+  --accent-glow:  rgba(203, 166, 247, 0.25);
+  --danger:       #f38ba8;
+  --success:      #a6e3a1;
+  --warning:      #f9e2af;
+  --terminal-bg:       #11111b;
+  --terminal-bg-header: rgba(203,166,247,0.04);
+  --terminal-border:    #313244;
+  --terminal-title:     #6c7086;
+  --terminal-txt:       #cdd6f4;
+  --terminal-stdout:    #a6e3a1;
+  --terminal-stderr:    #f9e2af;
+  --terminal-debug:     #45475a;
+  --terminal-warning:   #f9e2af;
+  --terminal-info:      #89dceb;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #a6adc8;
+  --scrollbar:    #181825;
+  --scrollbar-thumb: #313244;
+  --shadow:       0 4px 24px rgba(0,0,0,0.5);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* ── Emerald Forest (Matrix Mint) ────────────────────────────── */
+[data-theme="emerald"] {
+  color-scheme: dark;
+  --bg:           #08100c;
+  --bg-surface:   #0e1a14;
+  --bg-elevated:  #16281f;
+  --bg-input:     #060c09;
+  --bg-hover:     #1e362a;
+  --border:       #224032;
+  --border-focus: #10b981;
+  --text:         #e2f6ec;
+  --text-muted:   #82a895;
+  --text-subtle:  #4d705f;
+  --accent:       #10b981;
+  --accent-hover: #34d399;
+  --accent-glow:  rgba(16, 185, 129, 0.25);
+  --danger:       #f43f5e;
+  --success:      #10b981;
+  --warning:      #fbbf24;
+  --terminal-bg:       #050a08;
+  --terminal-bg-header: rgba(16,185,129,0.04);
+  --terminal-border:    #16281f;
+  --terminal-title:     #4d705f;
+  --terminal-txt:       #d1fae5;
+  --terminal-stdout:    #34d399;
+  --terminal-stderr:    #fbbf24;
+  --terminal-debug:     #224032;
+  --terminal-warning:   #fbbf24;
+  --terminal-info:      #38bdf8;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #82a895;
+  --scrollbar:    #08100c;
+  --scrollbar-thumb: #1e362a;
+  --shadow:       0 4px 24px rgba(0,0,0,0.6);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ── Solarized Dark ──────────────────────────────────────────── */
+[data-theme="solarized"] {
+  color-scheme: dark;
+  --bg:           #00212b;
+  --bg-surface:   #002b36;
+  --bg-elevated:  #073642;
+  --bg-input:     #001b24;
+  --bg-hover:     #0e4a59;
+  --border:       #155566;
+  --border-focus: #2aa198;
+  --text:         #93a1a1;
+  --text-muted:   #657b83;
+  --text-subtle:  #586e75;
+  --accent:       #2aa198;
+  --accent-hover: #268bd2;
+  --accent-glow:  rgba(42, 161, 152, 0.25);
+  --danger:       #dc322f;
+  --success:      #859900;
+  --warning:      #b58900;
+  --terminal-bg:       #001921;
+  --terminal-bg-header: rgba(42,161,152,0.04);
+  --terminal-border:    #073642;
+  --terminal-title:     #586e75;
+  --terminal-txt:       #93a1a1;
+  --terminal-stdout:    #859900;
+  --terminal-stderr:    #b58900;
+  --terminal-debug:     #073642;
+  --terminal-warning:   #b58900;
+  --terminal-info:      #268bd2;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #657b83;
+  --scrollbar:    #00212b;
+  --scrollbar-thumb: #0e4a59;
+  --shadow:       0 4px 24px rgba(0,0,0,0.55);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ── Oceanic Abyss (Deep Maritime Sapphire) ──────────────────── */
+[data-theme="abyss-navy"] {
+  color-scheme: dark;
+  --bg:           #040d18;
+  --bg-surface:   #081627;
+  --bg-elevated:  #0e223c;
+  --bg-input:     #020912;
+  --bg-hover:     #132f52;
+  --border:       #193c68;
+  --border-focus: #0ea5e9;
+  --text:         #e0f2fe;
+  --text-muted:   #7eaad0;
+  --text-subtle:  #3b658d;
+  --accent:       #0ea5e9;
+  --accent-hover: #38bdf8;
+  --accent-glow:  rgba(14, 165, 233, 0.28);
+  --danger:       #f43f5e;
+  --success:      #10b981;
+  --warning:      #fbbf24;
+  --terminal-bg:       #020811;
+  --terminal-bg-header: rgba(14,165,233,0.05);
+  --terminal-border:    #0e223c;
+  --terminal-title:     #3b658d;
+  --terminal-txt:       #e0f2fe;
+  --terminal-stdout:    #38bdf8;
+  --terminal-stderr:    #fbbf24;
+  --terminal-debug:     #193c68;
+  --terminal-warning:   #fbbf24;
+  --terminal-info:      #0ea5e9;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #7eaad0;
+  --scrollbar:    #040d18;
+  --scrollbar-thumb: #132f52;
+  --shadow:       0 4px 24px rgba(0,0,0,0.65);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.45);
+}
+
+/* ── Crimson Abyss (Deep Velvet Burgundy & Ruby Flame) ───────── */
+[data-theme="crimson-night"] {
+  color-scheme: dark;
+  --bg:           #12070a;
+  --bg-surface:   #1c0d12;
+  --bg-elevated:  #28131b;
+  --bg-input:     #0f0507;
+  --bg-hover:     #361924;
+  --border:       #421e29;
+  --border-focus: #f43f5e;
+  --text:         #ffe4e8;
+  --text-muted:   #b88693;
+  --text-subtle:  #6e4853;
+  --accent:       #f43f5e;
+  --accent-hover: #fb7185;
+  --accent-glow:  rgba(244, 63, 94, 0.28);
+  --danger:       #fb7185;
+  --success:      #34d399;
+  --warning:      #fbbf24;
+  --terminal-bg:       #0d0406;
+  --terminal-bg-header: rgba(244,63,94,0.05);
+  --terminal-border:    #28131b;
+  --terminal-title:     #6e4853;
+  --terminal-txt:       #ffe4e8;
+  --terminal-stdout:    #34d399;
+  --terminal-stderr:    #fbbf24;
+  --terminal-debug:     #421e29;
+  --terminal-warning:   #fbbf24;
+  --terminal-info:      #38bdf8;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #b88693;
+  --scrollbar:    #12070a;
+  --scrollbar-thumb: #361924;
+  --shadow:       0 4px 24px rgba(0,0,0,0.65);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.45);
+}
+
+/* ── Amber Espresso (Toasted Mahogany Wood & Warm Copper) ────── */
+[data-theme="espresso-dark"] {
+  color-scheme: dark;
+  --bg:           #120a05;
+  --bg-surface:   #1a0f08;
+  --bg-elevated:  #26160d;
+  --bg-input:     #0d0703;
+  --bg-hover:     #331e12;
+  --border:       #422819;
+  --border-focus: #f59e0b;
+  --text:         #fef3c7;
+  --text-muted:   #bfa882;
+  --text-subtle:  #6e573e;
+  --accent:       #f59e0b;
+  --accent-hover: #fbbf24;
+  --accent-glow:  rgba(245, 158, 11, 0.28);
+  --danger:       #f43f5e;
+  --success:      #84cc16;
+  --warning:      #f59e0b;
+  --terminal-bg:       #0d0703;
+  --terminal-bg-header: rgba(245,158,11,0.05);
+  --terminal-border:    #26160d;
+  --terminal-title:     #6e573e;
+  --terminal-txt:       #fef3c7;
+  --terminal-stdout:    #84cc16;
+  --terminal-stderr:    #fbbf24;
+  --terminal-debug:     #422819;
+  --terminal-warning:   #fbbf24;
+  --terminal-info:      #38bdf8;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #bfa882;
+  --scrollbar:    #120a05;
+  --scrollbar-thumb: #331e12;
+  --shadow:       0 4px 24px rgba(0,0,0,0.65);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.45);
+}
+
+/* ── Moss Forest (Olive Woodland & Chartreuse Lime) ──────────── */
+[data-theme="moss-dark"] {
+  color-scheme: dark;
+  --bg:           #0b1207;
+  --bg-surface:   #131d0d;
+  --bg-elevated:  #1c2b14;
+  --bg-input:     #070c04;
+  --bg-hover:     #26391c;
+  --border:       #314725;
+  --border-focus: #84cc16;
+  --text:         #ecfccb;
+  --text-muted:   #8fa878;
+  --text-subtle:  #4e663a;
+  --accent:       #84cc16;
+  --accent-hover: #a3e635;
+  --accent-glow:  rgba(132, 204, 22, 0.28);
+  --danger:       #f43f5e;
+  --success:      #84cc16;
+  --warning:      #fbbf24;
+  --terminal-bg:       #060a03;
+  --terminal-bg-header: rgba(132,204,22,0.05);
+  --terminal-border:    #1c2b14;
+  --terminal-title:     #4e663a;
+  --terminal-txt:       #ecfccb;
+  --terminal-stdout:    #a3e635;
+  --terminal-stderr:    #fbbf24;
+  --terminal-debug:     #314725;
+  --terminal-warning:   #fbbf24;
+  --terminal-info:      #38bdf8;
+  --terminal-input:     #ffffff;
+  --terminal-cmd:       #8fa878;
+  --scrollbar:    #0b1207;
+  --scrollbar-thumb: #26391c;
+  --shadow:       0 4px 24px rgba(0,0,0,0.65);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.45);
 }
 
 /* ── Scrollbar ────────────────────────────────────────────────── */
@@ -165,9 +863,148 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   transition: background var(--transition), color var(--transition);
 }
-.tb-btn:hover { background: var(--bg-hover); color: var(--text); }
-.tb-btn.close-btn:hover { background: var(--danger); color: #fff; }
 .theme-toggle { width: 38px; }
+
+/* ── Appearance & Theme Card Grid ────────────────────────────── */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 28px;
+}
+.settings-section:last-child {
+  margin-bottom: 8px;
+}
+.settings-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.settings-section-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 4px 0 16px 0;
+  line-height: 1.5;
+}
+
+.flashbang-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.theme-card-easter-egg {
+  min-height: 90px;
+  border-radius: var(--radius);
+  cursor: default;
+  background: transparent;
+  border: 1.5px solid transparent;
+  user-select: none;
+}
+
+.theme-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.theme-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.theme-card.active {
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1.5px var(--accent), 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.theme-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-card-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.theme-card-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #ffffff;
+  display: none;
+}
+
+.theme-card.active .theme-card-badge {
+  display: inline-block;
+}
+
+.theme-card-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.theme-swatches {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  align-items: center;
+}
+
+.theme-swatch {
+  flex: 1;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.appearance-preview-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
 /* ── App Layout ───────────────────────────────────────────────── */
 .app-layout {
@@ -291,6 +1128,83 @@ html, body {
   padding: 28px 32px;
   display: flex;
   flex-direction: column;
+}
+
+/* ── Update Notification Banner ─────────────────────────────── */
+.update-banner {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  color: var(--text);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 100;
+  animation: slideDownFade 0.25s ease-out;
+}
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.update-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.update-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+}
+.update-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.update-banner-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.update-banner-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.update-banner-progress-wrap {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-input);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.update-banner-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
 }
 
 /* ── Tab Panels ───────────────────────────────────────────────── */

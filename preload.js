@@ -12,8 +12,12 @@ contextBridge.exposeInMainWorld('api', {
   setStartMinimized: (val) => ipcRenderer.send('set-start-minimized', val),
   setAutoUpdate:     (val) => ipcRenderer.send('set-auto-update', val),
   checkForUpdates:   () => ipcRenderer.invoke('check-for-updates'),
+  downloadAppUpdate: (opts) => ipcRenderer.invoke('download-app-update', opts),
+  installAppUpdate:  (filePath) => ipcRenderer.send('install-app-update', filePath),
   openExternal:      (url) => ipcRenderer.send('open-external', url),
   onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_e, d) => cb(d)),
+  onAppUpdateProgress: (cb) => ipcRenderer.on('app-update-progress', (_e, d) => cb(d)),
+  onAppUpdateDownloaded: (cb) => ipcRenderer.on('app-update-downloaded', (_e, d) => cb(d)),
 
   // Folder picker
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
@@ -68,7 +72,7 @@ contextBridge.exposeInMainWorld('api', {
   resumeScript: (pid) => ipcRenderer.send('resume-script', { pid }),
 
   // Remote server
-  startRemoteServer: (port) => ipcRenderer.send('start-remote-server', { port }),
+  startRemoteServer: (opts) => ipcRenderer.send('start-remote-server', typeof opts === 'object' ? opts : { port: opts }),
   stopRemoteServer:  () => ipcRenderer.send('stop-remote-server'),
 
   // Discord Bot
