@@ -355,23 +355,63 @@ ipcMain.on('install-app-update', (e, filePath) => {
   try {
     if (isWin) {
       if (filePath.endsWith('.exe')) {
-        const child = spawn(filePath, [], { detached: true, stdio: 'ignore' });
-        child.unref();
-        isQuitting = true;
-        app.quit();
+        // Use shell.openPath to invoke Windows ShellExecuteEx with full UAC elevation support
+        shell.openPath(filePath).then((errMsg) => {
+          if (errMsg) {
+            console.error('[Auto-Update] shell.openPath error, falling back to cmd start:', errMsg);
+            try {
+              const child = spawn('cmd.exe', ['/c', 'start', '""', filePath], {
+                detached: true,
+                stdio: 'ignore',
+                windowsHide: true
+              });
+              child.on('error', (spawnErr) => {
+                console.error('[Auto-Update] cmd start error:', spawnErr);
+                shell.showItemInFolder(filePath);
+              });
+              child.unref();
+            } catch (fallbackErr) {
+              console.error('[Auto-Update] cmd fallback exception:', fallbackErr);
+              shell.showItemInFolder(filePath);
+            }
+          }
+          setTimeout(() => {
+            isQuitting = true;
+            app.quit();
+          }, 600);
+        }).catch((err) => {
+          console.error('[Auto-Update] shell.openPath rejected:', err);
+          shell.showItemInFolder(filePath);
+          setTimeout(() => {
+            isQuitting = true;
+            app.quit();
+          }, 600);
+        });
         return;
       } else {
         shell.showItemInFolder(filePath);
       }
     } else if (isMac) {
-      shell.openPath(filePath);
+      shell.openPath(filePath).then(() => {
+        setTimeout(() => {
+          isQuitting = true;
+          app.quit();
+        }, 600);
+      });
+      return;
     } else if (isLinux) {
       if (filePath.endsWith('.AppImage')) {
         try { fs.chmodSync(filePath, 0o755); } catch (_) {}
         const child = spawn(filePath, [], { detached: true, stdio: 'ignore' });
+        child.on('error', (err) => {
+          console.error('[Auto-Update] AppImage spawn error:', err);
+          shell.openPath(filePath);
+        });
         child.unref();
-        isQuitting = true;
-        app.quit();
+        setTimeout(() => {
+          isQuitting = true;
+          app.quit();
+        }, 600);
         return;
       } else {
         shell.showItemInFolder(filePath);
