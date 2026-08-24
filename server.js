@@ -197,8 +197,29 @@ function startServer(options, appPath) {
           } else {
             // Direct standalone fallback for Node CLI
             const opts = msg.data || {};
-            const outputChan = (channelName) => (data) => {
-              recordAndBroadcast(channelName, data);
+            const outputChan = (channelName, toolCmd, toolOpts) => {
+              const cmdName = toolCmd || channelName.replace('-output', '').replace('gallery-dl', 'gallerydl').replace('concatenator', 'concat');
+              const jobId = 'web-' + cmdName + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+              let jobTracker = null;
+              try {
+                const discordBot = require('./lib/discord-bot.js');
+                if (discordBot && typeof discordBot.registerExternalJob === 'function') {
+                  jobTracker = discordBot.registerExternalJob(jobId, {
+                    command: cmdName,
+                    options: toolOpts || {},
+                    outputDir: toolOpts?.outputDir || '',
+                    source: 'Web Remote',
+                    user: 'Web Cockpit'
+                  });
+                }
+              } catch (_) {}
+
+              return (data) => {
+                recordAndBroadcast(channelName, data);
+                if (jobTracker && typeof jobTracker.onData === 'function') {
+                  try { jobTracker.onData(data); } catch (_) {}
+                }
+              };
             };
 
             switch (msg.channel) {
@@ -213,35 +234,35 @@ function startServer(options, appPath) {
                 break;
               case 'run-ytdlp':
                 activeLogBuffers.set('ytdlp-output', []);
-                runners.runYtdlp(opts, outputChan('ytdlp-output'));
+                runners.runYtdlp(opts, outputChan('ytdlp-output', 'ytdlp', opts));
                 break;
               case 'run-livestream':
                 activeLogBuffers.set('livestream-output', []);
-                runners.runLivestream(opts, outputChan('livestream-output'));
+                runners.runLivestream(opts, outputChan('livestream-output', 'livestream', opts));
                 break;
               case 'run-batch':
                 activeLogBuffers.set('batch-output', []);
-                runners.runBatch(opts, outputChan('batch-output'));
+                runners.runBatch(opts, outputChan('batch-output', 'batch', opts));
                 break;
               case 'run-m3u8':
                 activeLogBuffers.set('m3u8-output', []);
-                runners.runM3u8(opts, outputChan('m3u8-output'));
+                runners.runM3u8(opts, outputChan('m3u8-output', 'm3u8', opts));
                 break;
               case 'run-gallery-dl':
                 activeLogBuffers.set('gallery-dl-output', []);
-                runners.runGalleryDl(opts, outputChan('gallery-dl-output'));
+                runners.runGalleryDl(opts, outputChan('gallery-dl-output', 'gallerydl', opts));
                 break;
               case 'run-splitter':
                 activeLogBuffers.set('splitter-output', []);
-                runners.runSplitter(opts, outputChan('splitter-output'));
+                runners.runSplitter(opts, outputChan('splitter-output', 'splitter', opts));
                 break;
               case 'run-concatenator':
                 activeLogBuffers.set('concatenator-output', []);
-                runners.runConcatenator(opts, outputChan('concatenator-output'));
+                runners.runConcatenator(opts, outputChan('concatenator-output', 'concat', opts));
                 break;
               case 'run-encoder':
                 activeLogBuffers.set('encoder-output', []);
-                runners.runEncoder(opts, outputChan('encoder-output'));
+                runners.runEncoder(opts, outputChan('encoder-output', 'encoder', opts));
                 break;
               case 'stop-script':
                 if (opts.pid) runners.stopScript(opts.pid);
@@ -267,28 +288,71 @@ function startServer(options, appPath) {
                 result = null;
              }
           } else if (msg.channel === 'get-history') {
-             try {
-               if (fs.existsSync(historyFile)) {
-                 result = JSON.parse(await fs.promises.readFile(historyFile, 'utf8'));
-               } else {
-                 result = [];
-               }
-             } catch (_) {
-               result = [];
-             }
+              try {
+                if (fs.existsSync(historyFile)) {
+                  let raw = JSON.parse(await fs.promises.readFile(historyFile, 'utf8'));
+                  try {
+                    const settingsStore = require('./lib/settings-store.js');
+                    const retentionVal = settingsStore.getSettingValue('history-retention', 'never');
+                    const days = parseInt(retentionVal, 10);
+                    if (!isNaN(days) && days > 0 && Array.isArray(raw)) {
+                      const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
+                      raw = raw.filter(item => {
+                        if (!item.date) return true;
+                        const itemTime = new Date(item.date).getTime();
+                        return isNaN(itemTime) || itemTime >= cutoffTime;
+                      });
+                    }
+                  } catch (_) {}
+                  result = raw;
+                } else {
+                  result = [];
+                }
+              } catch (_) {
+                result = [];
+              }
           } else if (msg.channel === 'add-history') {
-             try {
-               let history = [];
-               if (fs.existsSync(historyFile)) {
-                 try { history = JSON.parse(await fs.promises.readFile(historyFile, 'utf8')); } catch (_) {}
-               }
-               history.unshift(msg.data);
-               if (history.length > 1000) history = history.slice(0, 1000);
-               await fs.promises.writeFile(historyFile, JSON.stringify(history, null, 2), 'utf8');
-               result = true;
-             } catch (_) {
-               result = false;
-             }
+              try {
+                let saveHistory = true;
+                try {
+                  const settingsStore = require('./lib/settings-store.js');
+                  saveHistory = settingsStore.getSettingValue('save-history', true);
+                } catch (_) {}
+
+                if (saveHistory === false) {
+                  result = false;
+                } else {
+                  let history = [];
+                  if (fs.existsSync(historyFile)) {
+                    try { history = JSON.parse(await fs.promises.readFile(historyFile, 'utf8')); } catch (_) {}
+                  }
+                  const entry = msg.data;
+                  const existingIdx = entry && entry.id ? history.findIndex(h => h.id === entry.id) : -1;
+                  if (existingIdx >= 0) {
+                    history[existingIdx] = { ...history[existingIdx], ...entry };
+                  } else {
+                    history.unshift(entry);
+                  }
+                  try {
+                    const settingsStore = require('./lib/settings-store.js');
+                    const retentionVal = settingsStore.getSettingValue('history-retention', 'never');
+                    const days = parseInt(retentionVal, 10);
+                    if (!isNaN(days) && days > 0 && Array.isArray(history)) {
+                      const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
+                      history = history.filter(item => {
+                        if (!item.date) return true;
+                        const itemTime = new Date(item.date).getTime();
+                        return isNaN(itemTime) || itemTime >= cutoffTime;
+                      });
+                    }
+                  } catch (_) {}
+                  if (history.length > 1000) history = history.slice(0, 1000);
+                  await fs.promises.writeFile(historyFile, JSON.stringify(history, null, 2), 'utf8');
+                  result = true;
+                }
+              } catch (_) {
+                result = false;
+              }
           } else if (msg.channel === 'delete-history-item') {
              try {
                if (fs.existsSync(historyFile)) {

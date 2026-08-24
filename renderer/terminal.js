@@ -6,8 +6,8 @@ function classifyLine(text, streamType, logEl) {
     return 'info';
   }
   if (/^\[debug\]/i.test(t))                    return 'debug';
-  if (/^warning:/i.test(t) || /keepalive request failed/i.test(t) || /retrying with new connection/i.test(t) || /will reconnect/i.test(t)) return 'warning';
-  if (/^error:/i.test(t))                        return 'error';
+  if (/^warning:/i.test(t) || /^⚠/i.test(t) || /keepalive request failed/i.test(t) || /retrying with new connection/i.test(t) || /will reconnect/i.test(t)) return 'warning';
+  if (/^error:/i.test(t) || /^✖/i.test(t) || /^❌/i.test(t)) return 'error';
   if (/has already been downloaded/i.test(t))    return 'info';
   if (/\berror\b.*:/i.test(t) && streamType === 'stderr') return 'error';
   
@@ -31,7 +31,12 @@ function appendLog(logEl, text, cls) {
     if (!logEl._hasLiveEventIgnore) logEl._hasError = true;
   }
   
-  if (getSetting('console-timestamps') && !/^\s*(?:\d+:\s*)?\[download\]\s+(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B)|Destination:)/i.test(text) && !/frame=\s*\d+/i.test(text)) {
+  const isIaProgressLine = /^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:uploading|downloading)\s+.*:\s*\d+(?:\.\d+)?%/i.test(text);
+  if (getSetting('console-timestamps') &&
+      !/^\s*(?:\d+:\s*)?\[download\]\s+(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B)|Destination:)/i.test(text) &&
+      !/frame=\s*\d+/i.test(text) &&
+      !isIaProgressLine
+  ) {
     const now = new Date();
     const timeStr = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}] `;
     text = timeStr + text;
@@ -69,7 +74,7 @@ function appendLog(logEl, text, cls) {
 
   const isStatus = text.includes('⏸ Paused') || text.includes('▶ Resumed') || text.includes('✔ Process finished') || text.includes('✖ Process exited');
 
-  // Unpin progress when transitioning to post-processing, embedding metadata/thumbnails/subtitles, smart-cut, or completion
+  // Unpin progress when transitioning to post-processing, embedding metadata/thumbnails/subtitles, smart-cut, completion, error, or retry
   const isPostDownload = text.includes('▶ [Post-Process]') ||
     text.includes('✔ [Post-Process]') ||
     text.includes('▶ [Smart-Cut]') ||
@@ -79,6 +84,10 @@ function appendLog(logEl, text, cls) {
     text.includes('[EmbedThumbnail]') ||
     text.includes('[Merger]') ||
     text.includes('[Fixup') ||
+    text.includes('Upload failed') ||
+    text.includes('--- Upload Attempt') ||
+    text.includes('--- Attempt') ||
+    cls === 'error' ||
     isStatus;
 
   if (isPostDownload) {
@@ -110,7 +119,7 @@ function appendLog(logEl, text, cls) {
   // 2. Check for Progress line (yt-dlp, ffmpeg, or Internet Archive)
   const dlMatch = text.match(/^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:(\d+):\s*)?\[download\]\s+(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B))/i);
   const isFfmpegProgress = /^\s*frame=\s*\d+/i.test(text) || /^\s*size=\s*\d+/i.test(text);
-  const isIaProgress = /^\s*(?:uploading|downloading) (.*?):\s*\d+%\|.*\|\s*\d+\/\d+/i.exec(text);
+  const isIaProgress = /^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:uploading|downloading)\s+(.*?):\s*(\d+(?:\.\d+)?%)/i.exec(text);
   
   if (dlMatch || isFfmpegProgress || isIaProgress) {
       const iaFileName = isIaProgress ? isIaProgress[1].trim().replace(/\\/g, '/').split('/').pop() : null;
@@ -141,7 +150,7 @@ function appendLog(logEl, text, cls) {
       if (isComplete) {
           let cleanText = text.replace(/^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:\d+:\s*)?\[(?:download|ExtractAudio)\]\s+(?:\[(.*?)\]\s+)?/, '').trim();
           if (isIaProgress) {
-              cleanText = text.replace(/^\s*(?:uploading|downloading) .*:\s*/i, '').trim();
+              cleanText = text.replace(/^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:uploading|downloading)\s+.*:\s*/i, '').trim();
           }
           if (cleanText.startsWith('100%')) cleanText = cleanText.substring(4).trim();
           if (cleanText.startsWith('100.0%')) cleanText = cleanText.substring(6).trim();
@@ -672,6 +681,19 @@ function handleOutput(logEl, data, onExit) {
             source = document.getElementById('enc-file')?.value.trim();
             output = source; // Encoder usually outputs next to source
             if (!downloadName && source) downloadName = source.split(/[\\/]/).pop();
+          } else if (logEl.id === 'ia-log') {
+            toolName = 'Internet Archive';
+            const upId = document.getElementById('ia-identifier-up')?.value.trim();
+            const downId = document.getElementById('ia-identifier-down')?.value.trim();
+            const editId = document.getElementById('ia-identifier-edit')?.value.trim();
+            const id = upId || downId || editId || '';
+            const files = Array.from(document.getElementById('ia-files')?.querySelectorAll('.sortable-item') || []).map(el => el.dataset.path);
+            source = id ? `archive.org/details/${id}` : (files.length > 0 ? `${files.length} File(s)` : '');
+            output = document.getElementById('ia-output')?.value.trim() || (id ? `archive.org/details/${id}` : '');
+            if (!downloadName) {
+              if (files.length > 0) downloadName = files[0].split(/[\\/]/).pop();
+              else if (id) downloadName = id;
+            }
           }
           
           if (!downloadName && source) {
@@ -684,8 +706,16 @@ function handleOutput(logEl, data, onExit) {
             }
           }
 
-          if (source || output) {
-            window.api.addHistory({
+          if (logEl._currentIaJob) {
+            logEl._currentIaJob.status = (bs && bs.failed > 0) ? 'partial' : 'success';
+            if (!window.shouldRecordHistory || window.shouldRecordHistory(logEl._currentIaJob)) {
+              window.api.addHistory(logEl._currentIaJob).then(() => {
+                if (window._refreshHistory) window._refreshHistory();
+              });
+            }
+            logEl._currentIaJob = null;
+          } else if (source || output) {
+            const entry = {
               id,
               date: ts,
               tool: toolName,
@@ -693,9 +723,12 @@ function handleOutput(logEl, data, onExit) {
               source,
               output,
               status: (bs && bs.failed > 0) ? 'partial' : 'success'
-            }).then(() => {
-              if (window._refreshHistory) window._refreshHistory();
-            });
+            };
+            if (!window.shouldRecordHistory || window.shouldRecordHistory(entry)) {
+              window.api.addHistory(entry).then(() => {
+                if (window._refreshHistory) window._refreshHistory();
+              });
+            }
           }
         }
       } else if (bs && bs.failed > 0) {
@@ -704,10 +737,28 @@ function handleOutput(logEl, data, onExit) {
         const ok = bs.total - bs.failed;
         appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
         collapseLogBody(logEl, false, 2, true);
+        if (logEl._currentIaJob && window.api && window.api.addHistory) {
+          logEl._currentIaJob.status = 'partial';
+          if (!window.shouldRecordHistory || window.shouldRecordHistory(logEl._currentIaJob)) {
+            window.api.addHistory(logEl._currentIaJob).then(() => {
+              if (window._refreshHistory) window._refreshHistory();
+            });
+          }
+          logEl._currentIaJob = null;
+        }
       } else {
         if (data.code !== 0) appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
         else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
         collapseLogBody(logEl, true);
+        if (logEl._currentIaJob && window.api && window.api.addHistory) {
+          logEl._currentIaJob.status = 'failed';
+          if (!window.shouldRecordHistory || window.shouldRecordHistory(logEl._currentIaJob)) {
+            window.api.addHistory(logEl._currentIaJob).then(() => {
+              if (window._refreshHistory) window._refreshHistory();
+            });
+          }
+          logEl._currentIaJob = null;
+        }
       }
       if (onExit) onExit(data.code);
       break;

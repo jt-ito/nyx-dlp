@@ -45,6 +45,16 @@
     }
   });
 
+  const lsUrlInput = document.getElementById('ls-url');
+  if (lsUrlInput) {
+    lsUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runBtn.click();
+      }
+    });
+  }
+
   runBtn.addEventListener('click', () => {
     const url         = document.getElementById('ls-url').value.trim();
     const outputDir   = document.getElementById('ls-output').value.trim();

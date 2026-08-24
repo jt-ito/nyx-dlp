@@ -489,6 +489,18 @@
                   <label for="yd-dl-chat" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Live Chat (.json)</label>
                   <label class="toggle-switch"><input type="checkbox" id="yd-dl-chat" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
                 </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;" title="Saves comments to .info.json, which also includes the video title and full metadata in one file.">
+                  <label for="yd-dl-comments" style="font-size: 13px; color: var(--text); cursor: pointer;" title="Saves comments to .info.json, which also includes the video title and full metadata in one file.">Download Comments (.info.json)</label>
+                  <label class="toggle-switch" title="Saves comments to .info.json, which also includes the video title and full metadata in one file."><input type="checkbox" id="yd-dl-comments" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="yd-dl-desc" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Description (.description)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-dl-desc" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="yd-dl-title" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Video Title (.title.txt)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="yd-dl-title" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <label for="yd-dl-thumb" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Thumbnail</label>
                   <label class="toggle-switch"><input type="checkbox" id="yd-dl-thumb" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
@@ -695,6 +707,18 @@
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <label for="batch-dl-chat" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Live Chat (.json)</label>
                   <label class="toggle-switch"><input type="checkbox" id="batch-dl-chat" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;" title="Saves comments to .info.json, which also includes the video title and full metadata in one file.">
+                  <label for="batch-dl-comments" style="font-size: 13px; color: var(--text); cursor: pointer;" title="Saves comments to .info.json, which also includes the video title and full metadata in one file.">Download Comments (.info.json)</label>
+                  <label class="toggle-switch" title="Saves comments to .info.json, which also includes the video title and full metadata in one file."><input type="checkbox" id="batch-dl-comments" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="batch-dl-desc" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Description (.description)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-dl-desc" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="batch-dl-title" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Video Title (.title.txt)</label>
+                  <label class="toggle-switch"><input type="checkbox" id="batch-dl-title" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
                 </div>
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <label for="batch-dl-thumb" style="font-size: 13px; color: var(--text); cursor: pointer;">Download Thumbnail</label>
@@ -1625,7 +1649,10 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Identifier (Required)</label>
+              <div class="form-label-row">
+                <label class="form-label">Identifier (Required)</label>
+                <span class="char-count" id="ia-identifier-up-count">0 / 100</span>
+              </div>
               <input type="text" id="ia-identifier-up" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" maxlength="100" />
             </div>
             
@@ -1753,7 +1780,10 @@
 
           <div class="card form-grid hidden" id="ia-edit-form" style="display: none;">
             <div class="form-group full-width">
-              <label class="form-label">Identifier (Required)</label>
+              <div class="form-label-row">
+                <label class="form-label">Identifier (Required)</label>
+                <span class="char-count" id="ia-identifier-edit-count">0 / 100</span>
+              </div>
               <input type="text" id="ia-identifier-edit" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" maxlength="100" />
             </div>
 
@@ -1843,7 +1873,10 @@
 
           <div class="card form-grid hidden" id="ia-download-form" style="display: none;">
             <div class="form-group full-width">
-              <label class="form-label">Identifier (Required)</label>
+              <div class="form-label-row">
+                <label class="form-label">Identifier (Required)</label>
+                <span class="char-count" id="ia-identifier-down-count">0 / 100</span>
+              </div>
               <input type="text" id="ia-identifier-down" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" maxlength="100" />
             </div>
 
@@ -2461,6 +2494,88 @@
                 <div style="display: flex; gap: 8px;">
                   <button type="button" class="btn btn-ghost" id="discord-sync-commands-btn" style="font-size: 12px;">Re-sync Slash Commands</button>
                   <button type="button" class="btn btn-primary" id="discord-connect-btn" style="font-size: 12px;">Connect Bot</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Download History</div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Save History</div>
+                <div class="toggle-desc">Automatically log completed downloads, conversions, and uploads to the History tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="save-history" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+
+            <div id="history-options-group" style="transition: opacity 0.2s ease;">
+              <div style="padding: 12px 16px; border-bottom: 1px solid var(--border);">
+                <label class="form-label" style="margin-bottom: 6px;">History Retention Period</label>
+                <select id="history-retention" class="form-select">
+                  <option value="never" selected>Keep Forever (Infinite - Default)</option>
+                  <option value="100">Delete after 100 Days</option>
+                  <option value="60">Delete after 60 Days</option>
+                  <option value="30">Delete after 30 Days</option>
+                  <option value="7">Delete after 7 Days</option>
+                </select>
+                <p class="settings-section-desc" style="margin: 4px 0 0;">Automatically remove history entries older than the selected duration.</p>
+              </div>
+
+              <div style="padding: 12px 16px; border-bottom: 1px solid var(--border);">
+                <label class="form-label" style="margin-bottom: 6px;">Exclude Specific Sites / Domains</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                  <input type="text" id="history-exclude-site-input" class="form-input" placeholder="e.g. youtube.com, twitter.com, x.com (Press Enter to save)" style="flex: 1;" />
+                  <button type="button" class="btn btn-primary" id="history-exclude-add-btn" style="white-space: nowrap; font-size: 12px; padding: 6px 14px;">Add Site</button>
+                </div>
+                <input type="hidden" id="history-exclude-sites" />
+                <div id="history-exclude-tags" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 20px;"></div>
+                <p class="settings-section-desc" style="margin: 6px 0 0;">Enter a link or domain and press Enter to save it to the exclusion list.</p>
+              </div>
+
+              <div style="padding: 12px 16px 8px;">
+                <label class="form-label" style="margin-bottom: 8px;">Exclude Specific Tools</label>
+                <p class="settings-section-desc" style="margin: 0 0 10px;">Disable history logging for specific tools:</p>
+                <div class="checkbox-grid">
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-ytdlp" />
+                    <span>yt-dlp Downloader</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-batch" />
+                    <span>Batch Downloader</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-livestream" />
+                    <span>Live Stream Archiver</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-m3u8" />
+                    <span>M3U8 Downloader</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-gallery" />
+                    <span>gallery-dl</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-splitter" />
+                    <span>Video Splitter</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-concatenator" />
+                    <span>Video Concatenator</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-encoder" />
+                    <span>Video Encoder</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-ia" />
+                    <span>Internet Archive</span>
+                  </label>
                 </div>
               </div>
             </div>

@@ -9,7 +9,7 @@ yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive — nine tools,
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-4.0.1-orange)
+![Version](https://img.shields.io/badge/version-4.0.2-orange)
 
 </div>
 
@@ -28,7 +28,7 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 ## Features
 
 - 🧰 **9 built-in tools** — one unified interface for the download, archival, and video workflows you actually use
-- 🤖 **Discord Bot Integration** — run all tools via Discord slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/status`, `/help`) with live progress embeds, automatic file uploads (≤ 24MB), download history tracking, keep-alive heartbeat monitoring, and automatic gateway reconnection
+- 🤖 **Discord Bot Integration** — run all tools via Discord slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/progress`, `/status`, `/help`) with live progress embeds, automatic file uploads (≤ 24MB), download history tracking, keep-alive heartbeat monitoring, and automatic gateway reconnection
 - 🐍 **No Python, no manual dependencies** — pure Node.js execution; `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` are vendored and auto-updated for you with permission-safe user data fallbacks
 - ⏯️ **Real process tree pause/resume** — genuine OS-level suspension. Freezes the entire process tree (including background ffmpeg/python threads) simultaneously across Windows, macOS, and Linux, not just a UI lock
 - 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock, and more) with live search

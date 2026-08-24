@@ -56,8 +56,48 @@
   resetCancel.addEventListener('click', () => {
     resetModal.style.display = 'none';
   });
+  // Helper for character count updates
+  function updateCharCount(inputEl, counterEl) {
+    if (!inputEl || !counterEl) return;
+    const len = inputEl.value.length;
+    counterEl.classList.remove('char-count-warn', 'char-count-valid', 'char-count-limit');
+    if (len === 0) {
+      counterEl.textContent = '0 / 100';
+    } else if (len < 5) {
+      counterEl.textContent = `${len} / 100 (min 5)`;
+      counterEl.classList.add('char-count-warn');
+    } else if (len === 100) {
+      counterEl.textContent = '100 / 100 (max)';
+      counterEl.classList.add('char-count-limit');
+    } else {
+      counterEl.textContent = `${len} / 100`;
+      counterEl.classList.add('char-count-valid');
+    }
+  }
+
+  const iaIdUp = document.getElementById('ia-identifier-up');
+  const iaIdUpCount = document.getElementById('ia-identifier-up-count');
+  const iaIdEdit = document.getElementById('ia-identifier-edit');
+  const iaIdEditCount = document.getElementById('ia-identifier-edit-count');
+  const iaIdDown = document.getElementById('ia-identifier-down');
+  const iaIdDownCount = document.getElementById('ia-identifier-down-count');
+
+  if (iaIdUp && iaIdUpCount) {
+    iaIdUp.addEventListener('input', () => updateCharCount(iaIdUp, iaIdUpCount));
+    updateCharCount(iaIdUp, iaIdUpCount);
+  }
+  if (iaIdEdit && iaIdEditCount) {
+    iaIdEdit.addEventListener('input', () => updateCharCount(iaIdEdit, iaIdEditCount));
+    updateCharCount(iaIdEdit, iaIdEditCount);
+  }
+  if (iaIdDown && iaIdDownCount) {
+    iaIdDown.addEventListener('input', () => updateCharCount(iaIdDown, iaIdDownCount));
+    updateCharCount(iaIdDown, iaIdDownCount);
+  }
+
   resetSubmit.addEventListener('click', () => {
     document.getElementById('ia-identifier-up').value = '';
+    updateCharCount(iaIdUp, iaIdUpCount);
     document.getElementById('ia-title').value = '';
     document.getElementById('ia-description').value = '';
     document.getElementById('ia-creator').value = '';
@@ -116,7 +156,6 @@
 
   // Auto-populate Identifier from Title
   const iaTitle = document.getElementById('ia-title');
-  const iaIdUp = document.getElementById('ia-identifier-up');
   let idModifiedByUser = !!(iaIdUp && iaIdUp.value); // if it has a value on load from persistence, assume modified unless empty
 
   if (iaTitle && iaIdUp) {
@@ -130,6 +169,7 @@
       if (iaIdUp.value) {
         iaIdUp.value = iaIdUp.value.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
         iaIdUp.dispatchEvent(new Event('change', { bubbles: true }));
+        updateCharCount(iaIdUp, iaIdUpCount);
       }
     });
 
@@ -412,11 +452,168 @@
         .catch(err => {}); // Ignore if fetch fails
 
       const autoIa = getSetting('dep-auto-ia');
+
+      // Record to history right as the upload starts
+      const historyId = 'ia-up-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+      const downloadName = title || (files.length > 0 ? files[0].split(/[\\/]/).pop() : identifier);
+      const historyEntry = {
+        id: historyId,
+        date: new Date().toISOString(),
+        tool: 'Internet Archive',
+        subTool: 'upload',
+        name: downloadName,
+        source: identifier ? `archive.org/details/${identifier}` : `${files.length} File(s)`,
+        output: `https://archive.org/details/${identifier}`,
+        status: 'running',
+        uploadData: {
+          files: [...files],
+          identifier,
+          title,
+          description,
+          subject,
+          collection,
+          creator,
+          date,
+          dateY: y,
+          dateM: m,
+          dateD: d,
+          language,
+          license,
+          mediatype,
+          noDerive
+        }
+      };
+      log._currentIaJob = historyEntry;
+      if (window.api && window.api.addHistory && (!window.shouldRecordHistory || window.shouldRecordHistory(historyEntry))) {
+        window.api.addHistory(historyEntry).then(() => {
+          if (window._refreshHistory) window._refreshHistory();
+        });
+      }
+
       return {
         files, identifier, title, description, subject, collection, creator, date, language, license, mediatype, noDerive, autoIa
       };
     }
   );
+
+  window.fillIaUploadForm = function (data) {
+    if (!data) return;
+
+    // Switch tab to IA
+    const iaNavBtn = document.querySelector('.nav-item[data-tab="ia"]');
+    if (iaNavBtn) iaNavBtn.click();
+
+    // Switch mode to Upload
+    const uploadModeBtn = document.querySelector('#ia-mode-toggle .segment[data-mode="upload"]');
+    if (uploadModeBtn) uploadModeBtn.click();
+
+    // Fill primary metadata
+    if (iaIdUp) {
+      iaIdUp.value = data.identifier || '';
+      idModifiedByUser = true;
+      iaIdUp.dispatchEvent(new Event('input', { bubbles: true }));
+      updateCharCount(iaIdUp, iaIdUpCount);
+    }
+
+    if (iaTitle) {
+      iaTitle.value = data.title || '';
+      titleModifiedByUser = true;
+      iaTitle.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    const descEl = document.getElementById('ia-description');
+    if (descEl) {
+      descEl.value = data.description || '';
+      descEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    const subjEl = document.getElementById('ia-subject');
+    if (subjEl) {
+      subjEl.value = data.subject || '';
+      subjEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    if (iaCollection) {
+      iaCollection.value = data.collection || 'opensource_movies';
+      collectionModifiedByUser = true;
+      iaCollection.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Advanced options
+    const creatorEl = document.getElementById('ia-creator');
+    if (creatorEl) {
+      creatorEl.value = data.creator || '';
+      creatorEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    if (dateY && dateM && dateD) {
+      if (data.date) {
+        const parts = data.date.split('-');
+        dateY.value = parts[0] || '';
+        dateM.value = parts[1] || '';
+        dateD.value = parts[2] || '';
+      } else {
+        dateY.value = data.dateY || '';
+        dateM.value = data.dateM || '';
+        dateD.value = data.dateD || '';
+      }
+    }
+
+    const langEl = document.getElementById('ia-language');
+    if (langEl) {
+      langEl.value = data.language || '';
+      langEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const licEl = document.getElementById('ia-license');
+    if (licEl) {
+      licEl.value = data.license || '';
+      licEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    const mediaEl = document.getElementById('ia-mediatype');
+    if (mediaEl) {
+      mediaEl.value = data.mediatype || '';
+      mediaEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const noDeriveEl = document.getElementById('ia-noderive');
+    if (noDeriveEl) {
+      noDeriveEl.checked = !!data.noDerive;
+      noDeriveEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Populate file list
+    if (iaFiles) {
+      iaFiles.innerHTML = '';
+      if (Array.isArray(data.files) && data.files.length > 0) {
+        data.files.forEach(fp => {
+          if (window.addSortableItem) {
+            window.addSortableItem(iaFiles, fp);
+          }
+        });
+      } else {
+        iaFiles.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
+      }
+    }
+
+    // Open advanced accordion if any advanced option has a value
+    const hasAdv = !!(data.creator || data.date || data.dateY || data.language || data.license || data.mediatype || data.noDerive);
+    const advBody = document.getElementById('ia-adv');
+    const advToggle = document.querySelector('.form-adv-toggle[data-adv="ia-adv"]');
+    if (hasAdv && advBody && !advBody.classList.contains('open')) {
+      advBody.classList.add('open');
+      if (advToggle) advToggle.setAttribute('aria-expanded', 'true');
+    }
+
+    // Visual feedback (flash highlight)
+    [iaIdUp, iaTitle, descEl, subjEl].forEach(el => {
+      if (el) {
+        el.classList.add('flash-highlight');
+        setTimeout(() => el.classList.remove('flash-highlight'), 1200);
+      }
+    });
+  };
 
   // Queue Builder Logic
   const addActionBtn = document.getElementById('ia-edit-add-action');
@@ -532,6 +729,7 @@
     editResetBtn.addEventListener('click', (e) => {
       e.preventDefault();
       document.getElementById('ia-identifier-edit').value = '';
+      updateCharCount(iaIdEdit, iaIdEditCount);
       keyInput.value = '';
       valInput.value = '';
       filesList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
@@ -557,6 +755,22 @@
       }
       
       const autoIa = getSetting('dep-auto-ia');
+      const historyEntry = {
+        id: 'ia-edit-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        date: new Date().toISOString(),
+        tool: 'Internet Archive',
+        subTool: 'edit',
+        name: identifier,
+        source: `archive.org/details/${identifier}`,
+        output: `${queuedEdits.length} Action(s)`,
+        status: 'running'
+      };
+      log._currentIaJob = historyEntry;
+      if (window.api && window.api.addHistory && (!window.shouldRecordHistory || window.shouldRecordHistory(historyEntry))) {
+        window.api.addHistory(historyEntry).then(() => {
+          if (window._refreshHistory) window._refreshHistory();
+        });
+      }
       return { identifier, actions: queuedEdits, autoIa };
     }
   );
@@ -576,9 +790,35 @@
       if (!outputDir) { appendLog(log, '⚠ Please specify an output directory.', 'error'); return null; }
 
       const autoIa = getSetting('dep-auto-ia');
+      const historyEntry = {
+        id: 'ia-dl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        date: new Date().toISOString(),
+        tool: 'Internet Archive',
+        subTool: 'download',
+        name: identifier,
+        source: `archive.org/details/${identifier}`,
+        output: outputDir,
+        status: 'running'
+      };
+      log._currentIaJob = historyEntry;
+      if (window.api && window.api.addHistory && (!window.shouldRecordHistory || window.shouldRecordHistory(historyEntry))) {
+        window.api.addHistory(historyEntry).then(() => {
+          if (window._refreshHistory) window._refreshHistory();
+        });
+      }
       return { identifier, outputDir, autoIa };
     }
   );
+
+  const iaDownInput = document.getElementById('ia-identifier-down');
+  if (iaDownInput) {
+    iaDownInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('ia-download-run')?.click();
+      }
+    });
+  }
 
   // Check IA auth on load
   setTimeout(async () => {

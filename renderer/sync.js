@@ -5,8 +5,11 @@ const TRANSIENT_SYNC_IDS = new Set([
   'yd-url', 'batch-urls', 'ls-url', 'm3-url', 'gdl-url',
   'yd-start', 'yd-end', 'm3-start', 'm3-end',
   'concat-output-name',
-  'ia-identifier-up', 'ia-identifier-edit', 'ia-identifier-dl',
-  'ia-title', 'ia-description', 'ia-creator', 'ia-date', 'ia-collection', 'ia-mediatype', 'ia-subject',
+  'ia-identifier-up', 'ia-identifier-edit', 'ia-identifier-down', 'ia-identifier-dl',
+  'ia-title', 'ia-description', 'ia-creator',
+  'ia-date', 'ia-date-y', 'ia-date-m', 'ia-date-d',
+  'ia-collection', 'ia-mediatype', 'ia-subject', 'ia-license', 'ia-language',
+  'ia-edit-key', 'ia-edit-value',
   'ia-auth-email', 'ia-auth-password'
 ]);
 

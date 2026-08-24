@@ -85,6 +85,24 @@
     }
   });
 
+  const gdlUrlInput = document.getElementById('gdl-url');
+  if (gdlUrlInput) {
+    gdlUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runBtn.click();
+      }
+    });
+  }
+  if (gdlTextarea) {
+    gdlTextarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        runBtn.click();
+      }
+    });
+  }
+
   runBtn.addEventListener('click', () => {
     activeUrls         = getGdlUrls();
     const urls         = activeUrls;

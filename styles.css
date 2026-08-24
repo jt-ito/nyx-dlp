@@ -861,9 +861,63 @@ html, body {
   cursor: pointer;
   border-radius: var(--radius-sm);
   display: flex; align-items: center; justify-content: center;
-  transition: background var(--transition), color var(--transition);
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.theme-toggle { width: 38px; }
+.tb-btn svg {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease;
+}
+.tb-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.tb-btn:active {
+  transform: scale(0.92);
+}
+.theme-toggle {
+  width: 38px;
+}
+.theme-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+.theme-toggle:hover svg {
+  transform: rotate(20deg) scale(1.12);
+}
+#btnMin:hover {
+  background: var(--warning, #f5a623);
+  color: #ffffff;
+}
+#btnMin:hover svg {
+  transform: translateY(1.5px) scale(1.05);
+}
+#btnMin:active {
+  background: #d97706;
+  transform: scale(0.92);
+}
+
+#btnMax:hover {
+  background: var(--success, #28ca41);
+  color: #ffffff;
+}
+#btnMax:hover svg {
+  transform: scale(1.12);
+}
+#btnMax:active {
+  background: #16a34a;
+  transform: scale(0.92);
+}
+
+.tb-btn.close-btn:hover {
+  background: var(--danger, #ff5564);
+  color: #ffffff;
+}
+.tb-btn.close-btn:hover svg {
+  transform: scale(1.15) rotate(90deg);
+}
+.tb-btn.close-btn:active {
+  background: #d63847;
+  transform: scale(0.92);
+}
 
 /* ── Appearance & Theme Card Grid ────────────────────────────── */
 .settings-section {
@@ -1300,6 +1354,25 @@ html, body {
   font-weight: 600;
   border: 1px solid rgba(108,99,255,0.3);
   flex-shrink: 0;
+}
+/* Character counter for text inputs (e.g. IA identifier) */
+.char-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-subtle);
+  letter-spacing: 0.02em;
+  transition: color var(--transition);
+}
+.char-count.char-count-warn {
+  color: var(--warning);
+}
+.char-count.char-count-valid {
+  color: var(--text-muted);
+}
+.char-count.char-count-limit {
+  color: var(--accent);
 }
 /* Expand-to-multi-URL toggle button (standalone, if ever used outside wrap) */
 .btn-url-expand {
@@ -2687,6 +2760,154 @@ details.auto-collapse-details summary:hover {
 
 .history-delete-btn:active {
   transform: scale(0.94);
+}
+
+.history-fill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid rgba(108, 99, 255, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+  font-family: var(--font);
+}
+
+.history-fill-btn:hover {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 6px var(--accent-glow);
+}
+
+.history-fill-btn.filled {
+  background: rgba(40, 202, 65, 0.18);
+  color: var(--success);
+  border-color: rgba(40, 202, 65, 0.4);
+}
+
+/* ── Custom Themed Checkboxes ───────────────────────────── */
+input[type="checkbox"]:not(.toggle-switch input) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  position: relative;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+  margin: 0;
+}
+
+input[type="checkbox"]:not(.toggle-switch input):hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+input[type="checkbox"]:not(.toggle-switch input):focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+input[type="checkbox"]:not(.toggle-switch input):checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+input[type="checkbox"]:not(.toggle-switch input):checked::after {
+  content: "";
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -1px);
+  display: block;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 10px 16px;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition);
+}
+
+.checkbox-label:hover {
+  color: #ffffff;
+}
+
+/* ── Excluded Sites Tags / Chips ────────────────────────── */
+.site-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 11.5px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  transition: all var(--transition);
+  animation: tagPopIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tagPopIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.site-tag:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  box-shadow: 0 2px 6px var(--accent-glow);
+}
+
+.site-tag-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  transition: all 0.15s ease;
+}
+
+.site-tag-remove:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: var(--danger, #ef4444);
+  transform: scale(1.15);
 }
 
 /* ── Remote File Browser Modal ──────────────────────────── */

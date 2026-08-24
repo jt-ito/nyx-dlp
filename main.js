@@ -4,6 +4,7 @@ const { spawn, execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const https = require('https');
+const settingsStore = require('./lib/settings-store.js');
 
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-gpu-cache');
@@ -722,10 +723,32 @@ ipcMain.on('show-notification', (e, { title, body }) => {
 
 // Download History
 const historyFile = path.join(app.getPath('userData'), 'history.json');
+
+function applyRetentionToHistory(history) {
+  try {
+    const retentionVal = settingsStore.getSettingValue('history-retention', 'never');
+    const days = parseInt(retentionVal, 10);
+    if (!isNaN(days) && days > 0 && Array.isArray(history)) {
+      const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
+      return history.filter(item => {
+        if (!item.date) return true;
+        const itemTime = new Date(item.date).getTime();
+        return isNaN(itemTime) || itemTime >= cutoffTime;
+      });
+    }
+  } catch (_) {}
+  return history;
+}
+
 ipcMain.handle('get-history', async () => {
   try {
     if (fs.existsSync(historyFile)) {
-      return JSON.parse(await fs.promises.readFile(historyFile, 'utf8'));
+      let raw = JSON.parse(await fs.promises.readFile(historyFile, 'utf8'));
+      const filtered = applyRetentionToHistory(raw);
+      if (filtered.length !== raw.length) {
+        await fs.promises.writeFile(historyFile, JSON.stringify(filtered, null, 2));
+      }
+      return filtered;
     }
   } catch (e) {}
   return [];
@@ -733,11 +756,20 @@ ipcMain.handle('get-history', async () => {
 
 ipcMain.handle('add-history', async (e, entry) => {
   try {
+    const saveHistory = settingsStore.getSettingValue('save-history', true);
+    if (saveHistory === false) return false;
+
     let history = [];
     if (fs.existsSync(historyFile)) {
       try { history = JSON.parse(await fs.promises.readFile(historyFile, 'utf8')); } catch(e){}
     }
-    history.unshift(entry);
+    const existingIdx = entry && entry.id ? history.findIndex(h => h.id === entry.id) : -1;
+    if (existingIdx >= 0) {
+      history[existingIdx] = { ...history[existingIdx], ...entry };
+    } else {
+      history.unshift(entry);
+    }
+    history = applyRetentionToHistory(history);
     if (history.length > 1000) history = history.slice(0, 1000); // keep last 1000
     await fs.promises.writeFile(historyFile, JSON.stringify(history, null, 2));
     return true;
@@ -875,8 +907,28 @@ function getFfmpegSettings() {
 function prepareRunner(opts, channel, runnerFn) {
   console.log(`[DEBUG prepareRunner] called for channel=${channel}, outputDir=${opts.outputDir}`);
   const originalBroadcast = (data) => broadcastIPC(channel, data);
+
+  const cmdName = String(channel || '').replace('-output', '').replace('gallery-dl', 'gallerydl').replace('concatenator', 'concat');
+  const jobId = 'gui-' + cmdName + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  let jobTracker = null;
+  try {
+    const discordBot = require('./lib/discord-bot.js');
+    if (discordBot && typeof discordBot.registerExternalJob === 'function') {
+      jobTracker = discordBot.registerExternalJob(jobId, {
+        command: cmdName,
+        options: opts,
+        outputDir: opts.outputDir || '',
+        source: 'Desktop App',
+        user: 'Desktop App'
+      });
+    }
+  } catch (_) {}
+
   const broadcast = (data) => {
     originalBroadcast(data);
+    if (jobTracker && typeof jobTracker.onData === 'function') {
+      try { jobTracker.onData(data); } catch (_) {}
+    }
     if (data && data.type === 'exit' && opts.outputDir) {
       activeDownloads.delete(opts.outputDir);
     }
@@ -1040,7 +1092,6 @@ ipcMain.handle('sync-discord-commands', async () => {
 });
 
 // ── State Synchronization ──────────────────────────────────────────────────
-const settingsStore = require('./lib/settings-store.js');
 let fullUiState = settingsStore.loadAllSettings();
 
 ipcMain.on('sync-ui-state', (event, data) => {

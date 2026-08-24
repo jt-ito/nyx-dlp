@@ -13,7 +13,7 @@
   document.getElementById('yd-clear').addEventListener('click', () => clearLog(log));
 
   stopBtn.addEventListener('click', () => {
-    if (currentPid) window.api.stopScript(currentPid);
+    window.api.stopScript(currentPid);
   });
 
   pauseBtn.addEventListener('click', () => {
@@ -45,6 +45,16 @@
     }
   });
 
+  const ydUrlInput = document.getElementById('yd-url');
+  if (ydUrlInput) {
+    ydUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runBtn.click();
+      }
+    });
+  }
+
   runBtn.addEventListener('click', () => {
     const url         = document.getElementById('yd-url').value.trim();
     const outputDir   = document.getElementById('yd-output').value.trim();
@@ -57,6 +67,9 @@
     const dlSubs      = document.getElementById('yd-dl-subs').checked;
     const embedSubs   = document.getElementById('yd-embed-subs').checked;
     const dlChat      = document.getElementById('yd-dl-chat').checked;
+    const dlComments  = document.getElementById('yd-dl-comments')?.checked || false;
+    const dlDesc      = document.getElementById('yd-dl-desc')?.checked || false;
+    const dlTitle     = document.getElementById('yd-dl-title')?.checked || false;
     const dlThumb     = document.getElementById('yd-dl-thumb').checked;
     const embedThumb  = document.getElementById('yd-embed-thumb').checked;
     const skipDownload= document.getElementById('yd-skip-download').checked;
@@ -98,7 +111,7 @@
     window.api.runYtdlp({ 
       url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), 
       container, startTime, endTime, bgutilUrl, useDeno,
-      dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair
+      dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair
     });
   });
 

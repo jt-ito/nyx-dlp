@@ -31,6 +31,16 @@ const SETTINGS_MAP = {
   'discord-bot-enable': { custom: 'discord-bot' },
   'remote-access': { custom: 'remote-access' },
   'ntf-storage': { el: 'ntf-storage-group' },
+  'save-history': { custom: 'save-history' },
+  'history-exclude-ytdlp': {},
+  'history-exclude-batch': {},
+  'history-exclude-livestream': {},
+  'history-exclude-m3u8': {},
+  'history-exclude-gallery': {},
+  'history-exclude-splitter': {},
+  'history-exclude-concatenator': {},
+  'history-exclude-encoder': {},
+  'history-exclude-ia': {},
 };
 const SETTINGS_DEFAULTS = {
   'show-tool-livestream': true,
@@ -66,6 +76,16 @@ const SETTINGS_DEFAULTS = {
   'discord-bot-enable': false,
   'remote-access': false,
   'ntf-storage': true,
+  'save-history': true,
+  'history-exclude-ytdlp': false,
+  'history-exclude-batch': false,
+  'history-exclude-livestream': false,
+  'history-exclude-m3u8': false,
+  'history-exclude-gallery': false,
+  'history-exclude-splitter': false,
+  'history-exclude-concatenator': false,
+  'history-exclude-encoder': false,
+  'history-exclude-ia': false,
 };
 
 function getSetting(key) {
@@ -142,6 +162,19 @@ function applySetting(key, value) {
       }
     } else {
       if (window.api && window.api.stopRemoteServer) window.api.stopRemoteServer();
+    }
+  } else if (cfg.custom === 'save-history') {
+    const historyOptsGroup = document.getElementById('history-options-group');
+    if (historyOptsGroup) {
+      if (value) {
+        historyOptsGroup.style.opacity = '1';
+        historyOptsGroup.style.pointerEvents = 'auto';
+        historyOptsGroup.querySelectorAll('input, select, button').forEach(el => el.disabled = false);
+      } else {
+        historyOptsGroup.style.opacity = '0.45';
+        historyOptsGroup.style.pointerEvents = 'none';
+        historyOptsGroup.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+      }
     }
   }
 }
@@ -882,6 +915,99 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
       setTimeout(() => copySvcCmdBtn.textContent = orig, 1800);
     });
   }
+
+  // ── History Exclude Sites Tag Manager ──────────────────────
+  const siteInput = document.getElementById('history-exclude-site-input');
+  const addSiteBtn = document.getElementById('history-exclude-add-btn');
+  const hiddenSitesInput = document.getElementById('history-exclude-sites');
+  const tagsContainer = document.getElementById('history-exclude-tags');
+
+  function getExcludedSitesList() {
+    const raw = localStorage.getItem('field:history-exclude-sites') || hiddenSitesInput?.value || '';
+    return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  }
+
+  function saveExcludedSitesList(list) {
+    const unique = Array.from(new Set(list));
+    const val = unique.join(', ');
+    if (hiddenSitesInput) {
+      hiddenSitesInput.value = val;
+      hiddenSitesInput.dispatchEvent(new Event('input', { bubbles: true }));
+      hiddenSitesInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    localStorage.setItem('field:history-exclude-sites', val);
+    if (window.api && window.api.syncUiState) {
+      window.api.syncUiState({ id: 'history-exclude-sites', type: 'text', value: val });
+    }
+    renderExcludedSitesTags();
+  }
+
+  function cleanDomain(input) {
+    let s = input.trim().toLowerCase();
+    s = s.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '').trim();
+    return s;
+  }
+
+  function addSitesFromInput() {
+    if (!siteInput) return;
+    const val = siteInput.value.trim();
+    if (!val) return;
+
+    const parts = val.split(/[\s,\n]+/).map(cleanDomain).filter(Boolean);
+    if (parts.length === 0) return;
+
+    const current = getExcludedSitesList();
+    parts.forEach(p => {
+      if (!current.includes(p)) current.push(p);
+    });
+
+    saveExcludedSitesList(current);
+    siteInput.value = '';
+    siteInput.classList.add('flash-highlight');
+    setTimeout(() => siteInput.classList.remove('flash-highlight'), 600);
+  }
+
+  function renderExcludedSitesTags() {
+    if (!tagsContainer) return;
+    tagsContainer.innerHTML = '';
+    const sites = getExcludedSitesList();
+    if (sites.length === 0) {
+      tagsContainer.innerHTML = '<span style="font-size: 11.5px; color: var(--text-muted); font-style: italic;">No sites excluded yet.</span>';
+      return;
+    }
+
+    sites.forEach((site) => {
+      const tag = document.createElement('div');
+      tag.className = 'site-tag';
+      tag.innerHTML = `
+        <span>${site}</span>
+        <button type="button" class="site-tag-remove" title="Remove ${site}">✕</button>
+      `;
+      tag.querySelector('.site-tag-remove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const updated = getExcludedSitesList().filter(s => s !== site);
+        saveExcludedSitesList(updated);
+      });
+      tagsContainer.appendChild(tag);
+    });
+  }
+
+  if (siteInput) {
+    siteInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addSitesFromInput();
+      }
+    });
+  }
+
+  if (addSiteBtn) {
+    addSiteBtn.addEventListener('click', () => {
+      addSitesFromInput();
+    });
+  }
+
+  renderExcludedSitesTags();
 });
 
 function showUpdateBanner(info) {

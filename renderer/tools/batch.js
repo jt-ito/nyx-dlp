@@ -133,6 +133,13 @@
     counter.textContent = urls.length + (urls.length === 1 ? ' URL' : ' URLs');
   });
 
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      runBtn.click();
+    }
+  });
+
   // Auto-newline on paste so each pasted URL lands on its own line
   textarea.addEventListener('paste', (e) => {
     e.preventDefault();
@@ -204,6 +211,9 @@
     const dlSubs      = document.getElementById('batch-dl-subs').checked;
     const embedSubs   = document.getElementById('batch-embed-subs').checked;
     const dlChat      = document.getElementById('batch-dl-chat').checked;
+    const dlComments  = document.getElementById('batch-dl-comments')?.checked || false;
+    const dlDesc      = document.getElementById('batch-dl-desc')?.checked || false;
+    const dlTitle     = document.getElementById('batch-dl-title')?.checked || false;
     const dlThumb     = document.getElementById('batch-dl-thumb').checked;
     const embedThumb  = document.getElementById('batch-embed-thumb').checked;
     const skipDownload= document.getElementById('batch-skip-download').checked;
@@ -260,7 +270,7 @@
       window.api.runBatch({ 
         urls, outputDir, format, rest, skipLive, cookiesPath, 
         extraArgs, container, bgutilUrl, useDeno,
-        dlSubs, embedSubs, dlChat, dlThumb, embedThumb, skipDownload, autoRepair
+        dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoRepair
       });
       console.log('[BATCH DEBUG] window.api.runBatch called successfully');
     } catch (e) {

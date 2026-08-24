@@ -144,6 +144,24 @@
     }
   });
 
+  const m3UrlInput = document.getElementById('m3-url');
+  if (m3UrlInput) {
+    m3UrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runBtn.click();
+      }
+    });
+  }
+  if (m3Textarea) {
+    m3Textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        runBtn.click();
+      }
+    });
+  }
+
   runBtn.addEventListener('click', () => {
     activeUrls         = getM3Urls();
     const urls         = activeUrls;
