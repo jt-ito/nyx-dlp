@@ -746,6 +746,12 @@
             </svg>
             Start Batch
           </button>
+          <button class="btn btn-primary hidden" id="batch-update-queue" title="Update the batch queue with any added, reordered, or removed URLs">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            Update Queue
+          </button>
           <button class="btn btn-pause hidden" id="batch-pause">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
@@ -833,6 +839,79 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
               </div>
+            </div>
+          </div>
+
+          <!-- Twitch & TwitchTracker Metadata Card -->
+          <div id="m3-twitch-card" class="twitch-meta-card hidden">
+            <div class="twitch-card-header">
+              <div class="twitch-user-info">
+                <div class="twitch-avatar-wrap">
+                  <img id="m3-twitch-avatar" class="twitch-avatar hidden" src="" alt="Streamer" />
+                  <div id="m3-twitch-avatar-fallback" class="twitch-avatar-fallback">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
+                  </div>
+                </div>
+                <div class="twitch-user-text">
+                  <div class="twitch-user-name-row">
+                    <span id="m3-twitch-name" class="twitch-name">Channel</span>
+                    <span class="twitch-badge">Twitch VOD</span>
+                  </div>
+                  <div class="twitch-sub-row">
+                    <span id="m3-twitch-date" class="twitch-date">Date</span>
+                    <span class="twitch-dot">•</span>
+                    <span id="m3-twitch-game" class="twitch-game">Category</span>
+                  </div>
+                </div>
+              </div>
+              <div class="twitch-card-actions">
+                <button type="button" class="btn-twitch-action" id="m3-twitch-refresh-btn" title="Refresh metadata">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <a id="m3-twitch-tt-link" href="#" target="_blank" class="btn-twitch-action" title="View on TwitchTracker">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+              </div>
+            </div>
+
+            <div class="twitch-card-body">
+              <div class="twitch-stream-title-box">
+                <span class="twitch-title-label">Stream / VOD Title</span>
+                <input type="text" id="m3-twitch-title-input" class="form-input twitch-title-input" placeholder="Stream Title..." />
+              </div>
+              <div class="twitch-stats-grid" id="m3-twitch-stats-grid">
+                <div class="twitch-stat-chip">
+                  <span class="stat-chip-label">Rank</span>
+                  <span id="m3-tt-rank" class="stat-chip-val">-</span>
+                </div>
+                <div class="twitch-stat-chip">
+                  <span class="stat-chip-label">Avg Viewers</span>
+                  <span id="m3-tt-avg-viewers" class="stat-chip-val">-</span>
+                </div>
+                <div class="twitch-stat-chip">
+                  <span class="stat-chip-label">30d Hours</span>
+                  <span id="m3-tt-hours" class="stat-chip-val">-</span>
+                </div>
+                <div class="twitch-stat-chip">
+                  <span class="stat-chip-label">Followers</span>
+                  <span id="m3-tt-followers" class="stat-chip-val">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full-width" id="m3-auto-title-group">
+            <div class="toggle-card" id="m3-auto-title-toggle">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Auto-Name with VOD Title & TwitchTracker</div>
+                <div class="toggle-desc">Automatically names downloaded files with streamer, broadcast date, and title</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="m3-auto-title" checked />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
             </div>
           </div>
 
@@ -986,6 +1065,14 @@
                 </div>
               </div>
               
+              <div class="form-group full-width" id="m3-channel-override-group">
+                <label class="form-label">Twitch Channel / Streamer <span class="label-optional">(optional override)</span></label>
+                <div class="input-wrapper">
+                  <input type="text" id="m3-twitch-channel" class="form-input" placeholder="e.g. koffie_ch" />
+                </div>
+                <div class="field-hint">Auto-detected from M3U8 chunk metadata. Enter manually here to override if needed.</div>
+              </div>
+
               <div class="form-group full-width" id="m3-repair-group" style="margin-top: 8px;">
                 <div class="toggle-card" id="m3-repair-toggle">
                   <div class="toggle-card-left">
@@ -1279,11 +1366,11 @@
               <div class="form-grid">
                 <div class="form-group full-width">
                   <label class="form-label">Duration (HH:MM:SS or HH:MM:SS.ms)</label>
-                  <input type="text" id="sp-calc-duration" class="form-input" placeholder="e.g. 01:23:45 or 01:23:45.500" />
+                  <input type="text" id="sp-calc-duration" class="form-input" placeholder="e.g. 01:23:45 or 01:23:45.500" autocomplete="off" />
                 </div>
                 <div class="form-group full-width">
                   <label class="form-label">Split into N Parts</label>
-                  <input type="number" id="sp-calc-parts" class="form-input" placeholder="e.g. 3" min="2" />
+                  <input type="number" id="sp-calc-parts" class="form-input" placeholder="e.g. 3" min="2" autocomplete="off" />
                 </div>
                 <div class="form-group full-width" style="margin-top: 4px;">
                   <div class="field-hint" id="sp-calc-desc">Enter duration and parts to calculate time per part...</div>
@@ -1326,12 +1413,12 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label">Base Timestamp / Start Time</label>
-                  <input type="text" id="sp-calc-offset-base" class="form-input" placeholder="e.g. 35:57:44.25" />
+                  <input type="text" id="sp-calc-offset-base" class="form-input" placeholder="e.g. 35:57:44.25" autocomplete="off" />
                   <div class="field-hint">Initial timestamp in HH:MM:SS or HH:MM:SS.ms</div>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Offset / Duration</label>
-                  <input type="text" id="sp-calc-offset-val" class="form-input" placeholder="e.g. 09:49:44" />
+                  <input type="text" id="sp-calc-offset-val" class="form-input" placeholder="e.g. 09:49:44" autocomplete="off" />
                   <div class="field-hint">Duration to add or subtract</div>
                 </div>
                 <div class="form-group full-width" style="margin-top: -6px;">
@@ -1653,7 +1740,7 @@
                 <label class="form-label">Identifier (Required)</label>
                 <span class="char-count" id="ia-identifier-up-count">0 / 100</span>
               </div>
-              <input type="text" id="ia-identifier-up" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" maxlength="100" />
+              <input type="text" id="ia-identifier-up" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" />
             </div>
             
             <div class="form-group">
@@ -1784,7 +1871,7 @@
                 <label class="form-label">Identifier (Required)</label>
                 <span class="char-count" id="ia-identifier-edit-count">0 / 100</span>
               </div>
-              <input type="text" id="ia-identifier-edit" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" maxlength="100" />
+              <input type="text" id="ia-identifier-edit" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" />
             </div>
 
             <div class="form-group" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
@@ -1877,7 +1964,7 @@
                 <label class="form-label">Identifier (Required)</label>
                 <span class="char-count" id="ia-identifier-down-count">0 / 100</span>
               </div>
-              <input type="text" id="ia-identifier-down" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" maxlength="100" />
+              <input type="text" id="ia-identifier-down" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" />
             </div>
 
             <div class="form-group full-width">

@@ -71,7 +71,6 @@
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning('Concatenator');
 
     window.api.runConcatenator({ files, output, forceEncode: !!forceEncode, useMkvFix: !!useMkvFix, quality, outputDir: outputDir || '' });
   });

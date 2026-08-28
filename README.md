@@ -9,7 +9,7 @@ yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive — nine tools,
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-4.0.2-orange)
+![Version](https://img.shields.io/badge/version-4.0.3-orange)
 
 </div>
 
@@ -30,10 +30,11 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 - 🧰 **9 built-in tools** — one unified interface for the download, archival, and video workflows you actually use
 - 🤖 **Discord Bot Integration** — run all tools via Discord slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/progress`, `/status`, `/help`) with live progress embeds, automatic file uploads (≤ 24MB), download history tracking, keep-alive heartbeat monitoring, and automatic gateway reconnection
 - 🐍 **No Python, no manual dependencies** — pure Node.js execution; `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` are vendored and auto-updated for you with permission-safe user data fallbacks
-- ⏯️ **Real process tree pause/resume** — genuine OS-level suspension. Freezes the entire process tree (including background ffmpeg/python threads) simultaneously across Windows, macOS, and Linux, not just a UI lock
+- ⏯️ **Instant non-blocking process management** — genuine OS-level suspension and instant asynchronous tree termination across Windows, macOS, and Linux with zero UI freezing
 - 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock, and more) with live search
 - 🔑 **Automated PO Tokens** — natively integrates `yt-dlp-get-pot` to bypass `web_creator` challenges without manual token passing
 - 📡 **Live & VOD archiving for YouTube and Twitch** — DVR-style capture from the live edge, or from the start where the platform allows, with Twitch auth-token ad bypass
+- 📺 **Twitch & TwitchTracker Metadata Engine** — automatic stream title resolution, channel avatar previews, 30-day TwitchTracker statistics, title-first naming (`[Title] - [Date].mp4`), and rich FFmpeg video metadata tag embedding (artist, title, TwitchTracker URL comment)
 - 🗄️ **Internet Archive integration** — authenticate, upload with full metadata (title, collection, subject tags, license, mediatype), or bulk-download an identifier, with automatic retry on failed uploads
 - 🎞️ **Encoder tool & Smart-Cut Clipping** — batch re-encode queues to chosen video/audio codecs with hardware GPU acceleration (NVENC, AMF, QSV) and exact start/end time trimming
 - 💾 **Form persistence & Download History** — every field is remembered; unified history tracks Desktop, Web Remote, and Discord Bot jobs with title resolution and smooth hover-to-shrink delete actions
@@ -64,7 +65,7 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 - **Live Archiver** `yt-dlp` · `streamlink`  
   Record live YouTube and Twitch broadcasts from the live edge or DVR-style from the start, with native Twitch auth token ad-bypass.
 - **M3U8 Downloader** `ffmpeg`  
-  Pull direct HLS playlists and streaming manifests with optional GPU-accelerated remuxing or re-encoding.
+  Pull direct HLS playlists and streaming manifests with optional GPU-accelerated remuxing/re-encoding, automatic mid-stream reset repair, Twitch & TwitchTracker metadata resolution, and embedded tags.
 
 ### 🎬 Video Processing & Editing
 - **Video Splitter** `ffmpeg`  
@@ -156,6 +157,7 @@ nyx-dlp/
 ├── index.html / styles.css # App shell, dark/light theme gallery, and UI subsystems
 ├── lib/
 │   ├── runners.js          # Centralized process spawning for every tool — execution core
+│   ├── twitch-meta.js      # Twitch & TwitchTracker metadata engine & FFmpeg tag builder
 │   ├── discord-bot.js      # Zero-dependency Discord Gateway & REST client with slash commands
 │   ├── settings-store.js   # Centralized JSON configuration & settings store
 │   ├── vendor-dir.js       # Permission-safe vendor binary path resolver

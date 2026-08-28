@@ -3,7 +3,7 @@ let isSyncingState = false;
 
 const TRANSIENT_SYNC_IDS = new Set([
   'yd-url', 'batch-urls', 'ls-url', 'm3-url', 'gdl-url',
-  'yd-start', 'yd-end', 'm3-start', 'm3-end',
+  'yd-start', 'yd-end', 'm3-start', 'm3-end', 'm3-twitch-title-input',
   'concat-output-name',
   'ia-identifier-up', 'ia-identifier-edit', 'ia-identifier-down', 'ia-identifier-dl',
   'ia-title', 'ia-description', 'ia-creator',

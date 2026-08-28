@@ -2,6 +2,7 @@
 (function () {
   const log        = document.getElementById('batch-log');
   const runBtn     = document.getElementById('batch-run');
+  const updateQueueBtn = document.getElementById('batch-update-queue');
   const pauseBtn   = document.getElementById('batch-pause');
   const stopBtn     = document.getElementById('batch-stop');
   const skipRestBtn = document.getElementById('batch-skip-rest');
@@ -127,16 +128,98 @@
     }
   });
 
+  function getPendingQueueDifference() {
+    const currentUrls = getUrls();
+    const activePending = batchUrlStatuses.filter(s => s.status === 'pending').map(s => s.url);
+    const targetPending = currentUrls.filter(u => !batchUrlStatuses.some(s => s.url === u && (s.status === 'done' || s.status === 'downloading' || s.status === 'failed')));
+    const isIdentical = targetPending.length === activePending.length && targetPending.every((u, i) => u === activePending[i]);
+    return { currentUrls, activePending, targetPending, isIdentical };
+  }
+
+  function updateQueueButtonVisibility() {
+    if (!updateQueueBtn) return;
+    if (!currentPid) {
+      updateQueueBtn.classList.add('hidden');
+      return;
+    }
+    const { isIdentical } = getPendingQueueDifference();
+    if (!isIdentical) {
+      updateQueueBtn.classList.remove('hidden');
+    } else {
+      updateQueueBtn.classList.add('hidden');
+    }
+  }
+
   // Live URL counter
   textarea.addEventListener('input', () => {
     const urls = getUrls();
     counter.textContent = urls.length + (urls.length === 1 ? ' URL' : ' URLs');
+    updateQueueButtonVisibility();
   });
+
+  function syncBatchQueue() {
+    if (!currentPid) return;
+    const outputDir = document.getElementById('batch-output').value.trim();
+    if (!outputDir) {
+      appendLog(log, '⚠ Output directory is not set.', 'error');
+      return;
+    }
+
+    const { activePending, targetPending, isIdentical } = getPendingQueueDifference();
+    if (isIdentical) {
+      updateQueueButtonVisibility();
+      return;
+    }
+
+    // Send updated pending list to backend
+    if (window.api && window.api.updateBatchQueue) {
+      window.api.updateBatchQueue({ outputDir, remainingUrls: targetPending });
+    }
+
+    // Rebuild batchUrlStatuses: keep done, downloading, failed items, replace pending items
+    const nonPending = batchUrlStatuses.filter(s => s.status !== 'pending');
+    const newStatuses = targetPending.map(u => ({ url: u, status: 'pending' }));
+    batchUrlStatuses = [...nonPending, ...newStatuses];
+
+    // Compute added / removed counts
+    const addedCount = targetPending.filter(u => !activePending.includes(u)).length;
+    const removedCount = activePending.filter(u => !targetPending.includes(u)).length;
+
+    // Update batchTotal: finished + downloading + remaining pending
+    const finishedCount = batchUrlStatuses.filter(s => s.status === 'done' || s.status === 'failed').length;
+    const downloadingCount = batchUrlStatuses.filter(s => s.status === 'downloading').length;
+    batchTotal = finishedCount + downloadingCount + targetPending.length;
+    lastProgressText = `${completedCount} / ${batchTotal}`;
+
+    if (progressBar && progressLbl) {
+      progressBar.style.width = (completedCount / batchTotal * 100) + '%';
+      progressLbl.textContent = lastProgressText;
+    }
+    if (statusModal && statusModal.style.display !== 'none') {
+      renderBatchStatusModal();
+    }
+
+    updateQueueButtonVisibility();
+
+    const changes = [];
+    if (addedCount > 0) changes.push(`${addedCount} added`);
+    if (removedCount > 0) changes.push(`${removedCount} removed`);
+    if (changes.length === 0) changes.push('reordered');
+    appendLog(log, `✔ Queue updated: ${changes.join(', ')}. (${targetPending.length} pending, total: ${batchTotal})`, 'success');
+  }
+
+  if (updateQueueBtn) {
+    updateQueueBtn.addEventListener('click', syncBatchQueue);
+  }
 
   textarea.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      runBtn.click();
+      if (currentPid) {
+        syncBatchQueue();
+      } else {
+        runBtn.click();
+      }
     }
   });
 
@@ -168,18 +251,6 @@
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
-    if (pauseBtn.classList.contains('btn-add-queue')) {
-      const newUrls = pauseBtn._newUrls;
-      if (newUrls && newUrls.length > 0) {
-        activeUrls.push(...newUrls);
-        pauseBtn._newUrls = null;
-        pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
-        pauseBtn.classList.remove('btn-add-queue');
-        pauseBtn.classList.toggle('paused', isPaused);
-        appendLog(log, '✔ Added ' + newUrls.length + ' new URL(s) to the queue.', 'success');
-      }
-      return;
-    }
     if (!isPaused) {
       isPaused = true;
       window.api.pauseScript(currentPid);
@@ -238,6 +309,7 @@
 
     completedCount = 0;
     batchTotal = urls.length;
+    activeUrls = [...urls];
     lastProgressText = `0 / ${urls.length}`;
     progressWrap.classList.remove('hidden');
     progressBar.style.width = '0%';
@@ -252,13 +324,13 @@
     pauseBtn.classList.remove('paused');
 
     runBtn.classList.add('hidden');
+    updateQueueButtonVisibility();
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
     skipRestBtn.classList.remove('hidden');
     isResting = false;
     skipNextRest = false;
     updateSkipRestBtn();
-    incRunning('Batch Downloader');
 
     try {
       console.log('[BATCH DEBUG] About to call getBatchExtraArgs');
@@ -296,12 +368,13 @@
 
     window.api.onBatchOutput((data) => {
       if (data.type === 'pid') {
+        if (!currentPid) incRunning('Batch Downloader');
         currentPid = data.pid;
         runBtn.classList.add('hidden');
+        updateQueueButtonVisibility();
         pauseBtn.classList.remove('hidden');
         stopBtn.classList.remove('hidden');
         skipRestBtn.classList.remove('hidden');
-        incRunning('Batch Downloader');
         return;
       }
       if (data.type === 'rest-start') {
@@ -406,6 +479,7 @@
           }
         }
         runBtn.classList.remove('hidden');
+        if (updateQueueBtn) updateQueueBtn.classList.add('hidden');
         pauseBtn.classList.add('hidden');
         stopBtn.classList.add('hidden');
         skipRestBtn.classList.add('hidden');

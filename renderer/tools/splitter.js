@@ -650,6 +650,41 @@
     });
   }
 
+  function clearCalculatorState() {
+    if (calcDurationInput) calcDurationInput.value = '';
+    if (calcPartsInput) calcPartsInput.value = '';
+    if (calcOffsetBaseInput) calcOffsetBaseInput.value = '';
+    if (calcOffsetValInput) calcOffsetValInput.value = '';
+    if (calcResultRow) calcResultRow.style.display = 'none';
+    if (calcTime) calcTime.textContent = '';
+    if (calcDesc) calcDesc.textContent = 'Enter duration and parts to calculate time per part...';
+    if (calcBreakdownWrap) {
+      calcBreakdownWrap.style.display = 'none';
+      calcBreakdownWrap.innerHTML = '';
+    }
+    if (calcPartsBtnText) calcPartsBtnText.textContent = 'Show Parts Breakdown';
+    isBreakdownOpen = false;
+    if (calcOffsetResultRow) calcOffsetResultRow.style.display = 'none';
+    if (calcOffsetTime) calcOffsetTime.textContent = '';
+    if (calcOffsetDesc) calcOffsetDesc.textContent = 'Enter a base timestamp and offset duration to calculate...';
+
+    // Clear any potential localStorage entries
+    const calcKeys = [
+      'field:sp-calc-duration', 'field:sp-calc-parts',
+      'field:sp-calc-offset-base', 'field:sp-calc-offset-val'
+    ];
+    calcKeys.forEach(k => {
+      try { localStorage.removeItem(k); } catch (_) {}
+    });
+  }
+
+  // Clear on startup
+  clearCalculatorState();
+
+  // Clear on window exit / reload
+  window.addEventListener('beforeunload', clearCalculatorState);
+  window.addEventListener('pagehide', clearCalculatorState);
+
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
     if (!isPaused) {
@@ -694,7 +729,6 @@
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning('Splitter');
 
     window.api.runSplitter({ file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '', containerFormat: container || '' });
   });

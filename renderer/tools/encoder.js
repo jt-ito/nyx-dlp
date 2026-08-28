@@ -65,7 +65,6 @@
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning('Encoder');
 
     window.api.runEncoder({ files, mode, vcodec, acodec, quality, outputDir: outputDir || '' });
   });

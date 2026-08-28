@@ -137,7 +137,6 @@
     runBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
-    incRunning('gallery-dl');
 
     window.api.runGalleryDl({ urls, url: urls[0], outputDir, filetypes, metadata, cookiesPath, installGdl });
   });

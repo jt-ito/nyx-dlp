@@ -1040,6 +1040,11 @@ ipcMain.on('append-batch-queue', (event, { outputDir, newUrls }) => {
     fs.appendFileSync(path.join(outputDir, 'queue_additions.txt'), newUrls.join('\n') + '\n', 'utf-8');
   } catch (err) {}
 });
+ipcMain.on('update-batch-queue', (event, { outputDir, remainingUrls }) => {
+  try {
+    fs.writeFileSync(path.join(outputDir, 'queue_update.json'), JSON.stringify({ remainingUrls }), 'utf-8');
+  } catch (err) {}
+});
 ipcMain.on('set-batch-rest', (event, { outputDir, val }) => {
   try {
     fs.writeFileSync(path.join(outputDir, 'rest_state.txt'), String(val), 'utf-8');
@@ -1052,6 +1057,14 @@ ipcMain.on('skip-batch-rest', (event, { outputDir }) => {
 });
 
 // ── Tool 4: M3U8 Downloader/Encoder ──────────────────────────────────────────
+const { resolveTwitchVodMetadata } = require('./lib/twitch-meta');
+ipcMain.handle('fetch-m3u8-twitch-meta', async (_event, opts) => {
+  try {
+    return await resolveTwitchVodMetadata(opts);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
 ipcMain.on('run-m3u8', (event, opts) => prepareRunner(opts, 'm3u8-output', runners.runM3u8));
 
 // ── Tool 5: gallery-dl ────────────────────────────────────────────────────────────

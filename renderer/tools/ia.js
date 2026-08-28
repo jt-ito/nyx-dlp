@@ -56,23 +56,108 @@
   resetCancel.addEventListener('click', () => {
     resetModal.style.display = 'none';
   });
+  function normalizeIdentifier(str) {
+    if (!str) return '';
+    return str.toLowerCase()
+      .replace(/[\s_]+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function triggerCharCountPop(counterEl) {
+    if (!counterEl) return;
+    counterEl.classList.remove('char-count-pop');
+    void counterEl.offsetWidth; // Force CSS reflow to re-trigger animation
+    counterEl.classList.add('char-count-pop');
+  }
+
   // Helper for character count updates
   function updateCharCount(inputEl, counterEl) {
     if (!inputEl || !counterEl) return;
     const len = inputEl.value.length;
-    counterEl.classList.remove('char-count-warn', 'char-count-valid', 'char-count-limit');
+    counterEl.classList.remove('char-count-warn', 'char-count-valid', 'char-count-error', 'char-count-limit');
     if (len === 0) {
       counterEl.textContent = '0 / 100';
+      counterEl.classList.add('char-count-warn');
     } else if (len < 5) {
       counterEl.textContent = `${len} / 100 (min 5)`;
       counterEl.classList.add('char-count-warn');
-    } else if (len === 100) {
-      counterEl.textContent = '100 / 100 (max)';
-      counterEl.classList.add('char-count-limit');
+    } else if (len > 100) {
+      counterEl.textContent = `${len} / 100 (max 100)`;
+      counterEl.classList.add('char-count-error');
     } else {
       counterEl.textContent = `${len} / 100`;
       counterEl.classList.add('char-count-valid');
     }
+  }
+
+  function setupIdentifierInput(inputEl, counterEl, onUserModified) {
+    if (!inputEl || !counterEl) return;
+
+    counterEl.addEventListener('animationend', () => {
+      counterEl.classList.remove('char-count-pop');
+    });
+
+    // Block typing past 100 characters and trigger pop animation
+    inputEl.addEventListener('keydown', (e) => {
+      // Allow control keys, shortcuts (Ctrl/Cmd+A, C, V, X, Z), navigation, backspace, delete
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Home', 'End', 'Enter', 'Escape'].includes(e.key)) return;
+
+      if (e.key.length === 1) { // Single printable character
+        const selectedLength = inputEl.selectionEnd - inputEl.selectionStart;
+        const currentLength = inputEl.value.length;
+        const resultingLength = currentLength - selectedLength + 1;
+
+        if (resultingLength > 100) {
+          e.preventDefault();
+          triggerCharCountPop(counterEl);
+        }
+      }
+    });
+
+    // Paste handling: normalize pasted text, allow full text even if > 100 chars
+    inputEl.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData).getData('text');
+      const normalized = normalizeIdentifier(pasted);
+      const start = inputEl.selectionStart;
+      const end = inputEl.selectionEnd;
+      const before = inputEl.value.substring(0, start);
+      const after = inputEl.value.substring(end);
+      const combined = before + normalized + after;
+      inputEl.value = combined;
+      const newPos = start + normalized.length;
+      inputEl.selectionStart = newPos;
+      inputEl.selectionEnd = newPos;
+      counterEl.classList.remove('char-count-pop');
+      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+      inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+      updateCharCount(inputEl, counterEl);
+      if (onUserModified) onUserModified(true);
+    });
+
+    // Normalize on blur
+    inputEl.addEventListener('blur', () => {
+      if (inputEl.value) {
+        inputEl.value = normalizeIdentifier(inputEl.value);
+        counterEl.classList.remove('char-count-pop');
+        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        updateCharCount(inputEl, counterEl);
+      }
+    });
+
+    // General input listener
+    inputEl.addEventListener('input', (e) => {
+      if (e.isTrusted && onUserModified) {
+        onUserModified(e.target.value.length > 0);
+      }
+      counterEl.classList.remove('char-count-pop');
+      updateCharCount(inputEl, counterEl);
+    });
+
+    updateCharCount(inputEl, counterEl);
   }
 
   const iaIdUp = document.getElementById('ia-identifier-up');
@@ -81,49 +166,59 @@
   const iaIdEditCount = document.getElementById('ia-identifier-edit-count');
   const iaIdDown = document.getElementById('ia-identifier-down');
   const iaIdDownCount = document.getElementById('ia-identifier-down-count');
+  const iaTitle = document.getElementById('ia-title');
 
-  if (iaIdUp && iaIdUpCount) {
-    iaIdUp.addEventListener('input', () => updateCharCount(iaIdUp, iaIdUpCount));
-    updateCharCount(iaIdUp, iaIdUpCount);
-  }
-  if (iaIdEdit && iaIdEditCount) {
-    iaIdEdit.addEventListener('input', () => updateCharCount(iaIdEdit, iaIdEditCount));
-    updateCharCount(iaIdEdit, iaIdEditCount);
-  }
-  if (iaIdDown && iaIdDownCount) {
-    iaIdDown.addEventListener('input', () => updateCharCount(iaIdDown, iaIdDownCount));
-    updateCharCount(iaIdDown, iaIdDownCount);
-  }
+  let idModifiedByUser = !!(iaIdUp && iaIdUp.value);
+  let titleModifiedByUser = !!(iaTitle && iaTitle.value);
+  let collectionModifiedByUser = false;
 
-  resetSubmit.addEventListener('click', () => {
-    document.getElementById('ia-identifier-up').value = '';
-    updateCharCount(iaIdUp, iaIdUpCount);
-    document.getElementById('ia-title').value = '';
-    document.getElementById('ia-description').value = '';
-    document.getElementById('ia-creator').value = '';
-    document.getElementById('ia-date-y').value = '';
-    document.getElementById('ia-date-m').value = '';
-    document.getElementById('ia-date-d').value = '';
-    document.getElementById('ia-subject').value = '';
-    document.getElementById('ia-license').value = '';
-    document.getElementById('ia-collection').value = 'opensource_movies';
-    document.getElementById('ia-mediatype').value = '';
-    document.getElementById('ia-language').value = '';
-    const fileList = document.getElementById('ia-files');
-    if (fileList) fileList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
-    
-    // Also reset identifier tracking
-    idModifiedByUser = false;
-    titleModifiedByUser = false;
-
-    resetModal.style.display = 'none';
+  setupIdentifierInput(iaIdUp, iaIdUpCount, (modified) => {
+    idModifiedByUser = modified !== undefined ? modified : true;
   });
-  
+  setupIdentifierInput(iaIdEdit, iaIdEditCount);
+  setupIdentifierInput(iaIdDown, iaIdDownCount);
+
+  if (resetSubmit) {
+    resetSubmit.addEventListener('click', () => {
+      if (iaIdUp) iaIdUp.value = '';
+      updateCharCount(iaIdUp, iaIdUpCount);
+      if (iaTitle) iaTitle.value = '';
+      const iaDesc = document.getElementById('ia-description');
+      if (iaDesc) iaDesc.value = '';
+      const iaCreator = document.getElementById('ia-creator');
+      if (iaCreator) iaCreator.value = '';
+      const dY = document.getElementById('ia-date-y');
+      const dM = document.getElementById('ia-date-m');
+      const dD = document.getElementById('ia-date-d');
+      if (dY) dY.value = '';
+      if (dM) dM.value = '';
+      if (dD) dD.value = '';
+      const iaSubj = document.getElementById('ia-subject');
+      if (iaSubj) iaSubj.value = '';
+      const iaLic = document.getElementById('ia-license');
+      if (iaLic) iaLic.value = '';
+      const iaCol = document.getElementById('ia-collection');
+      if (iaCol) iaCol.value = 'opensource_movies';
+      const iaMed = document.getElementById('ia-mediatype');
+      if (iaMed) iaMed.value = '';
+      const iaLang = document.getElementById('ia-language');
+      if (iaLang) iaLang.value = '';
+      const fileList = document.getElementById('ia-files');
+      if (fileList) fileList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
+
+      idModifiedByUser = false;
+      titleModifiedByUser = false;
+      collectionModifiedByUser = false;
+
+      resetModal.style.display = 'none';
+    });
+  }
+
   // Date Auto-Focus Logic
   const dateY = document.getElementById('ia-date-y');
   const dateM = document.getElementById('ia-date-m');
   const dateD = document.getElementById('ia-date-d');
-  
+
   if (dateY && dateM && dateD) {
     dateY.addEventListener('input', () => {
       dateY.value = dateY.value.replace(/[^0-9]/g, '');
@@ -154,32 +249,9 @@
     });
   }
 
-  // Auto-populate Identifier from Title
-  const iaTitle = document.getElementById('ia-title');
-  let idModifiedByUser = !!(iaIdUp && iaIdUp.value); // if it has a value on load from persistence, assume modified unless empty
-
-  if (iaTitle && iaIdUp) {
-    iaIdUp.addEventListener('input', (e) => {
-      if (e.isTrusted) {
-        // If user clears it completely, allow auto-populating again
-        idModifiedByUser = e.target.value.length > 0;
-      }
-    });
-    iaIdUp.addEventListener('blur', () => {
-      if (iaIdUp.value) {
-        iaIdUp.value = iaIdUp.value.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        iaIdUp.dispatchEvent(new Event('change', { bubbles: true }));
-        updateCharCount(iaIdUp, iaIdUpCount);
-      }
-    });
-
-  }
-
   // Auto-populate Title and Collection from File Selection
   const iaFiles = document.getElementById('ia-files');
   const iaCollection = document.getElementById('ia-collection');
-  let titleModifiedByUser = !!(iaTitle && iaTitle.value);
-  let collectionModifiedByUser = false;
 
   if (iaCollection) {
     iaCollection.addEventListener('change', (e) => {
@@ -191,7 +263,7 @@
 
   if (iaTitle && iaFiles) {
     iaTitle.addEventListener('input', (e) => {
-      if (e.isTrusted) { // Only mark as user modified if it was an actual user typing
+      if (e.isTrusted) {
         titleModifiedByUser = e.target.value.length > 0;
       }
     });
@@ -214,8 +286,10 @@
           }
 
           if (!idModifiedByUser && iaIdUp) {
-            iaIdUp.value = filename.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            iaIdUp.value = normalizeIdentifier(filename);
             iaIdUp.dispatchEvent(new Event('input', { bubbles: true }));
+            iaIdUp.dispatchEvent(new Event('change', { bubbles: true }));
+            updateCharCount(iaIdUp, iaIdUpCount);
           }
 
           if (iaCollection && !collectionModifiedByUser) {
@@ -438,7 +512,8 @@
 
       if (files.length === 0) return showError('⚠ Please select at least one file to upload.');
       if (!identifier) return showError('⚠ Please provide an identifier.');
-      if (identifier.length < 5 || identifier.length > 100) return showError('⚠ Identifier must be between 5 and 100 characters.');
+      if (identifier.length < 5) return showError('⚠ Identifier must be at least 5 characters.');
+      if (identifier.length > 100) return showError(`⚠ Identifier exceeds the 100-character maximum limit (${identifier.length}/100). Please shorten it before uploading.`);
       if (!description) return showError('⚠ Please provide a description.');
       if (!subject) return showError('⚠ Please provide subject tags.');
 

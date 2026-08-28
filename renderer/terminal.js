@@ -359,7 +359,7 @@ function triggerRaf(logEl) {
       requestAnimationFrame(() => {
         logEl._rafPending = false;
         const count = flushPendingLogsSync(logEl);
-        if (logEl._autoFollow !== false && logEl.closest('.tab-panel')?.classList.contains('active')) {
+        if (logEl._autoFollow && !logEl._programmaticScroll && logEl.closest('.tab-panel')?.classList.contains('active')) {
           const scrollEl = logEl._scrollEl || logEl;
           scrollEl.scrollTop = scrollEl.scrollHeight;
           logEl._lastScrollTop = scrollEl.scrollTop;
@@ -382,6 +382,7 @@ function clearLog(logEl) {
   logEl._lineCount = 0;
   logEl._hasError = false;
   logEl._autoFollow = true;
+  logEl._programmaticScroll = false;
   logEl._lastScrollTop = 0;
   logEl._pendingLines = []; logEl._lastRenderedLine = null;
   logEl._rafPending = false;
@@ -419,51 +420,73 @@ function markBodyStart(logEl) {
   logEl._scrollBtn = btn;
 
   logEl._autoFollow = true;
+  logEl._programmaticScroll = false;
 
   const updateBtn = () => {
     if (!logEl.closest('.tab-panel')?.classList.contains('active')) {
       btn.style.display = 'none';
       return;
     }
-    const hasScroll = scrollEl.scrollHeight > scrollEl.clientHeight + 20;
-    if (!hasScroll) { btn.style.display = 'none'; return; }
+    const maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight;
+    if (maxScroll <= 20) {
+      btn.style.display = 'none';
+      return;
+    }
     btn.style.display = 'flex';
+
     if (logEl._autoFollow) {
       btn.innerHTML = svgUp;
-      btn.title = 'Scroll to top - pauses auto-scroll';
+      btn.title = 'Scroll to top (pauses auto-scroll)';
     } else {
       btn.innerHTML = svgDown;
-      btn.title = 'Scroll to bottom - resumes auto-scroll';
+      btn.title = 'Scroll to bottom (resumes auto-scroll)';
     }
   };
   logEl._updateScrollBtn = updateBtn;
 
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (logEl._autoFollow) {
+      // 1-click jump to TOP
       logEl._autoFollow = false;
+      logEl._programmaticScroll = true;
       scrollEl.scrollTo({ top: 0, behavior: 'auto' });
+      scrollEl.scrollTop = 0;
       logEl._lastScrollTop = 0;
+      updateBtn();
+      requestAnimationFrame(() => {
+        scrollEl.scrollTop = 0;
+        logEl._lastScrollTop = 0;
+        logEl._programmaticScroll = false;
+        updateBtn();
+      });
     } else {
+      // 1-click jump to BOTTOM
       logEl._autoFollow = true;
-      const target = scrollEl.scrollHeight - scrollEl.clientHeight;
-      scrollEl.scrollTo({ top: target, behavior: 'auto' });
-      logEl._lastScrollTop = target;
+      logEl._programmaticScroll = true;
+      scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'auto' });
+      scrollEl.scrollTop = scrollEl.scrollHeight;
+      logEl._lastScrollTop = scrollEl.scrollTop;
+      updateBtn();
+      requestAnimationFrame(() => {
+        scrollEl.scrollTop = scrollEl.scrollHeight;
+        logEl._lastScrollTop = scrollEl.scrollTop;
+        logEl._programmaticScroll = false;
+        updateBtn();
+      });
     }
-    updateBtn();
   });
 
   logEl._scrollBtnHandler = () => {
+    if (logEl._programmaticScroll) return;
     const currentScrollTop = scrollEl.scrollTop;
-    const isScrollingUp = currentScrollTop < (logEl._lastScrollTop || 0);
     logEl._lastScrollTop = currentScrollTop;
 
-    const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 60;
-    
-    if (isScrollingUp) {
-      logEl._autoFollow = false;
-    } else if (atBottom) {
-      logEl._autoFollow = true;
-    }
+    const distanceFromBottom = scrollEl.scrollHeight - currentScrollTop - scrollEl.clientHeight;
+    // If within 60px of bottom, resume auto-follow; otherwise pause auto-follow
+    logEl._autoFollow = (distanceFromBottom <= 60);
     updateBtn();
   };
 
@@ -471,7 +494,7 @@ function markBodyStart(logEl) {
     if (!logEl.closest('.tab-panel')?.classList.contains('active')) return;
     logEl._scrollBtnHandler?.();
   };
-  scrollEl.addEventListener('scroll', logEl._scrollListener);
+  scrollEl.addEventListener('scroll', logEl._scrollListener, { passive: true });
 }
 
 function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
