@@ -9,7 +9,7 @@ yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive — nine tools,
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-4.0.3-orange)
+![Version](https://img.shields.io/badge/version-4.0.4-orange)
 
 </div>
 
@@ -65,7 +65,7 @@ Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop 
 - **Live Archiver** `yt-dlp` · `streamlink`  
   Record live YouTube and Twitch broadcasts from the live edge or DVR-style from the start, with native Twitch auth token ad-bypass.
 - **M3U8 Downloader** `ffmpeg`  
-  Pull direct HLS playlists and streaming manifests with optional GPU-accelerated remuxing/re-encoding, automatic mid-stream reset repair, Twitch & TwitchTracker metadata resolution, and embedded tags.
+  Pull direct HLS playlists and streaming manifests with optional 15x concurrent multi-threaded Native HLS acceleration, GPU-accelerated remuxing/re-encoding, automatic mid-stream reset repair, Twitch & TwitchTracker metadata resolution, and embedded tags.
 
 ### 🎬 Video Processing & Editing
 - **Video Splitter** `ffmpeg`  

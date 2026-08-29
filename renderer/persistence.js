@@ -37,7 +37,7 @@
     'batch-rest', 'batch-skip-live', 'm3-encode', 'gdl-meta',
     'ls-use-cookies', 'ls-from-start', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies',
     'ia-noderive', 'concat-force', 'concat-mkv',
-    'yd-auto-repair', 'batch-auto-repair', 'm3-auto-repair',
+    'yd-auto-repair', 'batch-auto-repair', 'm3-auto-repair', 'm3-native-hls', 'm3-auto-title',
     'yd-dl-subs', 'yd-embed-subs', 'yd-dl-chat', 'yd-dl-comments', 'yd-dl-desc', 'yd-dl-title', 'yd-dl-thumb', 'yd-embed-thumb', 'yd-skip-download', 'yd-get-url',
     'batch-dl-subs', 'batch-embed-subs', 'batch-dl-chat', 'batch-dl-comments', 'batch-dl-desc', 'batch-dl-title', 'batch-dl-thumb', 'batch-embed-thumb', 'batch-skip-download'
   ];
@@ -74,6 +74,7 @@
       'batch-use-cookies': true,
       'm3-use-cookies': true,
       'gdl-use-cookies': true,
+      'm3-auto-title': true,
       'yd-dl-subs': true,
       'yd-embed-subs': true,
       'yd-dl-thumb': true,

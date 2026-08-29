@@ -381,6 +381,7 @@ function clearLog(logEl) {
   logEl.innerHTML = '';
   logEl._lineCount = 0;
   logEl._hasError = false;
+  logEl._isExited = false;
   logEl._autoFollow = true;
   logEl._programmaticScroll = false;
   logEl._lastScrollTop = 0;
@@ -400,6 +401,7 @@ function clearLog(logEl) {
 
 
 function markBodyStart(logEl) {
+  logEl._isExited = false;
   const m = document.createElement('div');
   m.className = 'log-body-start';
   logEl.appendChild(m);
@@ -617,6 +619,9 @@ function handleOutput(logEl, data, onExit) {
     }
     case 'error':   appendLog(logEl, '⚠ ' + data.text, 'error'); break;
     case 'exit': {
+      if (logEl._isExited) break;
+      logEl._isExited = true;
+
       if (logEl._streamBuffer) {
         let cls = classifyLine(logEl._streamBuffer, 'stdout', logEl);
         appendLog(logEl, logEl._streamBuffer, cls);

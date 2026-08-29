@@ -7,12 +7,14 @@
   const encodeChk  = document.getElementById('m3-encode');
   const encodeOpts = document.querySelectorAll('.encode-options');
   const modeBtnM3  = document.getElementById('m3-url-mode-btn');
-  const singleDiv  = document.getElementById('m3-url-single');
-  const multiDiv   = document.getElementById('m3-url-multi');
-  const countBadge = document.getElementById('m3-url-counter');
+  const singleDiv       = document.getElementById('m3-url-single');
+  const multiDiv        = document.getElementById('m3-url-multi');
+  const countBadge      = document.getElementById('m3-url-counter');
   const autoRepairChk   = document.getElementById('m3-auto-repair');
   const autoTitleChk    = document.getElementById('m3-auto-title');
   const autoTitleToggle = document.getElementById('m3-auto-title-toggle');
+  const nativeHlsChk    = document.getElementById('m3-native-hls');
+  const nativeHlsToggle = document.getElementById('m3-native-hls-toggle');
   const twitchChannelIn = document.getElementById('m3-twitch-channel');
 
   const twitchCard      = document.getElementById('m3-twitch-card');
@@ -62,6 +64,14 @@
       if (e.target.closest('label')) return;
       autoTitleChk.checked = !autoTitleChk.checked;
       autoTitleChk.dispatchEvent(new Event('change'));
+    });
+  }
+
+  if (nativeHlsToggle && nativeHlsChk) {
+    nativeHlsToggle.addEventListener('click', (e) => {
+      if (e.target.closest('label')) return;
+      nativeHlsChk.checked = !nativeHlsChk.checked;
+      nativeHlsChk.dispatchEvent(new Event('change'));
     });
   }
 
@@ -210,6 +220,16 @@
   if (twitchRefreshBtn) {
     twitchRefreshBtn.addEventListener('click', () => {
       checkAndFetchTwitchMeta(true);
+    });
+  }
+
+  if (twitchTtLink) {
+    twitchTtLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = twitchTtLink.getAttribute('href');
+      if (url && url !== '#' && window.api && window.api.openExternal) {
+        window.api.openExternal(url);
+      }
     });
   }
 
@@ -410,6 +430,7 @@
     const audioBitrate = document.getElementById('m3-audio-bitrate').value;
     const cookiesPath  = (document.getElementById('m3-use-cookies').checked ? document.getElementById('m3-cookies').value.trim() : '');
     const autoRepair   = autoRepairChk ? autoRepairChk.checked : false;
+    const nativeHls    = nativeHlsChk ? nativeHlsChk.checked : false;
     const autoTitle    = autoTitleChk ? autoTitleChk.checked : false;
     let twitchChannel  = (twitchChannelIn && twitchChannelIn.value.trim()) || (currentTwitchMeta ? currentTwitchMeta.channel : '');
     let customTitle    = autoTitle ? ((twitchTitleIn && twitchTitleIn.value.trim()) || '') : '';
@@ -475,6 +496,7 @@
     } else {
       appendLog(log, `  Re-encode: No (direct ${container.toUpperCase()} download)`, 'cmd');
     }
+    if (nativeHls) appendLog(log, `  Engine: Native HLS (15x concurrency)`, 'cmd');
     if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
     appendLog(log, '', 'stdout');
     markBodyStart(log);
@@ -503,6 +525,7 @@
       container,
       cookiesPath,
       autoRepair,
+      nativeHls,
       autoTitle,
       twitchChannel: autoTitle ? twitchChannel : '',
       customFilename: autoTitle ? customFilename : '',
