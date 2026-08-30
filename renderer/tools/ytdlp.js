@@ -75,6 +75,7 @@
     const skipDownload= document.getElementById('yd-skip-download').checked;
     const getUrl      = document.getElementById('yd-get-url').checked;
     const autoRepair  = document.getElementById('yd-auto-repair').checked;
+    const twitchSubOnly = document.getElementById('yd-twitch-sub-only')?.checked ?? true;
 
     if (!url)       { appendLog(log, '⚠ Please enter a URL.', 'error'); return; }
     if (!outputDir) { appendLog(log, '⚠ Please choose an output directory.', 'error'); return; }
@@ -111,7 +112,7 @@
     window.api.runYtdlp({ 
       url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), 
       container, startTime, endTime, bgutilUrl, useDeno,
-      dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair
+      dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair, twitchSubOnly
     });
   });
 

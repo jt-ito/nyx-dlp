@@ -38,8 +38,8 @@
     'ls-use-cookies', 'ls-from-start', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies',
     'ia-noderive', 'concat-force', 'concat-mkv',
     'yd-auto-repair', 'batch-auto-repair', 'm3-auto-repair', 'm3-native-hls', 'm3-auto-title',
-    'yd-dl-subs', 'yd-embed-subs', 'yd-dl-chat', 'yd-dl-comments', 'yd-dl-desc', 'yd-dl-title', 'yd-dl-thumb', 'yd-embed-thumb', 'yd-skip-download', 'yd-get-url',
-    'batch-dl-subs', 'batch-embed-subs', 'batch-dl-chat', 'batch-dl-comments', 'batch-dl-desc', 'batch-dl-title', 'batch-dl-thumb', 'batch-embed-thumb', 'batch-skip-download'
+    'yd-dl-subs', 'yd-embed-subs', 'yd-dl-chat', 'yd-dl-comments', 'yd-dl-desc', 'yd-dl-title', 'yd-dl-thumb', 'yd-embed-thumb', 'yd-twitch-sub-only', 'yd-skip-download', 'yd-get-url',
+    'batch-dl-subs', 'batch-embed-subs', 'batch-dl-chat', 'batch-dl-comments', 'batch-dl-desc', 'batch-dl-title', 'batch-dl-thumb', 'batch-embed-thumb', 'batch-twitch-sub-only', 'batch-skip-download'
   ];
 
   TEXT_IDS.forEach(id => {
@@ -79,10 +79,12 @@
       'yd-embed-subs': true,
       'yd-dl-thumb': true,
       'yd-embed-thumb': true,
+      'yd-twitch-sub-only': true,
       'batch-dl-subs': true,
       'batch-embed-subs': true,
       'batch-dl-thumb': true,
-      'batch-embed-thumb': true
+      'batch-embed-thumb': true,
+      'batch-twitch-sub-only': true
     };
     el.checked = v !== null ? v === 'true' : (defaults[id] ?? false);
     el.dispatchEvent(new Event('change'));

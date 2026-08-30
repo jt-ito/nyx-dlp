@@ -289,6 +289,7 @@
     const embedThumb  = document.getElementById('batch-embed-thumb').checked;
     const skipDownload= document.getElementById('batch-skip-download').checked;
     const autoRepair  = document.getElementById('batch-auto-repair').checked;
+    const twitchSubOnly = document.getElementById('batch-twitch-sub-only')?.checked ?? true;
     const autoYpdl    = getSetting('dep-auto-ypdl');
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter at least one valid URL.', 'error'); return; }
@@ -342,7 +343,7 @@
       window.api.runBatch({ 
         urls, outputDir, format, rest, skipLive, cookiesPath, 
         extraArgs, container, bgutilUrl, useDeno,
-        dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoRepair
+        dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoRepair, twitchSubOnly
       });
       console.log('[BATCH DEBUG] window.api.runBatch called successfully');
     } catch (e) {
