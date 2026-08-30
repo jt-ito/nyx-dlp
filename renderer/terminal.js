@@ -499,6 +499,26 @@ function markBodyStart(logEl) {
   scrollEl.addEventListener('scroll', logEl._scrollListener, { passive: true });
 }
 
+function convertSubOnlyErrorsToWarnings(logEl) {
+  if (!logEl) return;
+  if (logEl._pendingLines && logEl._pendingLines.length > 0) {
+    for (const item of logEl._pendingLines) {
+      if (item && item.text && /subscriber-only content/i.test(item.text)) {
+        item.cls = 'warning line-subonly-resolved';
+        item.text = item.text.replace(/\bERROR:\s*/i, 'WARNING: ').replace(/✖/g, '⚠');
+      }
+    }
+  }
+  const errNodes = logEl.querySelectorAll('.line-error, .line-stderr');
+  errNodes.forEach(node => {
+    if (/subscriber-only content/i.test(node.textContent)) {
+      node.classList.remove('line-error', 'line-stderr');
+      node.classList.add('line-warning', 'line-subonly-resolved');
+      node.textContent = node.textContent.replace(/\bERROR:\s*/i, 'WARNING: ').replace(/✖/g, '⚠');
+    }
+  });
+}
+
 function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
   flushPendingLogsSync(logEl);
   trailingCount = trailingCount || 1;
@@ -542,7 +562,7 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
   } else {
     const isVisible = failed
       ? el => el.classList.contains('line-error') || el.classList.contains('line-warning') || el.classList.contains('line-stderr') || el.classList.contains('line-blocked') || el.classList.contains('line-success')
-      : el => el.classList.contains('line-success') || el.classList.contains('line-error') || el.classList.contains('line-warning');
+      : el => el.classList.contains('line-success') || (el.classList.contains('line-error') && !el.classList.contains('line-subonly-resolved')) || (el.classList.contains('line-warning') && !el.classList.contains('line-subonly-resolved'));
 
     const detail = document.createElement('div');
     detail.className = 'log-collapse-container';
@@ -588,6 +608,10 @@ function handleOutput(logEl, data, onExit) {
       
       lines.forEach(line => {
         if (line === '') return;
+
+        if (/\[Twitch Sub-Only\] Resolved sub-only stream/i.test(line)) {
+          convertSubOnlyErrorsToWarnings(logEl);
+        }
         
         // Capture download filename / destination from stdout
         const nameMatch = line.match(/\[download\]\s+Destination:\s*(.+)/i)
@@ -646,6 +670,7 @@ function handleOutput(logEl, data, onExit) {
       };
 
       if (!failed) {
+        convertSubOnlyErrorsToWarnings(logEl);
         if (bs && bs.failed > 0) {
           const ok = bs.total - bs.failed;
           appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');

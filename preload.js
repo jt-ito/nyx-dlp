@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('api', {
   updateBatchQueue: (opts) => ipcRenderer.send('update-batch-queue', opts),
   runM3u8:       (opts) => ipcRenderer.send('run-m3u8', opts),
   fetchM3u8TwitchMeta: (opts) => ipcRenderer.invoke('fetch-m3u8-twitch-meta', opts),
+  saveKickIvsMapping: (opts) => ipcRenderer.invoke('save-kick-ivs-mapping', opts),
   runGalleryDl:  (opts) => ipcRenderer.send('run-gallery-dl', opts),
   runSplitter:   (opts) => ipcRenderer.send('run-splitter', opts),
   runConcatenator: (opts) => ipcRenderer.send('run-concatenator', opts),

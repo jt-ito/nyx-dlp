@@ -15,8 +15,7 @@
   const autoTitleToggle = document.getElementById('m3-auto-title-toggle');
   const nativeHlsChk    = document.getElementById('m3-native-hls');
   const nativeHlsToggle = document.getElementById('m3-native-hls-toggle');
-  const twitchChannelIn = document.getElementById('m3-twitch-channel');
-
+  const twitchBadge     = document.getElementById('m3-twitch-badge');
   const twitchCard      = document.getElementById('m3-twitch-card');
   const twitchAvatar    = document.getElementById('m3-twitch-avatar');
   const twitchFallback  = document.getElementById('m3-twitch-avatar-fallback');
@@ -26,6 +25,10 @@
   const twitchTitleIn   = document.getElementById('m3-twitch-title-input');
   const twitchTtLink    = document.getElementById('m3-twitch-tt-link');
   const twitchRefreshBtn = document.getElementById('m3-twitch-refresh-btn');
+  const channelEditRow  = document.getElementById('m3-channel-edit-row');
+  const manualChannelIn = document.getElementById('m3-manual-channel-input');
+  const saveChannelBtn  = document.getElementById('m3-save-channel-btn');
+  const metaLoadingMsg  = document.getElementById('m3-meta-loading-msg');
   const ttRank          = document.getElementById('m3-tt-rank');
   const ttAvg           = document.getElementById('m3-tt-avg-viewers');
   const ttHours         = document.getElementById('m3-tt-hours');
@@ -37,9 +40,13 @@
   let activeUrls        = [];
   let currentTwitchMeta = null;
   let metaFetchTimer    = null;
+  let activeMetaFetchPromise = null;
 
   const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
+
+  const TWITCH_FALLBACK_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>`;
+  const KICK_FALLBACK_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1.333 0h8v5.333H12v2.667h2.667V5.333h2.666V2.667h2.667V0h2.667v8h-2.667v2.667h-2.666v2.666h2.666V16h2.667v8h-2.667v-2.667h-2.667v-2.666h-2.666V16h-2.667v2.667H9.333V24h-8V0zm8 8H6.667v8h2.666v-2.667H12v-2.666H9.333V8z"/></svg>`;
 
   // Toggle encode options
   encodeChk.addEventListener('change', () => {
@@ -90,7 +97,7 @@
 
   let lastCheckedUrl = '';
 
-  // ── Twitch & TwitchTracker Metadata Resolution ──────────
+  // ── Twitch & Kick Metadata Resolution ──────────
   async function checkAndFetchTwitchMeta(force = false) {
     const isAutoTitleOn = autoTitleChk ? autoTitleChk.checked : false;
     if (!isAutoTitleOn) {
@@ -101,9 +108,8 @@
 
     const urls = getM3Urls();
     const primaryUrl = urls[0] || '';
-    const channelOverride = twitchChannelIn ? twitchChannelIn.value.trim() : '';
 
-    if (!primaryUrl && !channelOverride) {
+    if (!primaryUrl) {
       if (twitchCard) twitchCard.classList.add('hidden');
       currentTwitchMeta = null;
       lastCheckedUrl = '';
@@ -117,32 +123,56 @@
       if (twitchTitleIn && !twitchTitleIn._userEdited) twitchTitleIn.value = '';
     }
 
-    const isTwitchCandidate = channelOverride ||
-      primaryUrl.includes('vodvod.top') ||
+    const isMetaCandidate = primaryUrl.includes('vodvod.top') ||
       primaryUrl.includes('twitchtracker.com') ||
+      primaryUrl.includes('kicktracker.net') ||
+      primaryUrl.includes('kick.com') ||
       primaryUrl.includes('cloudfront.net') ||
       primaryUrl.includes('ttvnw.net') ||
       primaryUrl.includes('.m3u8');
 
-    if (!isTwitchCandidate) {
+    if (!isMetaCandidate) {
       if (twitchCard) twitchCard.classList.add('hidden');
       currentTwitchMeta = null;
+      if (metaLoadingMsg) metaLoadingMsg.classList.add('hidden');
       return;
+    }
+
+    if (twitchCard) twitchCard.classList.remove('hidden');
+    if (metaLoadingMsg) {
+      metaLoadingMsg.classList.remove('hidden');
+      metaLoadingMsg.style.color = '#ff4d4d';
+      metaLoadingMsg.textContent = '⏳ Pulling stream info, please wait...';
+    }
+    if (twitchTitleIn && !twitchTitleIn._userEdited && !twitchTitleIn.value) {
+      twitchTitleIn.placeholder = '⏳ Pulling stream info, please wait...';
     }
 
     if (window.api && window.api.fetchM3u8TwitchMeta) {
       try {
-        const meta = await window.api.fetchM3u8TwitchMeta({
-          url: primaryUrl,
-          channel: channelOverride
+        activeMetaFetchPromise = window.api.fetchM3u8TwitchMeta({
+          url: primaryUrl
         });
+        const meta = await activeMetaFetchPromise;
 
         if (meta && (meta.channel || meta.title || meta.streamId)) {
           currentTwitchMeta = meta;
           if (twitchCard) twitchCard.classList.remove('hidden');
 
           // Populate streamer info
-          if (twitchName) twitchName.textContent = meta.displayName || meta.channel || 'Twitch Stream';
+          if (twitchName) twitchName.textContent = meta.displayName || meta.channel || 'Live Stream';
+          const isKick = meta.source === 'kick' || !!meta.kickTrackerUrl;
+          if (twitchBadge) {
+            twitchBadge.textContent = isKick ? 'Kick Stream' : 'Twitch VOD';
+          }
+          if (twitchFallback) {
+            twitchFallback.innerHTML = isKick ? KICK_FALLBACK_SVG : TWITCH_FALLBACK_SVG;
+            if (isKick) {
+              twitchFallback.style.color = '#53fc18';
+            } else {
+              twitchFallback.style.color = '';
+            }
+          }
           if (meta.profileImage && twitchAvatar) {
             twitchAvatar.src = meta.profileImage;
             twitchAvatar.classList.remove('hidden');
@@ -173,9 +203,15 @@
             }
           }
 
-          // TwitchTracker stats
+          // Stats (TwitchTracker or KickTracker)
           const tt = meta.twitchTracker?.channel;
-          if (tt) {
+          const ks = meta.stats;
+          if (ks) {
+            if (ttRank) ttRank.textContent = ks.peakViewers ? `${ks.peakViewers} peak` : '-';
+            if (ttAvg) ttAvg.textContent = ks.avgViewers || '-';
+            if (ttHours) ttHours.textContent = ks.hoursWatched ? `${ks.hoursWatched}h` : (ks.hoursStreamed ? `${ks.hoursStreamed}h` : '-');
+            if (ttFollowers) ttFollowers.textContent = ks.hoursStreamed ? `${ks.hoursStreamed}h live` : '-';
+          } else if (tt) {
             if (ttRank) ttRank.textContent = tt.rank ? `#${Number(tt.rank).toLocaleString()}` : '-';
             if (ttAvg) ttAvg.textContent = tt.avgViewers ? Number(tt.avgViewers).toLocaleString() : '-';
             if (ttHours) ttHours.textContent = tt.hoursWatched ? `${Math.round(tt.hoursWatched).toLocaleString()}h` : '-';
@@ -187,23 +223,106 @@
             if (ttFollowers) ttFollowers.textContent = '-';
           }
 
-          // TwitchTracker link
+          // Tracker link (TwitchTracker or KickTracker)
           if (twitchTtLink) {
             const ch = meta.channel;
-            if (ch) {
+            if (meta.kickTrackerUrl) {
+              twitchTtLink.href = meta.kickTrackerUrl;
+              twitchTtLink.title = 'View on KickTracker';
+              twitchTtLink.style.display = '';
+            } else if (ch) {
               twitchTtLink.href = meta.streamId ? `https://twitchtracker.com/${ch}/streams/${meta.streamId}` : `https://twitchtracker.com/${ch}`;
+              twitchTtLink.title = 'View on TwitchTracker';
               twitchTtLink.style.display = '';
             } else {
               twitchTtLink.style.display = 'none';
             }
           }
+          // Show or hide Streamer linking box (only for unmapped Kick streams)
+          const isUnmappedKick = isKick && (!meta.channel || meta.channel === 'Kick Stream' || !meta.stats);
+          if (channelEditRow) {
+            channelEditRow.classList.toggle('hidden', !isUnmappedKick);
+          }
+          if (manualChannelIn) {
+            manualChannelIn.value = (meta.channel && !meta.channel.includes(' ') && meta.channel !== 'Kick Stream') ? meta.channel : '';
+          }
         } else {
-          if (!channelOverride && twitchCard) twitchCard.classList.add('hidden');
+          if (twitchCard) twitchCard.classList.add('hidden');
         }
       } catch (err) {
-        console.warn('Twitch meta fetch error:', err);
+        console.warn('Metadata fetch error:', err);
+      } finally {
+        activeMetaFetchPromise = null;
+        if (metaLoadingMsg) metaLoadingMsg.classList.add('hidden');
+        if (twitchTitleIn) twitchTitleIn.placeholder = 'Stream Title...';
       }
     }
+  }
+
+  async function linkManualChannel() {
+    const rawChannel = manualChannelIn ? manualChannelIn.value.trim().toLowerCase() : '';
+    if (!rawChannel) return;
+    const urls = getM3Urls();
+    const primaryUrl = urls[0] || '';
+    const ivsMatch = primaryUrl.match(/\/ivs\/v1\/\d+\/([^\/]+)\//);
+    const ivsId = ivsMatch ? ivsMatch[1] : '';
+
+    if (ivsId && window.api && window.api.saveKickIvsMapping) {
+      await window.api.saveKickIvsMapping({ ivsId, channel: rawChannel });
+    }
+
+    if (metaLoadingMsg) {
+      metaLoadingMsg.classList.remove('hidden');
+      metaLoadingMsg.style.color = '#50fa7b';
+      metaLoadingMsg.textContent = `⏳ Linking ${rawChannel} & fetching stream info...`;
+    }
+
+    try {
+      if (window.api && window.api.fetchM3u8TwitchMeta) {
+        const meta = await window.api.fetchM3u8TwitchMeta({ url: primaryUrl, channel: rawChannel });
+        if (meta) {
+          currentTwitchMeta = meta;
+          if (channelEditRow && meta.channel && meta.channel !== 'Kick Stream') {
+            channelEditRow.classList.add('hidden');
+          }
+          if (twitchName) twitchName.textContent = meta.displayName || meta.channel;
+          if (meta.title && twitchTitleIn) {
+            twitchTitleIn.value = meta.title;
+            twitchTitleIn._userEdited = false;
+          }
+          if (meta.profileImage && twitchAvatar) {
+            twitchAvatar.src = meta.profileImage;
+            twitchAvatar.classList.remove('hidden');
+            if (twitchFallback) twitchFallback.classList.add('hidden');
+          }
+          if (meta.kickTrackerUrl && twitchTtLink) {
+            twitchTtLink.href = meta.kickTrackerUrl;
+            twitchTtLink.style.display = '';
+          }
+          const ks = meta.stats;
+          if (ks) {
+            if (ttRank) ttRank.textContent = ks.peakViewers ? `${ks.peakViewers} peak` : '-';
+            if (ttAvg) ttAvg.textContent = ks.avgViewers || '-';
+            if (ttHours) ttHours.textContent = ks.hoursWatched ? `${ks.hoursWatched}h` : (ks.hoursStreamed ? `${ks.hoursStreamed}h` : '-');
+            if (ttFollowers) ttFollowers.textContent = ks.hoursStreamed ? `${ks.hoursStreamed}h live` : '-';
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (metaLoadingMsg) metaLoadingMsg.classList.add('hidden');
+  }
+
+  if (saveChannelBtn) {
+    saveChannelBtn.addEventListener('click', linkManualChannel);
+  }
+  if (manualChannelIn) {
+    manualChannelIn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        linkManualChannel();
+      }
+    });
   }
 
   function debounceTwitchMeta() {
@@ -231,10 +350,6 @@
         window.api.openExternal(url);
       }
     });
-  }
-
-  if (twitchChannelIn) {
-    twitchChannelIn.addEventListener('input', debounceTwitchMeta);
   }
 
   // ── Quality preset ──────────────────────────────────────
@@ -283,8 +398,11 @@
         m3Textarea.value = pasted.trim() + '\n';
         updateM3Count();
       }
-      currentTwitchMeta = null;
-      if (twitchTitleIn) { twitchTitleIn.value = ''; twitchTitleIn._userEdited = false; }
+      const pUrl = getM3Urls()[0] || '';
+      if (pUrl !== lastCheckedUrl) {
+        currentTwitchMeta = null;
+        if (twitchTitleIn && !twitchTitleIn._userEdited) twitchTitleIn.value = '';
+      }
       debounceTwitchMeta();
     });
     singleInput.addEventListener('input', () => {
@@ -292,8 +410,11 @@
         const singleVal = singleInput.value.trim();
         m3Textarea.value = singleVal ? singleVal + '\n' : '';
       }
-      currentTwitchMeta = null;
-      if (twitchTitleIn) { twitchTitleIn.value = ''; twitchTitleIn._userEdited = false; }
+      const pUrl = getM3Urls()[0] || '';
+      if (pUrl !== lastCheckedUrl) {
+        currentTwitchMeta = null;
+        if (twitchTitleIn && !twitchTitleIn._userEdited) twitchTitleIn.value = '';
+      }
       debounceTwitchMeta();
     });
   }
@@ -306,8 +427,11 @@
     } else if (list.length === 0 && singleInput) {
       singleInput.value = '';
     }
-    currentTwitchMeta = null;
-    if (twitchTitleIn) { twitchTitleIn.value = ''; twitchTitleIn._userEdited = false; }
+    const pUrl = list[0] || '';
+    if (pUrl !== lastCheckedUrl) {
+      currentTwitchMeta = null;
+      if (twitchTitleIn && !twitchTitleIn._userEdited) twitchTitleIn.value = '';
+    }
     debounceTwitchMeta();
   });
 
@@ -320,8 +444,11 @@
     m3Textarea.value = m3Textarea.value.substring(0, start) + insert + m3Textarea.value.substring(end);
     m3Textarea.selectionStart = m3Textarea.selectionEnd = start + insert.length;
     updateM3Count();
-    currentTwitchMeta = null;
-    if (twitchTitleIn) { twitchTitleIn.value = ''; twitchTitleIn._userEdited = false; }
+    const pUrl = getM3Urls()[0] || '';
+    if (pUrl !== lastCheckedUrl) {
+      currentTwitchMeta = null;
+      if (twitchTitleIn && !twitchTitleIn._userEdited) twitchTitleIn.value = '';
+    }
     debounceTwitchMeta();
   });
 
@@ -352,9 +479,10 @@
         }
       }
     }
-    currentTwitchMeta = null;
-    if (twitchTitleIn) { twitchTitleIn.value = ''; twitchTitleIn._userEdited = false; }
-    debounceTwitchMeta();
+    const currentPrimary = getM3Urls()[0] || '';
+    if (currentPrimary !== lastCheckedUrl) {
+      debounceTwitchMeta();
+    }
   });
 
   function getM3Urls() {
@@ -440,21 +568,47 @@
     const m3PathErr = isProtectedPath(outputDir);
     if (m3PathErr)         { appendLog(log, '⚠ ' + m3PathErr, 'error'); return; }
 
-    // If autoTitle is enabled and metadata hasn't loaded yet, resolve it before starting
-    if (autoTitle && !customTitle && urls.length === 1 && urls[0].includes('.m3u8') && window.api && window.api.fetchM3u8TwitchMeta) {
-      if (!currentTwitchMeta || (!currentTwitchMeta.title && !currentTwitchMeta.profileImage)) {
-        try {
-          const meta = await window.api.fetchM3u8TwitchMeta({ url: urls[0], channel: twitchChannel });
-          if (meta) {
-            currentTwitchMeta = meta;
-            if (meta.title && twitchTitleIn) {
-              twitchTitleIn.value = meta.title;
-              customTitle = meta.title;
-            }
-            if (meta.channel) twitchChannel = meta.channel;
-          }
-        } catch (e) { }
+    // If autoTitle is enabled and metadata is still actively being fetched:
+    if (autoTitle && (activeMetaFetchPromise || metaFetchTimer || (!currentTwitchMeta && urls.length === 1 && urls[0].includes('.m3u8')))) {
+      if (twitchCard) {
+        twitchCard.classList.remove('hidden');
+        twitchCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (metaLoadingMsg) {
+        metaLoadingMsg.classList.remove('hidden');
+        metaLoadingMsg.style.color = '#ff4d4d';
+        metaLoadingMsg.textContent = '⏳ Pulling stream info, please wait...';
+      }
+      if (twitchTitleIn && !twitchTitleIn.value) {
+        twitchTitleIn.placeholder = '⏳ Pulling stream info, please wait...';
+      }
+
+      if (metaFetchTimer) {
+        clearTimeout(metaFetchTimer);
+        metaFetchTimer = null;
+        checkAndFetchTwitchMeta(true);
+      }
+
+      if (activeMetaFetchPromise) {
+        appendLog(log, '⏳ Pulling stream info before download starts...', 'cmd');
+        try {
+          await activeMetaFetchPromise;
+        } catch (_) {}
+      } else if (!currentTwitchMeta && urls.length === 1 && window.api && window.api.fetchM3u8TwitchMeta) {
+        try {
+          appendLog(log, '⏳ Pulling stream info before download starts...', 'cmd');
+          await checkAndFetchTwitchMeta(true);
+        } catch (_) {}
+      }
+
+      if (metaLoadingMsg) metaLoadingMsg.classList.add('hidden');
+      if (twitchTitleIn) twitchTitleIn.placeholder = 'Stream Title...';
+
+      // Update customTitle and channel with newly resolved metadata
+      customTitle = autoTitle ? ((twitchTitleIn && twitchTitleIn.value.trim()) || '') : '';
+      twitchChannel = currentTwitchMeta ? currentTwitchMeta.channel : '';
     }
 
     let customFilename = '';

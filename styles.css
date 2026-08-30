@@ -3458,6 +3458,60 @@ input[type="checkbox"]:not(.toggle-switch input):checked::after {
   gap: 4px;
 }
 
+.twitch-channel-edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.twitch-channel-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.twitch-channel-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.twitch-channel-input:focus {
+  border-color: #9146ff;
+  box-shadow: 0 0 0 3px rgba(145, 71, 255, 0.2);
+}
+
+.btn-twitch-link {
+  height: 38px;
+  padding: 0 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.btn-twitch-link:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.btn-twitch-link:active {
+  transform: scale(0.98);
+}
+
 .twitch-title-label {
   font-size: 11px;
   font-weight: 600;

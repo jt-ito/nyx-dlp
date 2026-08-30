@@ -731,7 +731,14 @@ ipcMain.handle('pick-folders', async () => {
 // Disk space — returns { free, total } in bytes for the drive containing `drivePath`
 ipcMain.handle('get-disk-space', async (_e, drivePath) => {
   try {
-    const stats = await fs.promises.statfs(drivePath);
+    if (!drivePath || typeof drivePath !== 'string') return null;
+    let target = drivePath.trim();
+    while (target && !fs.existsSync(target)) {
+      const parent = path.dirname(target);
+      if (parent === target) break;
+      target = parent;
+    }
+    const stats = await fs.promises.statfs(target || drivePath);
     return { free: stats.bfree * stats.bsize, total: stats.blocks * stats.bsize };
   } catch {
     return null;
@@ -1056,13 +1063,27 @@ ipcMain.on('skip-batch-rest', (event, { outputDir }) => {
   } catch (err) {}
 });
 
-// ── Tool 4: M3U8 Downloader/Encoder ──────────────────────────────────────────
-const { resolveTwitchVodMetadata } = require('./lib/twitch-meta');
+const { resolveTwitchVodMetadata, sanitizeFilename } = require('./lib/twitch-meta');
+const { isKickVodUrl, isKickM3u8Url, resolveKickM3u8Metadata, saveIvsMapping } = require('./lib/kick-meta');
 ipcMain.handle('fetch-m3u8-twitch-meta', async (_event, opts) => {
   try {
+    if (opts && (isKickVodUrl(opts.url) || isKickM3u8Url(opts.url) || (opts.channel && isKickM3u8Url(opts.url)))) {
+      const kickRes = await resolveKickM3u8Metadata(opts);
+      if (kickRes) return kickRes;
+    }
     return await resolveTwitchVodMetadata(opts);
   } catch (err) {
     return { error: err.message };
+  }
+});
+ipcMain.handle('save-kick-ivs-mapping', async (_event, { ivsId, channel }) => {
+  try {
+    if (typeof saveIvsMapping === 'function') {
+      saveIvsMapping(ivsId, channel);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 ipcMain.on('run-m3u8', (event, opts) => prepareRunner(opts, 'm3u8-output', runners.runM3u8));

@@ -26,7 +26,7 @@ if (typeof window.api === 'undefined') {
     }
   };
 
-  let remoteVersion = '4.0.5';
+  let remoteVersion = '4.0.6';
   fetch('/package.json').then(r => r.json()).then(pkg => {
     if (pkg && pkg.version) {
       remoteVersion = pkg.version;
@@ -178,6 +178,7 @@ if (typeof window.api === 'undefined') {
     updateBatchQueue: (opts) => sendWs({ type: 'ipc-send', channel: 'update-batch-queue', data: opts }),
     runM3u8:       (opts) => sendWs({ type: 'ipc-send', channel: 'run-m3u8', data: opts }),
     fetchM3u8TwitchMeta: (opts) => window.api.invoke ? window.api.invoke('fetch-m3u8-twitch-meta', opts) : Promise.resolve({}),
+    saveKickIvsMapping: (opts) => window.api.invoke ? window.api.invoke('save-kick-ivs-mapping', opts) : Promise.resolve({}),
     runGalleryDl:  (opts) => sendWs({ type: 'ipc-send', channel: 'run-gallery-dl', data: opts }),
     runSplitter:   (opts) => sendWs({ type: 'ipc-send', channel: 'run-splitter', data: opts }),
     runConcatenator: (opts) => sendWs({ type: 'ipc-send', channel: 'run-concatenator', data: opts }),

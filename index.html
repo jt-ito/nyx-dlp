@@ -855,7 +855,7 @@
             <div class="twitch-card-header">
               <div class="twitch-user-info">
                 <div class="twitch-avatar-wrap">
-                  <img id="m3-twitch-avatar" class="twitch-avatar hidden" src="" alt="Streamer" />
+                  <img id="m3-twitch-avatar" class="twitch-avatar hidden" src="" alt="" onerror="this.classList.add('hidden'); const fb = document.getElementById('m3-twitch-avatar-fallback'); if (fb) fb.classList.remove('hidden');" />
                   <div id="m3-twitch-avatar-fallback" class="twitch-avatar-fallback">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
                   </div>
@@ -863,7 +863,7 @@
                 <div class="twitch-user-text">
                   <div class="twitch-user-name-row">
                     <span id="m3-twitch-name" class="twitch-name">Channel</span>
-                    <span class="twitch-badge">Twitch VOD</span>
+                    <span id="m3-twitch-badge" class="twitch-badge">Twitch VOD</span>
                   </div>
                   <div class="twitch-sub-row">
                     <span id="m3-twitch-date" class="twitch-date">Date</span>
@@ -883,9 +883,29 @@
             </div>
 
             <div class="twitch-card-body">
+              <div class="twitch-channel-edit-box hidden" id="m3-channel-edit-row">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="twitch-title-label">Streamer Username</span>
+                  <span class="form-label-hint" style="font-size: 11px; color: var(--text-subtle);">Link IVS to Streamer</span>
+                </div>
+                <div class="twitch-channel-row">
+                  <div class="input-wrapper" style="flex: 1;">
+                    <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <input type="text" id="m3-manual-channel-input" class="form-input twitch-channel-input" placeholder="e.g. xqc, adinross, lospollostv..." />
+                  </div>
+                  <button type="button" class="btn-twitch-link" id="m3-save-channel-btn" title="Link IVS to Streamer">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Link Streamer</span>
+                  </button>
+                </div>
+              </div>
+
               <div class="twitch-stream-title-box">
                 <span class="twitch-title-label">Stream / VOD Title</span>
                 <input type="text" id="m3-twitch-title-input" class="form-input twitch-title-input" placeholder="Stream Title..." />
+                <div id="m3-meta-loading-msg" class="hidden" style="color: #ff4d4d; font-size: 11.5px; font-weight: 600; margin-top: 5px; display: flex; align-items: center; gap: 6px;">
+                  <span>⏳ Pulling stream info, please wait...</span>
+                </div>
               </div>
               <div class="twitch-stats-grid" id="m3-twitch-stats-grid">
                 <div class="twitch-stat-chip">
