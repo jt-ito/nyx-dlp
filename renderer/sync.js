@@ -38,48 +38,50 @@ document.addEventListener('change', (e) => {
 });
 
 if (window.api) {
+  function applyStateToElement(el, data) {
+    if (!el || data === undefined || data === null) return;
+    const isCheckable = el.type === 'checkbox' || el.type === 'radio';
+    if (isCheckable) {
+      const targetChecked = (typeof data === 'object' && data !== null)
+        ? (data.checked !== undefined ? !!data.checked : !!data.value)
+        : (data === true || data === 'true');
+      if (el.checked !== targetChecked) {
+        el.checked = targetChecked;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } else {
+      let targetValue = (typeof data === 'object' && data !== null)
+        ? (data.value !== undefined ? data.value : '')
+        : String(data);
+      if (targetValue === 'undefined' || targetValue === 'null' || targetValue === undefined || targetValue === null) {
+        targetValue = '';
+      }
+      if (el.value !== targetValue) {
+        el.value = targetValue;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }
+
   if (window.api.onSyncUiState) {
     window.api.onSyncUiState((data) => {
+      if (!data || !data.id) return;
       isSyncingState = true;
       const el = document.getElementById(data.id) || document.querySelector(`[data-setting="${data.id}"]`);
-      if (el) {
-        if (data.type === 'checkbox' || data.type === 'radio') {
-          if (el.checked !== data.checked) {
-             el.checked = data.checked;
-             el.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        } else {
-          if (el.value !== data.value) {
-             el.value = data.value;
-             el.dispatchEvent(new Event('input', { bubbles: true }));
-             el.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        }
-      }
+      applyStateToElement(el, data);
       isSyncingState = false;
     });
   }
 
   if (window.api.onFullState) {
     window.api.onFullState((state) => {
+      if (!state || typeof state !== 'object') return;
       isSyncingState = true;
       Object.keys(state).forEach(id => {
         const data = state[id];
         const el = document.getElementById(id) || document.querySelector(`[data-setting="${id}"]`);
-        if (el) {
-          if (data.type === 'checkbox' || data.type === 'radio') {
-            if (el.checked !== data.checked) {
-               el.checked = data.checked;
-               el.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-          } else {
-            if (el.value !== data.value) {
-               el.value = data.value;
-               el.dispatchEvent(new Event('input', { bubbles: true }));
-               el.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-          }
-        }
+        applyStateToElement(el, data);
       });
       isSyncingState = false;
     });

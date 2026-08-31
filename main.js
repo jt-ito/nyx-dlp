@@ -1124,14 +1124,20 @@ discordBot.onStatusChange((statusObj) => {
 
 ipcMain.handle('start-discord-bot', async (event, opts) => {
   try {
+    const optsObj = opts || {};
+    let dlDir = optsObj.downloadDir;
+    if (!dlDir || dlDir === 'undefined' || dlDir === 'null') dlDir = '';
+    else dlDir = String(dlDir).trim();
+
     saveAppSettings({
       discordEnabled: true,
-      discordToken: opts.token || '',
-      discordClientId: opts.clientId || '',
-      discordDownloadDir: opts.downloadDir || ''
+      discordToken: optsObj.token ? String(optsObj.token).trim() : '',
+      discordClientId: optsObj.clientId ? String(optsObj.clientId).trim() : '',
+      discordDownloadDir: dlDir
     });
-    settingsStore.updateSetting('discord-download-dir', opts.downloadDir || '');
-    await discordBot.start(opts);
+    settingsStore.updateSetting('discordDownloadDir', dlDir);
+    settingsStore.updateSetting('discord-download-dir', { id: 'discord-download-dir', type: 'text', value: dlDir });
+    await discordBot.start({ ...optsObj, downloadDir: dlDir });
     return discordBot.getStatus();
   } catch (err) {
     return { status: 'error', error: err.message };
@@ -1147,11 +1153,13 @@ ipcMain.handle('stop-discord-bot', async () => {
 ipcMain.handle('get-discord-bot-status', async () => {
   const current = loadAppSettings();
   const status = discordBot.getStatus();
+  let savedDir = current.discordDownloadDir || settingsStore.getSettingValue('discord-download-dir') || '';
+  if (savedDir === 'undefined' || savedDir === 'null') savedDir = '';
   return {
     ...status,
     savedToken: current.discordToken || '',
     savedClientId: current.discordClientId || '',
-    savedDownloadDir: current.discordDownloadDir || '',
+    savedDownloadDir: savedDir,
     savedEnabled: !!current.discordEnabled
   };
 });

@@ -423,12 +423,16 @@ function startServer(options, appPath) {
                 const discordBot = require('./lib/discord-bot.js');
                 discordBot.onStatusChange((statusObj) => broadcast('discord-bot-status', statusObj));
                 const opts = msg.data || {};
+                let dlDir = opts.downloadDir;
+                if (!dlDir || dlDir === 'undefined' || dlDir === 'null') dlDir = '';
+                else dlDir = String(dlDir).trim();
+
                 settingsStore.updateSetting('discordEnabled', true);
-                settingsStore.updateSetting('discordToken', opts.token || '');
-                settingsStore.updateSetting('discordClientId', opts.clientId || '');
-                settingsStore.updateSetting('discordDownloadDir', opts.downloadDir || '');
-                settingsStore.updateSetting('discord-download-dir', opts.downloadDir || '');
-                await discordBot.start(opts);
+                settingsStore.updateSetting('discordToken', opts.token ? String(opts.token).trim() : '');
+                settingsStore.updateSetting('discordClientId', opts.clientId ? String(opts.clientId).trim() : '');
+                settingsStore.updateSetting('discordDownloadDir', dlDir);
+                settingsStore.updateSetting('discord-download-dir', { id: 'discord-download-dir', type: 'text', value: dlDir });
+                await discordBot.start({ ...opts, downloadDir: dlDir });
                 result = discordBot.getStatus();
               } catch (err) {
                 result = { status: 'error', error: err.message };
@@ -442,11 +446,13 @@ function startServer(options, appPath) {
               const discordBot = require('./lib/discord-bot.js');
               discordBot.onStatusChange((statusObj) => broadcast('discord-bot-status', statusObj));
               const status = discordBot.getStatus();
+              let savedDir = settingsStore.getSettingValue('discordDownloadDir') || settingsStore.getSettingValue('discord-download-dir') || '';
+              if (savedDir === 'undefined' || savedDir === 'null') savedDir = '';
               result = {
                 ...status,
-                savedToken: settingsStore.getSettingValue('discordToken', ''),
-                savedClientId: settingsStore.getSettingValue('discordClientId', ''),
-                savedDownloadDir: settingsStore.getSettingValue('discordDownloadDir', '') || settingsStore.getSettingValue('discord-download-dir', ''),
+                savedToken: settingsStore.getSettingValue('discordToken', '') || '',
+                savedClientId: settingsStore.getSettingValue('discordClientId', '') || '',
+                savedDownloadDir: savedDir,
                 savedEnabled: !!settingsStore.getSettingValue('discordEnabled', false)
               };
           } else if (msg.channel === 'sync-discord-commands') {

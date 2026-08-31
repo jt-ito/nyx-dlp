@@ -122,10 +122,6 @@ if (typeof window.api === 'undefined') {
     installAppUpdate: () => {},
     onAppUpdateProgress: () => {},
     onAppUpdateDownloaded: () => {},
-    startDiscordBot: () => Promise.resolve({ status: 'disconnected' }),
-    stopDiscordBot: () => Promise.resolve(true),
-    getDiscordBotStatus: () => Promise.resolve({ status: 'disconnected', botUser: null, clientId: '', inviteUrl: '' }),
-    syncDiscordCommands: () => Promise.resolve(true),
     _invokeRaw: (channel, data) => new Promise(resolve => {
       const id = nextReqId++;
       pendingRequests.set(id, resolve);

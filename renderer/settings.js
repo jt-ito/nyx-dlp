@@ -639,9 +639,14 @@ document.addEventListener('DOMContentLoaded', () => {
     window.api.getDiscordBotStatus().then(statusObj => {
       if (discordTokenInput && statusObj.savedToken) discordTokenInput.value = statusObj.savedToken;
       if (discordClientIdInput && statusObj.savedClientId) discordClientIdInput.value = statusObj.savedClientId;
-      const savedDir = statusObj.savedDownloadDir || statusObj.downloadDir;
-      if (discordDownloadDir && savedDir && savedDir !== 'undefined' && savedDir !== 'null') {
-        discordDownloadDir.value = savedDir;
+      let savedDir = statusObj.savedDownloadDir || statusObj.downloadDir;
+      if (savedDir === 'undefined' || savedDir === 'null') savedDir = '';
+      if (discordDownloadDir) {
+        if (savedDir) {
+          discordDownloadDir.value = savedDir;
+        } else if (discordDownloadDir.value === 'undefined' || discordDownloadDir.value === 'null') {
+          discordDownloadDir.value = '';
+        }
       }
       handleTokenOrClientChange();
       updateDiscordStatusUI(statusObj);
