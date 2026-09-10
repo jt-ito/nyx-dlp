@@ -5,11 +5,17 @@ function classifyLine(text, streamType, logEl) {
     if (logEl) logEl._hasLiveEventIgnore = true;
     return 'info';
   }
+  if (/Did not get any data blocks/i.test(t) || /fragment not found;\s*Skipping fragment/i.test(t)) {
+    return 'info';
+  }
   if (/^\[debug\]/i.test(t))                    return 'debug';
-  if (/^warning:/i.test(t) || /^⚠/i.test(t) || /keepalive request failed/i.test(t) || /retrying with new connection/i.test(t) || /will reconnect/i.test(t)) return 'warning';
+  if (/^warning:/i.test(t) || /^⚠/i.test(t) || /keepalive request failed/i.test(t) || /retrying with new connection/i.test(t) || /will reconnect/i.test(t) || /Got error:\s*HTTP Error/i.test(t)) return 'warning';
   if (/^error:/i.test(t) || /^✖/i.test(t) || /^❌/i.test(t)) return 'error';
   if (/has already been downloaded/i.test(t))    return 'info';
-  if (/\berror\b.*:/i.test(t) && streamType === 'stderr') return 'error';
+  if (/\berror\b.*:/i.test(t) && streamType === 'stderr') {
+    if (/Did not get any data blocks/i.test(t)) return 'info';
+    return 'error';
+  }
   
   if (logEl && logEl._hasLiveEventIgnore) return streamType; // Suppress tracebacks if ignored
 
@@ -33,7 +39,8 @@ function appendLog(logEl, text, cls) {
   
   const isIaProgressLine = /^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:uploading|downloading)\s+.*:\s*\d+(?:\.\d+)?%/i.test(text);
   if (getSetting('console-timestamps') &&
-      !/^\s*(?:\d+:\s*)?\[download\]\s+(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B)|Destination:)/i.test(text) &&
+      !/^\s*(?:\[\d+:\d+:\d+\])/.test(text) &&
+      !/^\s*(?:\d+:\s*)?\[download\]\s+(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B))/i.test(text) &&
       !/frame=\s*\d+/i.test(text) &&
       !isIaProgressLine
   ) {
@@ -99,9 +106,15 @@ function appendLog(logEl, text, cls) {
   if (destMatch) {
       if (!logEl._liveProgresses) logEl._liveProgresses = new Map();
       if (!logEl._threadDestinations) logEl._threadDestinations = new Map();
-      const tId = destMatch[1] || 'main';
+      if (!logEl._destinationList) logEl._destinationList = [];
+      const tId = destMatch[1];
       let fileName = destMatch[2].trim().replace(/\\/g, '/').split('/').pop();
-      logEl._threadDestinations.set(tId, fileName);
+      if (tId) {
+        logEl._threadDestinations.set(tId, fileName);
+      } else {
+        logEl._destinationList.push(fileName);
+        logEl._threadDestinations.set('main', fileName);
+      }
       logEl._pendingLines.push({ text, cls, count: 1 });
       if (!logEl._rafPending) triggerRaf(logEl);
       return;
@@ -134,8 +147,15 @@ function appendLog(logEl, text, cls) {
       if (!logEl._threadDestinations) logEl._threadDestinations = new Map();
       
       let threadId = 'ffmpeg';
-      if (dlMatch) threadId = (dlMatch[1] || 'main');
-      else if (isIaProgress) {
+      if (dlMatch) {
+          threadId = (dlMatch[1] || 'main');
+          if (dlMatch[1] && !logEl._threadDestinations.has(threadId) && logEl._destinationList && logEl._destinationList.length > 0) {
+              const idx = parseInt(dlMatch[1], 10) - 1;
+              if (idx >= 0 && idx < logEl._destinationList.length) {
+                  logEl._threadDestinations.set(threadId, logEl._destinationList[idx]);
+              }
+          }
+      } else if (isIaProgress) {
           threadId = 'ia';
           logEl._threadDestinations.set('ia', isIaProgress[1].trim().replace(/\\/g, '/').split('/').pop());
       }
@@ -156,14 +176,36 @@ function appendLog(logEl, text, cls) {
           if (cleanText.startsWith('100.0%')) cleanText = cleanText.substring(6).trim();
           if (cleanText.startsWith('-')) cleanText = cleanText.substring(1).trim();
           
-          let dispName = logEl._threadDestinations.get(threadId) || (threadId !== 'ffmpeg' && threadId !== 'ia' ? `thread ${threadId}` : '');
+          let rawName = logEl._threadDestinations.get(threadId) || (threadId !== 'ffmpeg' && threadId !== 'ia' ? `thread ${threadId}` : '');
+          let dispName = rawName;
+          if (rawName) {
+            const fmtMatch = rawName.match(/\.(f\d+|video|audio)\.[a-zA-Z0-9]+$/i);
+            if (fmtMatch) {
+              const isVideo = fmtMatch[1].toLowerCase().includes('video') || /f(?:299|137|136|135|134|133|160|248|247|244|243|242|278|399|398|397|396|395|394)/.test(fmtMatch[1]);
+              const isAudio = fmtMatch[1].toLowerCase().includes('audio') || /f(?:140|251|250|249|139|141)/.test(fmtMatch[1]);
+              const trackType = isVideo ? 'Video' : (isAudio ? 'Audio' : 'Track');
+              dispName = `${trackType} (${fmtMatch[1]})`;
+            }
+          }
           let prefix = dispName ? `✔ Completed ${dispName} — 100% ` : `✔ Completed — 100% `;
           
           logEl._pendingLines.push({ text: prefix + cleanText, cls: 'success', count: 1 });
           logEl._liveProgresses.delete(threadId);
           logEl._downloadCompleted = true;
       } else {
-          logEl._liveProgresses.set(threadId, { text, cls: cls + ' line-progress' });
+          let progressText = text;
+          if (logEl._fragTracker) {
+            const liveEdge = logEl._fragTracker.liveEdge || 0;
+            progressText = progressText.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
+              const cur = parseInt(curStr, 10);
+              if (liveEdge > 0) {
+                const maxVal = Math.max(cur, liveEdge);
+                return `(frag ${cur} / ${maxVal})`;
+              }
+              return `(frag ${cur} / live)`;
+            });
+          }
+          logEl._liveProgresses.set(threadId, { text: progressText, cls: cls + ' line-progress' });
       }
       
       if (!logEl._rafPending) triggerRaf(logEl);
@@ -241,7 +283,18 @@ function flushPendingLogsSync(logEl) {
               frag.appendChild(div);
               logEl._currentAutoCollapse = null;
           } else {
-              const isAutoCollapse = (item.cls === 'debug' || item.cls === 'info') && !item.text.includes('▶ Starting') && !item.text.includes('? Starting');
+              const isAutoCollapse = (item.cls === 'debug' || item.cls === 'info') 
+                  && !item.text.includes('▶')
+                  && !item.text.includes('⏸')
+                  && !item.text.includes('📁')
+                  && !item.text.includes('⏹')
+                  && !item.text.includes('✔')
+                  && !item.text.includes('⚠')
+                  && !item.text.includes('✖')
+                  && !item.text.includes('Starting')
+                  && !item.text.includes('Resumed')
+                  && !item.text.includes('Paused')
+                  && !item.text.includes('Stopped');
               if (isAutoCollapse) {
                   if (!logEl._currentAutoCollapse) {
                       logEl._currentAutoCollapse = document.createElement('details');
@@ -374,13 +427,29 @@ function clearLog(logEl) {
     logEl._scrollListener = null;
     logEl._hasScrollListener = false;
     logEl._scrollBtnHandler = null;
-    logEl._scrollEl = null;
+  }
+  if (logEl._wheelListener) {
+    (logEl._scrollEl || logEl).removeEventListener('wheel', logEl._wheelListener);
+    logEl.removeEventListener('wheel', logEl._wheelListener);
+    logEl._wheelListener = null;
+  }
+  if (logEl._collapseScrollTimer) {
+    clearTimeout(logEl._collapseScrollTimer);
+    logEl._collapseScrollTimer = null;
+  }
+  logEl._scrollEl = null;
+  if (logEl._fragTicker) {
+    clearInterval(logEl._fragTicker);
+    logEl._fragTicker = null;
   }
   logEl._scrollBtn?.remove();
   logEl._scrollBtn = null;
   logEl.innerHTML = '';
   logEl._lineCount = 0;
   logEl._hasError = false;
+  logEl._hasMerged = false;
+  logEl._fragTracker = { downloaded: 0, liveEdge: 0 };
+  logEl._destinationList = [];
   logEl._isExited = false;
   logEl._autoFollow = true;
   logEl._programmaticScroll = false;
@@ -453,6 +522,10 @@ function markBodyStart(logEl) {
     if (logEl._autoFollow) {
       // 1-click jump to TOP
       logEl._autoFollow = false;
+      if (logEl._collapseScrollTimer) {
+        clearTimeout(logEl._collapseScrollTimer);
+        logEl._collapseScrollTimer = null;
+      }
       logEl._programmaticScroll = true;
       scrollEl.scrollTo({ top: 0, behavior: 'auto' });
       scrollEl.scrollTop = 0;
@@ -484,11 +557,21 @@ function markBodyStart(logEl) {
   logEl._scrollBtnHandler = () => {
     if (logEl._programmaticScroll) return;
     const currentScrollTop = scrollEl.scrollTop;
+    const prevScrollTop = logEl._lastScrollTop !== undefined ? logEl._lastScrollTop : currentScrollTop;
     logEl._lastScrollTop = currentScrollTop;
 
     const distanceFromBottom = scrollEl.scrollHeight - currentScrollTop - scrollEl.clientHeight;
-    // If within 60px of bottom, resume auto-follow; otherwise pause auto-follow
-    logEl._autoFollow = (distanceFromBottom <= 60);
+    // If the user scrolled UP by even 1px, immediately pause auto-follow to prevent rubberbanding
+    if (currentScrollTop < prevScrollTop - 1) {
+      logEl._autoFollow = false;
+      if (logEl._collapseScrollTimer) {
+        clearTimeout(logEl._collapseScrollTimer);
+        logEl._collapseScrollTimer = null;
+      }
+    } else if (distanceFromBottom <= 15) {
+      // Re-engage auto-follow only when scrolled all the way to the bottom
+      logEl._autoFollow = true;
+    }
     updateBtn();
   };
 
@@ -497,6 +580,20 @@ function markBodyStart(logEl) {
     logEl._scrollBtnHandler?.();
   };
   scrollEl.addEventListener('scroll', logEl._scrollListener, { passive: true });
+
+  logEl._wheelListener = (e) => {
+    if (e.deltaY < 0) {
+      // User is wheeling UP — immediately kill auto-follow and any delayed scroll
+      logEl._autoFollow = false;
+      if (logEl._collapseScrollTimer) {
+        clearTimeout(logEl._collapseScrollTimer);
+        logEl._collapseScrollTimer = null;
+      }
+      updateBtn();
+    }
+  };
+  scrollEl.addEventListener('wheel', logEl._wheelListener, { passive: true });
+  logEl.addEventListener('wheel', logEl._wheelListener, { passive: true });
 }
 
 function convertSubOnlyErrorsToWarnings(logEl) {
@@ -521,12 +618,12 @@ function convertSubOnlyErrorsToWarnings(logEl) {
 
 function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
   flushPendingLogsSync(logEl);
-  trailingCount = trailingCount || 1;
+  trailingCount = trailingCount !== undefined ? trailingCount : 0;
   const sentinel = logEl.querySelector('.log-body-start');
   if (!sentinel) return;
   const all = Array.from(logEl.children);
   const start = all.indexOf(sentinel);
-  const bodyLines = all.slice(start + 1, all.length - trailingCount);
+  const bodyLines = trailingCount > 0 ? all.slice(start + 1, all.length - trailingCount) : all.slice(start + 1);
   if (bodyLines.length === 0) { sentinel.remove(); return; }
 
   if (withViewErrors) {
@@ -585,10 +682,20 @@ function collapseLogBody(logEl, failed, trailingCount, withViewErrors) {
   }
 
   logEl.closest('.terminal-wrap')?.classList.add('collapsed');
-    setTimeout(() => {
-        const scrollEl = logEl.closest('.content');
-        if (scrollEl) scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+  if (logEl._autoFollow) {
+    if (logEl._collapseScrollTimer) clearTimeout(logEl._collapseScrollTimer);
+    logEl._collapseScrollTimer = setTimeout(() => {
+      logEl._collapseScrollTimer = null;
+      if (!logEl._autoFollow || logEl._programmaticScroll) return;
+      const scrollEl = logEl.closest('.content');
+      if (scrollEl) {
+        const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+        if (distanceFromBottom <= 80) {
+          scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' });
+        }
+      }
     }, 260);
+  }
 
   logEl._scrollBtnHandler?.();
 }
@@ -598,8 +705,12 @@ function handleOutput(logEl, data, onExit) {
     case 'stdout':
     case 'stderr': {
       const stream = data.type;
-      const cleanText = data.text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\[A\[K/g, '');
+      let cleanText = data.text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\[A\[K/g, '');
       
+      // Before splitting on newlines/CRs, ensure overlapping messages (like "[download] Got error:" or "ERROR:" attached immediately after a progress string) are separated into newlines
+      cleanText = cleanText.replace(/(\S)(\[(?:download|youtube|info|dashsegments|Merger|ExtractAudio)\])/g, '$1\n$2');
+      cleanText = cleanText.replace(/(\S)(ERROR:|WARNING:)/g, '$1\n$2');
+
       if (logEl._streamBuffer === undefined) logEl._streamBuffer = '';
       logEl._streamBuffer += cleanText;
       
@@ -627,6 +738,68 @@ function handleOutput(logEl, data, onExit) {
           if (baseName) logEl._lastCapturedName = baseName;
         }
 
+        if (line.includes('[Merger] Merging formats into') || line.includes('Deleting original file')) {
+          logEl._hasMerged = true;
+        }
+
+        const prevLiveEdge = logEl._fragTracker ? logEl._fragTracker.liveEdge : 0;
+        if (!logEl._fragTracker) logEl._fragTracker = { downloaded: 0, liveEdge: 0 };
+        const dMatches = line.matchAll(/\(frag\s+(\d+)(?:\/(\d+))?\)/gi);
+        for (const m of dMatches) {
+          if (m[1]) logEl._fragTracker.downloaded = Math.max(logEl._fragTracker.downloaded, parseInt(m[1], 10));
+          if (m[2]) logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(m[2], 10));
+        }
+        const skipMatches = line.matchAll(/(?:Skipping fragment|fragment not found;?\s*Skipping fragment)\s+(\d+)/gi);
+        for (const m of skipMatches) {
+          if (m[1]) logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(m[1], 10));
+        }
+        const liveEdgeMatch = line.match(/\[live\]\s+Detected live broadcast edge:\s*~?(\d[\d,]*)/i);
+        if (liveEdgeMatch) {
+          logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(liveEdgeMatch[1].replace(/,/g, ''), 10));
+        }
+
+        // Real-time ticking ticker: increments liveEdge +1 every 2.0s while stream is ongoing
+        if (!logEl._fragTicker && logEl._fragTracker.liveEdge > 0) {
+          logEl._fragTicker = setInterval(() => {
+            if (logEl._isExited || logEl._hasMerged) {
+              clearInterval(logEl._fragTicker);
+              logEl._fragTicker = null;
+              return;
+            }
+            if (logEl._fragTracker && logEl._fragTracker.liveEdge > 0) {
+              logEl._fragTracker.liveEdge += 1;
+              if (logEl._liveProgresses && logEl._liveProgresses.size > 0) {
+                for (const [tId, prog] of logEl._liveProgresses.entries()) {
+                  if (prog && prog.text && /\(frag\s+\d+/i.test(prog.text)) {
+                    prog.text = prog.text.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
+                      const cur = parseInt(curStr, 10);
+                      const maxVal = Math.max(cur, logEl._fragTracker.liveEdge);
+                      return `(frag ${cur} / ${maxVal})`;
+                    });
+                  }
+                }
+                triggerRaf(logEl);
+              }
+            }
+          }, 2000);
+        }
+
+        if (logEl._fragTracker && logEl._liveProgresses && logEl._liveProgresses.size > 0) {
+          const liveEdge = logEl._fragTracker.liveEdge || 0;
+          for (const [tId, prog] of logEl._liveProgresses.entries()) {
+            if (prog && prog.text && /\(frag\s+\d+/i.test(prog.text)) {
+              prog.text = prog.text.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
+                const cur = parseInt(curStr, 10);
+                if (liveEdge > 0) {
+                  const maxVal = Math.max(cur, liveEdge);
+                  return `(frag ${cur} / ${maxVal})`;
+                }
+                return `(frag ${cur} / live)`;
+              });
+            }
+          }
+        }
+
         let cls = classifyLine(line, stream, logEl);
         
         // Intercept access restrictions (members-only, private, age-gated)
@@ -646,6 +819,11 @@ function handleOutput(logEl, data, onExit) {
       if (logEl._isExited) break;
       logEl._isExited = true;
 
+      if (logEl._fragTicker) {
+        clearInterval(logEl._fragTicker);
+        logEl._fragTicker = null;
+      }
+
       if (logEl._streamBuffer) {
         let cls = classifyLine(logEl._streamBuffer, 'stdout', logEl);
         appendLog(logEl, logEl._streamBuffer, cls);
@@ -655,7 +833,24 @@ function handleOutput(logEl, data, onExit) {
         logEl._liveProgresses.clear();
         triggerRaf(logEl);
       }
-      const failed = data.code !== 0 || !!logEl._hasError;
+      logEl._currentAutoCollapse = null;
+
+      const isStopped = data.code === null;
+      const ft = logEl._fragTracker;
+      const isLiveStream = ft && (ft.downloaded > 0 || ft.liveEdge > 0);
+      const isCompleteLive = !isStopped && isLiveStream && ft.liveEdge > 0 && (
+        ft.downloaded >= ft.liveEdge ||
+        (ft.liveEdge - ft.downloaded <= 3 && logEl._hasMerged)
+      );
+
+      let failed = data.code !== 0 || !!logEl._hasError;
+      if (isStopped) {
+        failed = true;
+      } else if (isLiveStream) {
+        failed = !isCompleteLive;
+      } else if (logEl._hasMerged && (data.code === 0 || data.code === 1)) {
+        failed = false;
+      }
       logEl._hasError = false;
       const bs = logEl._batchStats;
       logEl._batchStats = null;
@@ -671,13 +866,35 @@ function handleOutput(logEl, data, onExit) {
 
       if (!failed) {
         convertSubOnlyErrorsToWarnings(logEl);
+      }
+
+      let trailingCount = 0;
+      if (isStopped) {
+        if (isLiveStream || logEl.id === 'ls-log') {
+          const fragCount = ft ? ft.downloaded : 0;
+          if (fragCount > 0) {
+            appendLog(logEl, `⏹ Live archiver stopped (captured ${fragCount.toLocaleString()} fragments).`, 'warning');
+          } else {
+            appendLog(logEl, '⏹ Live archiver stopped.', 'warning');
+          }
+          appendLog(logEl, '📁 Incomplete files retained in temporary folder to prevent mixing with complete downloads.', 'info');
+          trailingCount += 2;
+        }
+        appendLog(logEl, '⏹ Process was manually stopped.', 'warning');
+        trailingCount += 1;
+      } else if (!failed) {
+        if (isLiveStream && isCompleteLive) {
+          appendLog(logEl, `✔ Fragment verification: 100% complete (All ${ft.downloaded.toLocaleString()} fragments captured)`, 'success');
+          trailingCount += 1;
+        }
         if (bs && bs.failed > 0) {
           const ok = bs.total - bs.failed;
           appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
+          trailingCount += 1;
         } else {
           appendLog(logEl, '✔ Process finished successfully.', 'success');
+          trailingCount += 1;
         }
-        collapseLogBody(logEl, false);
         
         if (getSetting('show-notifications') && window.api.showNotification) {
           window.api.showNotification({ 
@@ -789,7 +1006,7 @@ function handleOutput(logEl, data, onExit) {
         else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
         const ok = bs.total - bs.failed;
         appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
-        collapseLogBody(logEl, false, 2, true);
+        trailingCount += 2;
         if (logEl._currentIaJob && window.api && window.api.addHistory) {
           logEl._currentIaJob.status = 'partial';
           if (!window.shouldRecordHistory || window.shouldRecordHistory(logEl._currentIaJob)) {
@@ -800,9 +1017,19 @@ function handleOutput(logEl, data, onExit) {
           logEl._currentIaJob = null;
         }
       } else {
-        if (data.code !== 0) appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
-        else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
-        collapseLogBody(logEl, true);
+        if (isLiveStream) {
+          const totalStr = ft.liveEdge > 0 ? ft.liveEdge.toLocaleString() : 'unknown';
+          const diffStr = ft.liveEdge > ft.downloaded ? ` (${(ft.liveEdge - ft.downloaded).toLocaleString()} fragments missing before stream was removed)` : '';
+          appendLog(logEl, `⚠ Fragment verification: Partial — captured ${ft.downloaded.toLocaleString()} / ${totalStr} fragments${diffStr}`, 'warning');
+          appendLog(logEl, `📁 Incomplete files retained in temporary folder to prevent mixing with complete downloads.`, 'info');
+          trailingCount += 2;
+        }
+        if (data.code !== 0) {
+          appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
+        } else {
+          appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
+        }
+        trailingCount += 1;
         if (logEl._currentIaJob && window.api && window.api.addHistory) {
           logEl._currentIaJob.status = 'failed';
           if (!window.shouldRecordHistory || window.shouldRecordHistory(logEl._currentIaJob)) {
@@ -813,6 +1040,8 @@ function handleOutput(logEl, data, onExit) {
           logEl._currentIaJob = null;
         }
       }
+
+      collapseLogBody(logEl, failed, trailingCount, (bs && bs.failed > 0));
       if (onExit) onExit(data.code);
       break;
     }

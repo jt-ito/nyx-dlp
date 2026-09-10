@@ -14,6 +14,7 @@
 
   stopBtn.addEventListener('click', () => {
     if (currentPid) window.api.stopScript(currentPid);
+    else window.api.stopScript();
   });
 
   pauseBtn.addEventListener('click', () => {

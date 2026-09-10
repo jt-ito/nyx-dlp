@@ -3569,6 +3569,175 @@ input[type="checkbox"]:not(.toggle-switch input):checked::after {
   color: var(--text);
 }
 
+/* ── Per-Site Download Presets & Badges ─────────────────── */
+.site-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.site-preset-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.site-preset-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.site-preset-card.disabled {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+
+.site-preset-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.site-preset-name {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.site-preset-domains {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.site-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.site-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.site-chip.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.site-chip.accent {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-color: var(--border-hover);
+}
+
+.site-preset-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Tool Tab URL Preset Pill */
+.site-preset-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  animation: pillSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.02em;
+}
+
+@keyframes pillSlideIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.site-preset-pill button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+  line-height: 1;
+}
+
+.site-preset-pill button:hover {
+  opacity: 1;
+}
+
+/* Modal for Editing Presets */
+.site-preset-modal-content {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 580px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.site-preset-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.site-preset-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 550px) {
+  .site-preset-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 
 
 

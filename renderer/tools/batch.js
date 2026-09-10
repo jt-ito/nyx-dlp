@@ -155,6 +155,7 @@
     const urls = getUrls();
     counter.textContent = urls.length + (urls.length === 1 ? ' URL' : ' URLs');
     updateQueueButtonVisibility();
+    scrollToCursor(textarea);
   });
 
   function syncBatchQueue() {
@@ -223,6 +224,27 @@
     }
   });
 
+  function scrollToCursor(ta) {
+    if (!ta) return;
+    requestAnimationFrame(() => {
+      const lastNewline = ta.value.lastIndexOf('\n');
+      if (ta.selectionStart >= lastNewline || ta.selectionStart >= ta.value.length - 1) {
+        ta.scrollTop = ta.scrollHeight;
+      } else {
+        const lines = ta.value.substring(0, ta.selectionStart).split('\n');
+        const lineIndex = lines.length - 1;
+        const totalLines = ta.value.split('\n').length;
+        const lineHeight = ta.scrollHeight / Math.max(totalLines, 1);
+        const cursorY = lineIndex * lineHeight;
+        if (cursorY >= ta.scrollTop + ta.clientHeight - lineHeight * 2) {
+          ta.scrollTop = Math.min(ta.scrollHeight, cursorY - ta.clientHeight + lineHeight * 3);
+        } else if (cursorY < ta.scrollTop) {
+          ta.scrollTop = Math.max(0, cursorY - lineHeight);
+        }
+      }
+    });
+  }
+
   // Auto-newline on paste so each pasted URL lands on its own line
   textarea.addEventListener('paste', (e) => {
     e.preventDefault();
@@ -237,6 +259,7 @@
     textarea.selectionStart = newPos;
     textarea.selectionEnd   = newPos;
     textarea.dispatchEvent(new Event('input'));
+    scrollToCursor(textarea);
   });
 
   function getUrls() {

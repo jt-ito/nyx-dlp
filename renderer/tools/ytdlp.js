@@ -46,12 +46,107 @@
   });
 
   const ydUrlInput = document.getElementById('yd-url');
+  const autoPresetsToggle = document.getElementById('yd-auto-presets-toggle');
+  const presetBadge = document.getElementById('yd-preset-badge');
+  const presetBadgeText = document.getElementById('yd-preset-badge-text');
+  const presetClearBtn = document.getElementById('yd-preset-clear');
+
+  let activePresetConcurrent = null;
+  let activePresetExtraArgs = '';
+
+  if (autoPresetsToggle) {
+    const savedAuto = localStorage.getItem('field:yd-auto-presets-toggle');
+    if (savedAuto !== null) autoPresetsToggle.checked = savedAuto === 'true';
+    autoPresetsToggle.addEventListener('change', () => {
+      localStorage.setItem('field:yd-auto-presets-toggle', autoPresetsToggle.checked);
+      checkAndApplySitePreset();
+    });
+  }
+
+  function checkAndApplySitePreset() {
+    if (!ydUrlInput) return;
+    const url = ydUrlInput.value.trim();
+    if (!url || (autoPresetsToggle && !autoPresetsToggle.checked)) {
+      if (presetBadge) presetBadge.style.display = 'none';
+      activePresetConcurrent = null;
+      activePresetExtraArgs = '';
+      return;
+    }
+
+    const presets = typeof window.getSitePresets === 'function'
+      ? window.getSitePresets()
+      : (window.NyxSitePresets ? window.NyxSitePresets.DEFAULT_SITE_PRESETS : []);
+
+    const matched = window.NyxSitePresets ? window.NyxSitePresets.matchSitePreset(url, presets) : null;
+    if (!matched) {
+      if (presetBadge) presetBadge.style.display = 'none';
+      activePresetConcurrent = null;
+      activePresetExtraArgs = '';
+      return;
+    }
+
+    // Apply preset values to form controls
+    activePresetConcurrent = matched.concurrent || null;
+    activePresetExtraArgs = matched.extraArgs || '';
+
+    const applyVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val !== undefined && el.value !== val) {
+        el.value = val;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    };
+
+    const applyCheck = (id, checked) => {
+      const el = document.getElementById(id);
+      if (el && checked !== undefined && el.checked !== !!checked) {
+        el.checked = !!checked;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    };
+
+    if (matched.format) applyVal('yd-format', matched.format);
+    if (matched.container) applyVal('yd-container', matched.container);
+    if (matched.client) applyVal('yd-client', matched.client);
+    if (matched.useCookies !== undefined) applyCheck('yd-use-cookies', matched.useCookies);
+    if (matched.dlSubs !== undefined) applyCheck('yd-dl-subs', matched.dlSubs);
+    if (matched.embedSubs !== undefined) applyCheck('yd-embed-subs', matched.embedSubs);
+    if (matched.dlThumb !== undefined) applyCheck('yd-dl-thumb', matched.dlThumb);
+    if (matched.embedThumb !== undefined) applyCheck('yd-embed-thumb', matched.embedThumb);
+    if (matched.dlDesc !== undefined) applyCheck('yd-dl-desc', matched.dlDesc);
+    if (matched.dlComments !== undefined) applyCheck('yd-dl-comments', matched.dlComments);
+    if (matched.dlChat !== undefined) applyCheck('yd-dl-chat', matched.dlChat);
+    if (matched.autoRepair !== undefined) applyCheck('yd-auto-repair', matched.autoRepair);
+
+    if (presetBadge) {
+      if (presetBadgeText) presetBadgeText.textContent = `⚡ ${matched.name || 'Site'} Preset Applied`;
+      presetBadge.style.display = 'inline-flex';
+    }
+  }
+
   if (ydUrlInput) {
+    let debounceTimer = null;
+    ydUrlInput.addEventListener('input', () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(checkAndApplySitePreset, 120);
+    });
+    ydUrlInput.addEventListener('paste', () => {
+      setTimeout(checkAndApplySitePreset, 50);
+    });
     ydUrlInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         runBtn.click();
       }
+    });
+  }
+
+  if (presetClearBtn) {
+    presetClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (presetBadge) presetBadge.style.display = 'none';
+      activePresetConcurrent = null;
+      activePresetExtraArgs = '';
     });
   }
 
@@ -95,6 +190,7 @@
       if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
       appendLog(log, `  Output: ${outputDir}`, 'cmd');
       if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
+      if (activePresetConcurrent) appendLog(log, `  Concurrent Fragments: ${activePresetConcurrent}`, 'cmd');
     }
     appendLog(log, '', 'stdout');
     markBodyStart(log);
@@ -109,9 +205,17 @@
     const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
     const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
     const autoYpdl  = getSetting('dep-auto-ypdl');
+
+    let extraArgs = getExtraYtdlpArgs();
+    if (activePresetExtraArgs) {
+      const extraList = activePresetExtraArgs.split(/\s+/).filter(Boolean);
+      extraArgs = [...extraArgs, ...extraList];
+    }
+
     window.api.runYtdlp({ 
-      url, outputDir, format, cookiesPath, extraArgs: getExtraYtdlpArgs(), 
+      url, outputDir, format, cookiesPath, extraArgs, 
       container, startTime, endTime, bgutilUrl, useDeno,
+      concurrent: activePresetConcurrent,
       dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair, twitchSubOnly
     });
   });

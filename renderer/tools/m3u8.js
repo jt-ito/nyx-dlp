@@ -419,6 +419,27 @@
     });
   }
 
+  function scrollToCursor(ta) {
+    if (!ta) return;
+    requestAnimationFrame(() => {
+      const lastNewline = ta.value.lastIndexOf('\n');
+      if (ta.selectionStart >= lastNewline || ta.selectionStart >= ta.value.length - 1) {
+        ta.scrollTop = ta.scrollHeight;
+      } else {
+        const lines = ta.value.substring(0, ta.selectionStart).split('\n');
+        const lineIndex = lines.length - 1;
+        const totalLines = ta.value.split('\n').length;
+        const lineHeight = ta.scrollHeight / Math.max(totalLines, 1);
+        const cursorY = lineIndex * lineHeight;
+        if (cursorY >= ta.scrollTop + ta.clientHeight - lineHeight * 2) {
+          ta.scrollTop = Math.min(ta.scrollHeight, cursorY - ta.clientHeight + lineHeight * 3);
+        } else if (cursorY < ta.scrollTop) {
+          ta.scrollTop = Math.max(0, cursorY - lineHeight);
+        }
+      }
+    });
+  }
+
   m3Textarea.addEventListener('input', () => {
     updateM3Count();
     const list = getM3Urls();
@@ -432,6 +453,7 @@
       currentTwitchMeta = null;
       if (twitchTitleIn && !twitchTitleIn._userEdited) twitchTitleIn.value = '';
     }
+    scrollToCursor(m3Textarea);
     debounceTwitchMeta();
   });
 
@@ -440,10 +462,15 @@
     const pasted = (e.clipboardData || window.clipboardData).getData('text');
     const start  = m3Textarea.selectionStart;
     const end    = m3Textarea.selectionEnd;
+    const before = m3Textarea.value.substring(0, start);
+    const after  = m3Textarea.value.substring(end);
     const insert = pasted.endsWith('\n') ? pasted : pasted + '\n';
-    m3Textarea.value = m3Textarea.value.substring(0, start) + insert + m3Textarea.value.substring(end);
-    m3Textarea.selectionStart = m3Textarea.selectionEnd = start + insert.length;
+    m3Textarea.value = before + insert + after;
+    const newPos = start + insert.length;
+    m3Textarea.selectionStart = newPos;
+    m3Textarea.selectionEnd   = newPos;
     updateM3Count();
+    scrollToCursor(m3Textarea);
     const pUrl = getM3Urls()[0] || '';
     if (pUrl !== lastCheckedUrl) {
       currentTwitchMeta = null;
@@ -560,7 +587,7 @@
     const autoRepair   = autoRepairChk ? autoRepairChk.checked : false;
     const nativeHls    = nativeHlsChk ? nativeHlsChk.checked : false;
     const autoTitle    = autoTitleChk ? autoTitleChk.checked : false;
-    let twitchChannel  = (twitchChannelIn && twitchChannelIn.value.trim()) || (currentTwitchMeta ? currentTwitchMeta.channel : '');
+    let twitchChannel  = (manualChannelIn && manualChannelIn.value.trim()) || (currentTwitchMeta ? currentTwitchMeta.channel : '');
     let customTitle    = autoTitle ? ((twitchTitleIn && twitchTitleIn.value.trim()) || '') : '';
 
     if (urls.length === 0) { appendLog(log, '⚠ Please enter an M3U8 URL.', 'error'); return; }

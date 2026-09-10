@@ -20,3 +20,4 @@ internetarchive.log
 *.ts
 scratch/
 TWITCH_CDN_RECOVERY.md
+v*.md

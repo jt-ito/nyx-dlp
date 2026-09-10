@@ -1013,6 +1013,261 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
   }
 
   renderExcludedSitesTags();
+
+  // ── Per-Site Download Presets Manager ────────────────────────
+  const sitePresetsList = document.getElementById('site-presets-list');
+  const addSitePresetBtn = document.getElementById('add-site-preset-btn');
+  const resetSitePresetsBtn = document.getElementById('reset-site-presets-btn');
+  const sitePresetModal = document.getElementById('site-preset-modal');
+  const closeSitePresetModalBtn = document.getElementById('close-site-preset-modal');
+  const cancelSitePresetModalBtn = document.getElementById('cancel-site-preset-modal');
+  const saveSitePresetModalBtn = document.getElementById('save-site-preset-modal');
+
+  const defaultPresets = window.NyxSitePresets ? window.NyxSitePresets.DEFAULT_SITE_PRESETS : [];
+
+  function getSitePresets() {
+    try {
+      const raw = localStorage.getItem('field:site-presets');
+      if (raw && raw !== 'undefined' && raw !== 'null') {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return JSON.parse(JSON.stringify(defaultPresets));
+  }
+  window.getSitePresets = getSitePresets;
+
+  function saveSitePresets(presets) {
+    const jsonStr = JSON.stringify(presets);
+    localStorage.setItem('field:site-presets', jsonStr);
+    if (window.api && window.api.syncUiState) {
+      window.api.syncUiState({ id: 'site-presets', type: 'text', value: jsonStr });
+    }
+    renderSitePresets();
+  }
+  window.saveSitePresets = saveSitePresets;
+
+  function renderSitePresets() {
+    if (!sitePresetsList) return;
+    sitePresetsList.innerHTML = '';
+    const presets = getSitePresets();
+
+    presets.forEach((preset) => {
+      const card = document.createElement('div');
+      card.className = `site-preset-card ${preset.enabled ? '' : 'disabled'}`;
+      card.dataset.id = preset.id;
+
+      const domainsText = (preset.domains || []).join(', ') || 'No domains';
+      const isCustom = !defaultPresets.some(d => d.id === preset.id);
+
+      card.innerHTML = `
+        <div class="site-preset-card-header">
+          <div class="site-preset-name">
+            <span>${preset.name || 'Custom Site'}</span>
+            ${isCustom ? '<span style="font-size: 10px; padding: 1px 5px; border-radius: 4px; background: rgba(99, 102, 241, 0.2); color: #818cf8;">Custom</span>' : ''}
+          </div>
+          <label class="toggle-switch" title="${preset.enabled ? 'Enabled' : 'Disabled'}">
+            <input type="checkbox" class="preset-toggle-enable" ${preset.enabled ? 'checked' : ''} />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+        </div>
+        <div class="site-preset-domains" title="${domainsText}">${domainsText}</div>
+        <div class="site-preset-chips">
+          <span class="site-chip accent">⚡ ${preset.concurrent || 1} conn</span>
+          <span class="site-chip ${preset.useCookies ? 'active' : ''}">🍪 Cookies ${preset.useCookies ? 'ON' : 'OFF'}</span>
+          <span class="site-chip">${preset.container ? preset.container.toUpperCase() : 'MP4'}</span>
+          ${preset.embedSubs || preset.dlSubs ? '<span class="site-chip active">📝 Subs</span>' : ''}
+          ${preset.embedThumb || preset.dlThumb ? '<span class="site-chip active">🖼️ Thumb</span>' : ''}
+          ${preset.autoRepair ? '<span class="site-chip active">🛠️ Auto-Repair</span>' : ''}
+          ${preset.client && preset.client !== 'default' ? `<span class="site-chip">👤 ${preset.client}</span>` : ''}
+        </div>
+        <div class="site-preset-card-actions">
+          <button type="button" class="btn btn-ghost edit-preset-btn" style="font-size: 11px; padding: 3px 8px;">Edit</button>
+          ${isCustom ? '<button type="button" class="btn btn-ghost delete-preset-btn" style="font-size: 11px; padding: 3px 8px; color: var(--danger);">Delete</button>' : ''}
+        </div>
+      `;
+
+      // Enable/disable toggle
+      card.querySelector('.preset-toggle-enable').addEventListener('change', (e) => {
+        const list = getSitePresets();
+        const item = list.find(p => p.id === preset.id);
+        if (item) {
+          item.enabled = e.target.checked;
+          saveSitePresets(list);
+        }
+      });
+
+      // Edit action
+      card.querySelector('.edit-preset-btn').addEventListener('click', () => {
+        openSitePresetModal(preset);
+      });
+
+      // Delete action
+      const deleteBtn = card.querySelector('.delete-preset-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+          const list = getSitePresets().filter(p => p.id !== preset.id);
+          saveSitePresets(list);
+        });
+      }
+
+      sitePresetsList.appendChild(card);
+    });
+  }
+
+  function openSitePresetModal(preset = null) {
+    if (!sitePresetModal) return;
+    const isNew = !preset;
+    const p = preset || {
+      id: 'custom-' + Date.now(),
+      name: '',
+      domains: [],
+      enabled: true,
+      concurrent: 5,
+      useCookies: false,
+      client: 'default',
+      format: 'bestvideo+bestaudio/best',
+      container: 'mp4',
+      dlSubs: false,
+      embedSubs: false,
+      dlThumb: true,
+      embedThumb: true,
+      dlDesc: false,
+      dlComments: false,
+      dlChat: false,
+      autoRepair: false,
+      extraArgs: ''
+    };
+
+    const titleEl = document.getElementById('site-preset-modal-title');
+    if (titleEl) titleEl.textContent = isNew ? '⚡ Add Site Preset' : `⚡ Edit Preset: ${p.name}`;
+
+    document.getElementById('sp-edit-id').value = p.id;
+    document.getElementById('sp-edit-name').value = p.name || '';
+    document.getElementById('sp-edit-concurrent').value = p.concurrent || 5;
+    document.getElementById('sp-edit-domains').value = (p.domains || []).join(', ');
+    document.getElementById('sp-edit-format').value = p.format || 'bestvideo+bestaudio/best';
+    document.getElementById('sp-edit-container').value = p.container || 'mp4';
+    document.getElementById('sp-edit-client').value = p.client || 'default';
+    document.getElementById('sp-edit-extra').value = p.extraArgs || '';
+    document.getElementById('sp-edit-use-cookies').checked = !!p.useCookies;
+    document.getElementById('sp-edit-subs').checked = !!p.dlSubs;
+    document.getElementById('sp-edit-embed-subs').checked = !!p.embedSubs;
+    document.getElementById('sp-edit-thumb').checked = !!p.dlThumb;
+    document.getElementById('sp-edit-embed-thumb').checked = !!p.embedThumb;
+    document.getElementById('sp-edit-autorepair').checked = !!p.autoRepair;
+
+    sitePresetModal.style.display = 'flex';
+  }
+
+  function closeSitePresetModal() {
+    if (sitePresetModal) sitePresetModal.style.display = 'none';
+  }
+
+  if (addSitePresetBtn) addSitePresetBtn.addEventListener('click', () => openSitePresetModal());
+  if (resetSitePresetsBtn) {
+    resetSitePresetsBtn.addEventListener('click', () => {
+      saveSitePresets(JSON.parse(JSON.stringify(defaultPresets)));
+    });
+  }
+  if (closeSitePresetModalBtn) closeSitePresetModalBtn.addEventListener('click', closeSitePresetModal);
+  if (cancelSitePresetModalBtn) cancelSitePresetModalBtn.addEventListener('click', closeSitePresetModal);
+
+  if (saveSitePresetModalBtn) {
+    saveSitePresetModalBtn.addEventListener('click', () => {
+      const id = document.getElementById('sp-edit-id').value || ('custom-' + Date.now());
+      const name = document.getElementById('sp-edit-name').value.trim() || 'Custom Site';
+      const domainsRaw = document.getElementById('sp-edit-domains').value;
+      const domains = domainsRaw.split(/[\s,]+/).map(d => d.trim().toLowerCase()).filter(Boolean);
+      const concurrent = parseInt(document.getElementById('sp-edit-concurrent').value) || 5;
+      const format = document.getElementById('sp-edit-format').value;
+      const container = document.getElementById('sp-edit-container').value;
+      const client = document.getElementById('sp-edit-client').value;
+      const extraArgs = document.getElementById('sp-edit-extra').value.trim();
+      const useCookies = document.getElementById('sp-edit-use-cookies').checked;
+      const dlSubs = document.getElementById('sp-edit-subs').checked;
+      const embedSubs = document.getElementById('sp-edit-embed-subs').checked;
+      const dlThumb = document.getElementById('sp-edit-thumb').checked;
+      const embedThumb = document.getElementById('sp-edit-embed-thumb').checked;
+      const autoRepair = document.getElementById('sp-edit-autorepair').checked;
+
+      const list = getSitePresets();
+      const idx = list.findIndex(p => p.id === id);
+      const updatedItem = {
+        id,
+        name,
+        domains,
+        enabled: idx >= 0 ? list[idx].enabled : true,
+        concurrent,
+        format,
+        container,
+        client,
+        extraArgs,
+        useCookies,
+        dlSubs,
+        embedSubs,
+        dlThumb,
+        embedThumb,
+        autoRepair
+      };
+
+      if (idx >= 0) {
+        list[idx] = updatedItem;
+      } else {
+        list.push(updatedItem);
+      }
+
+      saveSitePresets(list);
+      closeSitePresetModal();
+    });
+  }
+
+  renderSitePresets();
+
+  // ── Discord Bot Default Download Preferences ────────────────
+  const discordDefControls = [
+    { id: 'discord-def-format', type: 'select', default: 'bestvideo+bestaudio/best' },
+    { id: 'discord-def-container', type: 'select', default: 'mp4' },
+    { id: 'discord-def-concurrent', type: 'number', default: 5 },
+    { id: 'discord-def-subs', type: 'checkbox', default: true },
+    { id: 'discord-def-thumb', type: 'checkbox', default: true },
+    { id: 'discord-def-desc', type: 'checkbox', default: false },
+    { id: 'discord-def-autorepair', type: 'checkbox', default: true },
+    { id: 'discord-def-cookies', type: 'checkbox', default: false }
+  ];
+
+  function getDiscordDownloadDefaults() {
+    const defaults = {};
+    discordDefControls.forEach(ctrl => {
+      const el = document.getElementById(ctrl.id);
+      if (ctrl.type === 'checkbox') {
+        const saved = localStorage.getItem(`field:${ctrl.id}`);
+        defaults[ctrl.id] = saved !== null ? saved === 'true' : ctrl.default;
+        if (el) el.checked = defaults[ctrl.id];
+      } else {
+        const saved = localStorage.getItem(`field:${ctrl.id}`);
+        defaults[ctrl.id] = (saved && saved !== 'undefined' && saved !== 'null') ? saved : ctrl.default;
+        if (el) el.value = defaults[ctrl.id];
+      }
+    });
+    return defaults;
+  }
+  window.getDiscordDownloadDefaults = getDiscordDownloadDefaults;
+
+  discordDefControls.forEach(ctrl => {
+    const el = document.getElementById(ctrl.id);
+    if (!el) return;
+    const evt = ctrl.type === 'checkbox' ? 'change' : 'input';
+    el.addEventListener(evt, () => {
+      const val = ctrl.type === 'checkbox' ? el.checked : el.value;
+      localStorage.setItem(`field:${ctrl.id}`, val);
+      if (window.api && window.api.syncUiState) {
+        window.api.syncUiState({ id: ctrl.id, type: ctrl.type, value: val, checked: el.checked });
+      }
+    });
+  });
+
+  getDiscordDownloadDefaults();
 });
 
 function showUpdateBanner(info) {

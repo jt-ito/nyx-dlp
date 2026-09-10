@@ -16,22 +16,71 @@
   const pauseIconHTML  = pauseBtn.innerHTML;
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
+  const gdlUrlInput = document.getElementById('gdl-url');
   const gdlTextarea = document.getElementById('gdl-urls');
+
+  // Prevent stale URLs from previous state sync or localStorage pollutions
+  try {
+    localStorage.removeItem('field:gdl-urls');
+    localStorage.removeItem('field:gdl-url');
+  } catch (_) {}
+  if (gdlUrlInput && !gdlUrlInput.value.trim() && gdlTextarea) {
+    gdlTextarea.value = '';
+  }
+
+  function scrollToCursor(ta) {
+    if (!ta) return;
+    requestAnimationFrame(() => {
+      const lastNewline = ta.value.lastIndexOf('\n');
+      if (ta.selectionStart >= lastNewline || ta.selectionStart >= ta.value.length - 1) {
+        ta.scrollTop = ta.scrollHeight;
+      } else {
+        const lines = ta.value.substring(0, ta.selectionStart).split('\n');
+        const lineIndex = lines.length - 1;
+        const totalLines = ta.value.split('\n').length;
+        const lineHeight = ta.scrollHeight / Math.max(totalLines, 1);
+        const cursorY = lineIndex * lineHeight;
+        if (cursorY >= ta.scrollTop + ta.clientHeight - lineHeight * 2) {
+          ta.scrollTop = Math.min(ta.scrollHeight, cursorY - ta.clientHeight + lineHeight * 3);
+        } else if (cursorY < ta.scrollTop) {
+          ta.scrollTop = Math.max(0, cursorY - lineHeight);
+        }
+      }
+    });
+  }
+
   function updateGdlCount() {
     const n = getGdlUrls().length;
     counterGdl.textContent = n + (n === 1 ? ' URL' : ' URLs');
   }
-  gdlTextarea.addEventListener('input', updateGdlCount);
+
+  gdlTextarea.addEventListener('input', () => {
+    updateGdlCount();
+    const list = getGdlUrls();
+    if (list.length === 1 && gdlUrlInput) {
+      gdlUrlInput.value = list[0];
+    } else if (list.length === 0 && gdlUrlInput) {
+      gdlUrlInput.value = '';
+    }
+    scrollToCursor(gdlTextarea);
+  });
+
   gdlTextarea.addEventListener('paste', (e) => {
     e.preventDefault();
     const pasted = (e.clipboardData || window.clipboardData).getData('text');
     const start  = gdlTextarea.selectionStart;
     const end    = gdlTextarea.selectionEnd;
+    const before = gdlTextarea.value.substring(0, start);
+    const after  = gdlTextarea.value.substring(end);
     const insert = pasted.endsWith('\n') ? pasted : pasted + '\n';
-    gdlTextarea.value = gdlTextarea.value.substring(0, start) + insert + gdlTextarea.value.substring(end);
-    gdlTextarea.selectionStart = gdlTextarea.selectionEnd = start + insert.length;
+    gdlTextarea.value = before + insert + after;
+    const newPos = start + insert.length;
+    gdlTextarea.selectionStart = newPos;
+    gdlTextarea.selectionEnd   = newPos;
     updateGdlCount();
+    scrollToCursor(gdlTextarea);
   });
+
   modeBtnGdl.addEventListener('click', () => {
     gdlMultiMode = !gdlMultiMode;
     singleDivGdl.classList.toggle('hidden', gdlMultiMode);
@@ -40,14 +89,29 @@
     modeBtnGdl.classList.toggle('active', gdlMultiMode);
     modeBtnGdl.title = gdlMultiMode ? 'Switch to single URL' : 'Switch to multi-URL mode';
     if (gdlMultiMode) {
-      const single = document.getElementById('gdl-url').value.trim();
-      if (single && !gdlTextarea.value.trim()) gdlTextarea.value = single + '\n';
+      const single = gdlUrlInput ? gdlUrlInput.value.trim() : '';
+      if (single) {
+        const multiUrls = gdlTextarea.value.split('\n').map(l => l.trim()).filter(Boolean);
+        if (multiUrls.length <= 1 || !multiUrls.includes(single)) {
+          gdlTextarea.value = single + '\n';
+        }
+      }
       updateGdlCount();
+      scrollToCursor(gdlTextarea);
+      if (gdlTextarea) {
+        setTimeout(() => gdlTextarea.focus(), 50);
+      }
+    } else {
+      const urls = getGdlUrls();
+      if (gdlUrlInput) {
+        gdlUrlInput.value = urls.length > 0 ? urls[0] : '';
+      }
     }
   });
+
   function getGdlUrls() {
     if (!gdlMultiMode) {
-      const u = document.getElementById('gdl-url').value.trim();
+      const u = (gdlUrlInput ? gdlUrlInput.value : document.getElementById('gdl-url')?.value || '').trim();
       return u ? [u] : [];
     }
     return gdlTextarea.value.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
@@ -85,12 +149,32 @@
     }
   });
 
-  const gdlUrlInput = document.getElementById('gdl-url');
   if (gdlUrlInput) {
     gdlUrlInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         runBtn.click();
+      }
+    });
+
+    gdlUrlInput.addEventListener('input', () => {
+      if (!gdlMultiMode) {
+        const singleVal = gdlUrlInput.value.trim();
+        gdlTextarea.value = singleVal ? singleVal + '\n' : '';
+        updateGdlCount();
+      }
+    });
+
+    gdlUrlInput.addEventListener('paste', (e) => {
+      const pasted = (e.clipboardData || window.clipboardData).getData('text');
+      if (pasted && pasted.includes('\n') && pasted.trim().split('\n').filter(l => l.trim()).length > 1) {
+        e.preventDefault();
+        if (!gdlMultiMode) {
+          modeBtnGdl.click();
+        }
+        gdlTextarea.value = pasted.trim() + '\n';
+        updateGdlCount();
+        scrollToCursor(gdlTextarea);
       }
     });
   }

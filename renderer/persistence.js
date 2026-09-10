@@ -14,6 +14,7 @@
     'dep-bgutil-url',
     'ntf-storage-threshold',
     'discord-download-dir',
+    'discord-def-concurrent',
     'history-exclude-sites'
   ];
 
@@ -29,7 +30,9 @@
     'dep-ffmpeg-version',
     'concat-quality',
     'enc-quality',
-    'history-retention'
+    'history-retention',
+    'discord-def-format',
+    'discord-def-container'
   ];
 
   // Checkboxes on the tool tabs (not settings-page toggles) — save on change
@@ -39,7 +42,8 @@
     'ia-noderive', 'concat-force', 'concat-mkv',
     'yd-auto-repair', 'batch-auto-repair', 'm3-auto-repair', 'm3-native-hls', 'm3-auto-title',
     'yd-dl-subs', 'yd-embed-subs', 'yd-dl-chat', 'yd-dl-comments', 'yd-dl-desc', 'yd-dl-title', 'yd-dl-thumb', 'yd-embed-thumb', 'yd-twitch-sub-only', 'yd-skip-download', 'yd-get-url',
-    'batch-dl-subs', 'batch-embed-subs', 'batch-dl-chat', 'batch-dl-comments', 'batch-dl-desc', 'batch-dl-title', 'batch-dl-thumb', 'batch-embed-thumb', 'batch-twitch-sub-only', 'batch-skip-download'
+    'batch-dl-subs', 'batch-embed-subs', 'batch-dl-chat', 'batch-dl-comments', 'batch-dl-desc', 'batch-dl-title', 'batch-dl-thumb', 'batch-embed-thumb', 'batch-twitch-sub-only', 'batch-skip-download',
+    'yd-auto-presets-toggle', 'discord-def-subs', 'discord-def-thumb', 'discord-def-desc', 'discord-def-autorepair', 'discord-def-cookies'
   ];
 
   TEXT_IDS.forEach(id => {
@@ -84,7 +88,11 @@
       'batch-embed-subs': true,
       'batch-dl-thumb': true,
       'batch-embed-thumb': true,
-      'batch-twitch-sub-only': true
+      'batch-twitch-sub-only': true,
+      'yd-auto-presets-toggle': true,
+      'discord-def-subs': true,
+      'discord-def-thumb': true,
+      'discord-def-autorepair': true
     };
     el.checked = v !== null ? v === 'true' : (defaults[id] ?? false);
     el.dispatchEvent(new Event('change'));

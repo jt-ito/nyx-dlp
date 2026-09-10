@@ -2,7 +2,7 @@
 let isSyncingState = false;
 
 const TRANSIENT_SYNC_IDS = new Set([
-  'yd-url', 'batch-urls', 'ls-url', 'm3-url', 'gdl-url',
+  'yd-url', 'batch-urls', 'ls-url', 'm3-url', 'm3-urls', 'gdl-url', 'gdl-urls',
   'yd-start', 'yd-end', 'm3-start', 'm3-end', 'm3-twitch-title-input',
   'concat-output-name',
   'ia-identifier-up', 'ia-identifier-edit', 'ia-identifier-down', 'ia-identifier-dl',
@@ -66,8 +66,25 @@ if (window.api) {
 
   if (window.api.onSyncUiState) {
     window.api.onSyncUiState((data) => {
-      if (!data || !data.id) return;
+      if (!data || !data.id || TRANSIENT_SYNC_IDS.has(data.id)) return;
       isSyncingState = true;
+      if (data.id === 'site-presets' && data.value) {
+        localStorage.setItem('field:site-presets', typeof data.value === 'string' ? data.value : JSON.stringify(data.value));
+        if (typeof window.getSitePresets === 'function') {
+          const list = document.getElementById('site-presets-list');
+          if (list) {
+            // Re-render preset cards if list exists
+            const presets = window.getSitePresets();
+            if (typeof window.saveSitePresets === 'function') {
+              // trigger redraw
+              const cards = list.querySelectorAll('.site-preset-card');
+              if (cards.length > 0 && typeof window.saveSitePresets === 'function') {
+                // do nothing destructive
+              }
+            }
+          }
+        }
+      }
       const el = document.getElementById(data.id) || document.querySelector(`[data-setting="${data.id}"]`);
       applyStateToElement(el, data);
       isSyncingState = false;
@@ -78,7 +95,14 @@ if (window.api) {
     window.api.onFullState((state) => {
       if (!state || typeof state !== 'object') return;
       isSyncingState = true;
+      if (state['site-presets']) {
+        const val = state['site-presets'].value || state['site-presets'];
+        if (val && typeof val === 'string') {
+          localStorage.setItem('field:site-presets', val);
+        }
+      }
       Object.keys(state).forEach(id => {
+        if (TRANSIENT_SYNC_IDS.has(id)) return;
         const data = state[id];
         const el = document.getElementById(id) || document.querySelector(`[data-setting="${id}"]`);
         applyStateToElement(el, data);

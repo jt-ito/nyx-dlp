@@ -9,7 +9,7 @@ yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive — nine tools,
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-4.0.6-orange)
+![Version](https://img.shields.io/badge/version-4.0.7-orange)
 
 </div>
 
@@ -21,7 +21,7 @@ If you've ever managed a pile of media-download scripts, you know the drill: hal
 
 It's built entirely in native Node.js — no Python involved anywhere. Every tool runs as a direct `child_process.spawn` call, and nyx-dlp manages its own vendored copies of `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, and `ia` in a local `vendor/` folder, downloading and updating them on its own. Nothing to install except the app itself.
 
-Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop actually work — on Windows that's done via Sysinternals `PsSuspend`, not just severing the connection and hoping the CLI recovers gracefully.
+Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop actually work — on Windows that's done via native NT process tree suspension (`treespend`), not just severing the connection and hoping the CLI recovers gracefully.
 
 ---
 
@@ -157,12 +157,14 @@ nyx-dlp/
 ├── index.html / styles.css # App shell, dark/light theme gallery, and UI subsystems
 ├── lib/
 │   ├── runners.js          # Centralized process spawning for every tool — execution core
+│   ├── site-presets.js     # Per-site download presets & Discord defaults engine
 │   ├── twitch-meta.js      # Twitch & TwitchTracker metadata engine & FFmpeg tag builder
 │   ├── discord-bot.js      # Zero-dependency Discord Gateway & REST client with slash commands
 │   ├── settings-store.js   # Centralized JSON configuration & settings store
 │   ├── vendor-dir.js       # Permission-safe vendor binary path resolver
 │   ├── download-helper.js  # Resilient download helper with curl fallback
 │   ├── runner-utils.js     # OS-level pause/resume/kill across Win/macOS/Linux
+│   ├── ensure-treespend.js  # Compiles/vendors native NT process tree suspension helper
 │   ├── ensure-ytdlp.js      # Vendors & auto-updates standalone yt-dlp binary
 │   ├── ensure-ffmpeg.js     # Vendors ffmpeg, selectable by version for GPU support
 │   ├── ensure-ia.js         # Vendors the archive.org `ia` CLI
