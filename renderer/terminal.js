@@ -194,7 +194,7 @@ function appendLog(logEl, text, cls) {
           logEl._downloadCompleted = true;
       } else {
           let progressText = text;
-          if (logEl._fragTracker) {
+          if (logEl.id === 'ls-log' && logEl._fragTracker) {
             const liveEdge = logEl._fragTracker.liveEdge || 0;
             progressText = progressText.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
               const cur = parseInt(curStr, 10);
@@ -742,60 +742,62 @@ function handleOutput(logEl, data, onExit) {
           logEl._hasMerged = true;
         }
 
-        const prevLiveEdge = logEl._fragTracker ? logEl._fragTracker.liveEdge : 0;
-        if (!logEl._fragTracker) logEl._fragTracker = { downloaded: 0, liveEdge: 0 };
-        const dMatches = line.matchAll(/\(frag\s+(\d+)(?:\/(\d+))?\)/gi);
-        for (const m of dMatches) {
-          if (m[1]) logEl._fragTracker.downloaded = Math.max(logEl._fragTracker.downloaded, parseInt(m[1], 10));
-          if (m[2]) logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(m[2], 10));
-        }
-        const skipMatches = line.matchAll(/(?:Skipping fragment|fragment not found;?\s*Skipping fragment)\s+(\d+)/gi);
-        for (const m of skipMatches) {
-          if (m[1]) logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(m[1], 10));
-        }
-        const liveEdgeMatch = line.match(/\[live\]\s+Detected live broadcast edge:\s*~?(\d[\d,]*)/i);
-        if (liveEdgeMatch) {
-          logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(liveEdgeMatch[1].replace(/,/g, ''), 10));
-        }
+        if (logEl.id === 'ls-log') {
+          const prevLiveEdge = logEl._fragTracker ? logEl._fragTracker.liveEdge : 0;
+          if (!logEl._fragTracker) logEl._fragTracker = { downloaded: 0, liveEdge: 0 };
+          const dMatches = line.matchAll(/\(frag\s+(\d+)(?:\/(\d+))?\)/gi);
+          for (const m of dMatches) {
+            if (m[1]) logEl._fragTracker.downloaded = Math.max(logEl._fragTracker.downloaded, parseInt(m[1], 10));
+            if (m[2]) logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(m[2], 10));
+          }
+          const skipMatches = line.matchAll(/(?:Skipping fragment|fragment not found;?\s*Skipping fragment)\s+(\d+)/gi);
+          for (const m of skipMatches) {
+            if (m[1]) logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(m[1], 10));
+          }
+          const liveEdgeMatch = line.match(/\[live\]\s+Detected live broadcast edge:\s*~?(\d[\d,]*)/i);
+          if (liveEdgeMatch) {
+            logEl._fragTracker.liveEdge = Math.max(logEl._fragTracker.liveEdge, parseInt(liveEdgeMatch[1].replace(/,/g, ''), 10));
+          }
 
-        // Real-time ticking ticker: increments liveEdge +1 every 2.0s while stream is ongoing
-        if (!logEl._fragTicker && logEl._fragTracker.liveEdge > 0) {
-          logEl._fragTicker = setInterval(() => {
-            if (logEl._isExited || logEl._hasMerged) {
-              clearInterval(logEl._fragTicker);
-              logEl._fragTicker = null;
-              return;
-            }
-            if (logEl._fragTracker && logEl._fragTracker.liveEdge > 0) {
-              logEl._fragTracker.liveEdge += 1;
-              if (logEl._liveProgresses && logEl._liveProgresses.size > 0) {
-                for (const [tId, prog] of logEl._liveProgresses.entries()) {
-                  if (prog && prog.text && /\(frag\s+\d+/i.test(prog.text)) {
-                    prog.text = prog.text.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
-                      const cur = parseInt(curStr, 10);
-                      const maxVal = Math.max(cur, logEl._fragTracker.liveEdge);
-                      return `(frag ${cur} / ${maxVal})`;
-                    });
-                  }
-                }
-                triggerRaf(logEl);
+          // Real-time ticking ticker: increments liveEdge +1 every 2.0s while stream is ongoing
+          if (!logEl._fragTicker && logEl._fragTracker.liveEdge > 0) {
+            logEl._fragTicker = setInterval(() => {
+              if (logEl._isExited || logEl._hasMerged) {
+                clearInterval(logEl._fragTicker);
+                logEl._fragTicker = null;
+                return;
               }
-            }
-          }, 2000);
-        }
-
-        if (logEl._fragTracker && logEl._liveProgresses && logEl._liveProgresses.size > 0) {
-          const liveEdge = logEl._fragTracker.liveEdge || 0;
-          for (const [tId, prog] of logEl._liveProgresses.entries()) {
-            if (prog && prog.text && /\(frag\s+\d+/i.test(prog.text)) {
-              prog.text = prog.text.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
-                const cur = parseInt(curStr, 10);
-                if (liveEdge > 0) {
-                  const maxVal = Math.max(cur, liveEdge);
-                  return `(frag ${cur} / ${maxVal})`;
+              if (logEl._fragTracker && logEl._fragTracker.liveEdge > 0) {
+                logEl._fragTracker.liveEdge += 1;
+                if (logEl._liveProgresses && logEl._liveProgresses.size > 0) {
+                  for (const [tId, prog] of logEl._liveProgresses.entries()) {
+                    if (prog && prog.text && /\(frag\s+\d+/i.test(prog.text)) {
+                      prog.text = prog.text.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
+                        const cur = parseInt(curStr, 10);
+                        const maxVal = Math.max(cur, logEl._fragTracker.liveEdge);
+                        return `(frag ${cur} / ${maxVal})`;
+                      });
+                    }
+                  }
+                  triggerRaf(logEl);
                 }
-                return `(frag ${cur} / live)`;
-              });
+              }
+            }, 2000);
+          }
+
+          if (logEl._fragTracker && logEl._liveProgresses && logEl._liveProgresses.size > 0) {
+            const liveEdge = logEl._fragTracker.liveEdge || 0;
+            for (const [tId, prog] of logEl._liveProgresses.entries()) {
+              if (prog && prog.text && /\(frag\s+\d+/i.test(prog.text)) {
+                prog.text = prog.text.replace(/\(frag\s+(\d+)(?:\/(?:\?|\d+|live))?\)/i, (match, curStr) => {
+                  const cur = parseInt(curStr, 10);
+                  if (liveEdge > 0) {
+                    const maxVal = Math.max(cur, liveEdge);
+                    return `(frag ${cur} / ${maxVal})`;
+                  }
+                  return `(frag ${cur} / live)`;
+                });
+              }
             }
           }
         }
@@ -837,7 +839,7 @@ function handleOutput(logEl, data, onExit) {
 
       const isStopped = data.code === null;
       const ft = logEl._fragTracker;
-      const isLiveStream = ft && (ft.downloaded > 0 || ft.liveEdge > 0);
+      const isLiveStream = (logEl.id === 'ls-log') && ft && (ft.downloaded > 0 || ft.liveEdge > 0);
       const isCompleteLive = !isStopped && isLiveStream && ft.liveEdge > 0 && (
         ft.downloaded >= ft.liveEdge ||
         (ft.liveEdge - ft.downloaded <= 3 && logEl._hasMerged)
