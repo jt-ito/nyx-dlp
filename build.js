@@ -15,6 +15,11 @@ const TARGETS = {
     afterPack: async (context) => {
       console.log('Creating .portable marker inside the app folder...');
       fs.writeFileSync(path.join(context.appOutDir, '.portable'), '');
+      fs.writeFileSync(path.join(context.appOutDir, 'portable.txt'), 'This marker indicates that nyx-dlp is running in Portable Mode.\nAll user settings, logs, and downloaded tools are stored locally in this folder.\n');
+      const dataDir = path.join(context.appOutDir, 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
     }
   },
   installer: {

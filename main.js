@@ -4,7 +4,6 @@ const { spawn, execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const https = require('https');
-const settingsStore = require('./lib/settings-store.js');
 const { getPortableRootDir } = require('./lib/vendor-dir.js');
 
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
@@ -23,10 +22,16 @@ if (portableRoot) {
     }
     fs.accessSync(dataDir, fs.constants.W_OK);
     app.setPath('userData', dataDir);
+    try {
+      const crashesDir = path.join(dataDir, 'crashes');
+      app.setPath('crashDumps', crashesDir);
+    } catch (_) {}
   } catch (err) {
     console.warn('[Portable] data/ is not writable, falling back to default userData:', err.message);
   }
 }
+
+const settingsStore = require('./lib/settings-store.js');
 
 const lastPathFile = path.join(app.getPath('userData'), 'last-used-path.txt');
 let lastUsedPath = '';
