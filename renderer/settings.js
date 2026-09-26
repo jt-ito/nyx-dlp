@@ -18,9 +18,19 @@ const SETTINGS_MAP = {
   'show-batch-skip-live': { el: 'batch-skip-live-group' },
   'show-concat-format': { el: 'concat-format-group' },
   'show-m3-encode': { el: 'm3-encode-group' },
+  'm3-quality-discovery': { el: 'm3-discovery-wrap' },
+  'detect-fragment-manifests': {},
   'show-gdl-filetypes': { el: 'gdl-filetypes-group' },
   'show-gdl-meta': { el: 'gdl-meta-group' },
   'show-ls-client': { el: 'ls-client-group' },
+  'show-ls-engine': { el: 'ls-engine-group' },
+  'show-ls-duration': { el: 'ls-duration-group' },
+  'show-ls-live-edge': { el: 'ls-live-edge-group' },
+  'show-ls-low-latency': { el: 'ls-low-latency-group' },
+  'show-ls-twitch-token': { el: 'ls-twitch-token-group' },
+  'show-ls-proxy': { el: 'ls-proxy-group' },
+  'ls-sync-fix': {},
+  'ls-twitch-codecs': {},
   'dep-use-bgutil': { el: 'dep-bgutil-url-group' },
   'show-disk-space': { custom: 'disk-space' },
   'minimize-to-tray': { custom: 'tray' },
@@ -61,9 +71,19 @@ const SETTINGS_DEFAULTS = {
   'show-batch-skip-live': true,
   'show-concat-format': true,
   'show-m3-encode': true,
+  'm3-quality-discovery': false,
+  'detect-fragment-manifests': false,
   'show-gdl-filetypes': true,
   'show-gdl-meta': true,
   'show-ls-client': true,
+  'show-ls-engine': true,
+  'show-ls-duration': true,
+  'show-ls-live-edge': true,
+  'show-ls-low-latency': true,
+  'show-ls-twitch-token': true,
+  'show-ls-proxy': true,
+  'ls-sync-fix': true,
+  'ls-twitch-codecs': true,
   'dep-use-bgutil': true,
   'dep-use-deno': true,
   'dep-install-gdl': true,
@@ -107,7 +127,27 @@ function applySetting(key, value) {
     }
   } else if (cfg.el) {
     const el = document.getElementById(cfg.el);
-    if (el) el.style.display = value ? '' : 'none';
+    if (el) {
+      el.style.display = value ? '' : 'none';
+      if (typeof el.disabled !== 'undefined') {
+        el.disabled = !value;
+      }
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.tagName === 'BUTTON') {
+        el.disabled = !value;
+        if (!value && el.type === 'checkbox' && el.checked) {
+          el.checked = false;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      const controls = el.querySelectorAll('input, select, textarea, button');
+      controls.forEach(ctrl => {
+        ctrl.disabled = !value;
+        if (!value && ctrl.type === 'checkbox' && ctrl.checked) {
+          ctrl.checked = false;
+          ctrl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }
   } else if (cfg.custom === 'disk-space') {
     // diskSpace is defined later in disk-space.js — called lazily, safe
     if (typeof diskSpace !== 'undefined') diskSpace.setEnabled(value);
@@ -1064,7 +1104,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
         <div class="site-preset-card-header">
           <div class="site-preset-name">
             <span>${preset.name || 'Custom Site'}</span>
-            ${isCustom ? '<span style="font-size: 10px; padding: 1px 5px; border-radius: 4px; background: rgba(99, 102, 241, 0.2); color: #818cf8;">Custom</span>' : ''}
+            ${isCustom ? '<span style="font-size: 10px; padding: 2px 7px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); color: #818cf8; font-weight: 600;">Custom</span>' : ''}
           </div>
           <label class="toggle-switch" title="${preset.enabled ? 'Enabled' : 'Disabled'}">
             <input type="checkbox" class="preset-toggle-enable" ${preset.enabled ? 'checked' : ''} />
@@ -1082,8 +1122,8 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
           ${preset.client && preset.client !== 'default' ? `<span class="site-chip">👤 ${preset.client}</span>` : ''}
         </div>
         <div class="site-preset-card-actions">
-          <button type="button" class="btn btn-ghost edit-preset-btn" style="font-size: 11px; padding: 3px 8px;">Edit</button>
-          ${isCustom ? '<button type="button" class="btn btn-ghost delete-preset-btn" style="font-size: 11px; padding: 3px 8px; color: var(--danger);">Delete</button>' : ''}
+          <button type="button" class="btn btn-ghost edit-preset-btn" style="font-size: 11px; padding: 4px 10px; border-radius: var(--radius-sm, 6px);">Edit</button>
+          ${isCustom ? '<button type="button" class="btn btn-ghost delete-preset-btn" style="font-size: 11px; padding: 4px 10px; color: var(--danger); border-radius: var(--radius-sm, 6px);">Delete</button>' : ''}
         </div>
       `;
 
@@ -1268,6 +1308,150 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
   });
 
   getDiscordDownloadDefaults();
+
+  // ── Two-Pane Settings Category & Search Navigation ───────────
+  function initSettingsCategoryNav() {
+    const navItems = document.querySelectorAll('.settings-nav-item');
+    const contentPane = document.getElementById('settings-content-pane');
+    const sectionsContainer = document.getElementById('settings-sections-container');
+    const sections = sectionsContainer ? sectionsContainer.querySelectorAll('.settings-section') : [];
+    const searchInput = document.getElementById('settings-search-input');
+    const searchClear = document.getElementById('settings-search-clear');
+    const searchBanner = document.getElementById('settings-search-results-banner');
+    const searchCount = document.getElementById('settings-search-results-count');
+    const searchResetBtn = document.getElementById('settings-search-reset-btn');
+
+    if (!navItems.length || !sections.length) return;
+
+    let activeCat = 'general';
+
+    function switchCategory(cat) {
+      activeCat = cat || 'general';
+
+      // Clear search if one was active
+      if (searchInput && searchInput.value) {
+        searchInput.value = '';
+      }
+      if (searchClear) searchClear.style.display = 'none';
+      if (searchBanner) searchBanner.style.display = 'none';
+
+      navItems.forEach(btn => {
+        const match = btn.dataset.settingsCat === cat;
+        btn.classList.toggle('active', match);
+      });
+
+      sections.forEach(sec => {
+        const belongs = cat === 'all' || sec.dataset.cat === cat;
+        sec.style.display = belongs ? '' : 'none';
+      });
+
+      const resetScroll = () => {
+        const mainContent = document.querySelector('.content');
+        if (mainContent) mainContent.scrollTop = 0;
+        if (contentPane) contentPane.scrollTop = 0;
+        const tabSettings = document.getElementById('tab-settings');
+        if (tabSettings) tabSettings.scrollTop = 0;
+        window.scrollTo(0, 0);
+      };
+      resetScroll();
+      requestAnimationFrame(resetScroll);
+    }
+
+    window.switchSettingsCategory = switchCategory;
+
+    navItems.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cat = btn.dataset.settingsCat;
+        if (cat) switchCategory(cat);
+      });
+    });
+
+    function performSearch(query) {
+      const q = (query || '').trim().toLowerCase();
+      if (!q) {
+        if (searchClear) searchClear.style.display = 'none';
+        if (searchBanner) searchBanner.style.display = 'none';
+        switchCategory(activeCat);
+        return;
+      }
+
+      if (searchClear) searchClear.style.display = 'flex';
+      navItems.forEach(btn => btn.classList.remove('active'));
+
+      let matchingSections = 0;
+      let totalSettingMatches = 0;
+
+      sections.forEach(sec => {
+        const title = (sec.querySelector('.settings-section-title')?.textContent || '').toLowerCase();
+        const desc = (sec.querySelector('.settings-section-desc')?.textContent || '').toLowerCase();
+
+        let sectionMatched = title.includes(q) || desc.includes(q);
+        let itemsInSecMatched = 0;
+
+        const cards = sec.querySelectorAll('.toggle-card, .settings-hub-card, .site-presets-grid, #history-options-group');
+        cards.forEach(card => {
+          const cardText = (card.textContent || '').toLowerCase();
+          if (cardText.includes(q)) {
+            itemsInSecMatched++;
+          }
+        });
+
+        if (sectionMatched || itemsInSecMatched > 0) {
+          sec.style.display = '';
+          matchingSections++;
+          totalSettingMatches += (itemsInSecMatched > 0 ? itemsInSecMatched : 1);
+        } else {
+          sec.style.display = 'none';
+        }
+      });
+
+      if (searchBanner && searchCount) {
+        searchBanner.style.display = 'flex';
+        if (matchingSections === 0) {
+          searchCount.textContent = `No settings matched "${query.trim()}"`;
+        } else {
+          searchCount.textContent = `Found ${matchingSections} section${matchingSections === 1 ? '' : 's'} (${totalSettingMatches} setting${totalSettingMatches === 1 ? '' : 's'}) matching "${query.trim()}"`;
+        }
+      }
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        performSearch(e.target.value);
+      });
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchInput.value = '';
+          performSearch('');
+        }
+      });
+    }
+
+    if (searchClear) {
+      searchClear.addEventListener('click', () => {
+        if (searchInput) {
+          searchInput.value = '';
+          searchInput.focus();
+        }
+        performSearch('');
+      });
+    }
+
+    if (searchResetBtn) {
+      searchResetBtn.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        performSearch('');
+      });
+    }
+
+    // Always start off on General & Window
+    try {
+      localStorage.removeItem('nyx-settings-active-cat');
+    } catch (e) {}
+    switchCategory('general');
+  }
+
+  initSettingsCategoryNav();
 });
 
 function showUpdateBanner(info) {

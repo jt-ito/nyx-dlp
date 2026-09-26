@@ -42,6 +42,12 @@ function resolveModule(relPath) {
 const runners = resolveModule('lib/runners.js');
 const settingsStore = resolveModule('lib/settings-store.js');
 
+const BOOLEAN_FLAGS = new Set([
+  'help', 'h', 'force-encode', 'mkv', 'check',
+  'auto-repair', 'retry-ssl', 'native-hls', 'all-clips',
+  'sub-only', 'keep-temp', 'reset', 'clear', 'enable-all', 'disable-all'
+]);
+
 // ── Argument parsing ─────────────────────────────────────────────────
 function parseArgs(argv) {
   const positional = [];
@@ -51,8 +57,9 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg.startsWith('--')) {
       const key = arg.slice(2);
-      // Support --flag=value format
-      if (key.includes('=')) {
+      if (BOOLEAN_FLAGS.has(key)) {
+        flags[key] = true;
+      } else if (key.includes('=')) {
         const [k, ...rest] = key.split('=');
         flags[k] = rest.join('=');
       } else if (i + 1 >= argv.length || argv[i + 1].startsWith('-')) {
@@ -68,7 +75,7 @@ function parseArgs(argv) {
       }
     } else if (arg.startsWith('-') && arg.length === 2) {
       const key = arg.slice(1);
-      if (i + 1 >= argv.length || argv[i + 1].startsWith('-')) {
+      if (key === 'h' || i + 1 >= argv.length || argv[i + 1].startsWith('-')) {
         flags[key] = true;
       } else {
         flags[key] = argv[++i];
@@ -461,10 +468,12 @@ switch (toolName) {
 
 \x1b[1mUsage:\x1b[0m
   nyx-dlp-cli concat -o <dir> --output <filename> [options] <file1> <file2> ...
+  nyx-dlp-cli concat --check <file1> <file2> ...
 
 \x1b[1mOptions:\x1b[0m
-  --output <filename>       Output filename (e.g. "merged.mp4"; required)
+  --output <filename>       Output filename (e.g. "merged.mp4"; required for merge)
   -o, --output-dir <dir>    Output directory (defaults to directory of first file)
+  --check, -c               Analyze files and verify stream compatibility without merging
   --force-encode            Force GPU/CPU re-encoding instead of direct stream copy
   --quality <level>         Encode quality profile (high, medium, low; default: high)
   --mkv                     Output container format as MKV
@@ -472,6 +481,7 @@ switch (toolName) {
   --ffmpeg-version <ver>    FFmpeg version (auto, latest, 5.1.4)
 
 \x1b[1mExamples:\x1b[0m
+  nyx-dlp-cli concat --check part1.mp4 part2.mp4
   nyx-dlp-cli concat -o ./output --output merged.mp4 part1.mp4 part2.mp4 part3.mp4
   nyx-dlp-cli concat -o ./output --output merged.mp4 --force-encode --quality high clip1.mp4 clip2.mov
 `);
@@ -479,6 +489,17 @@ switch (toolName) {
     }
     const files = positional;
     if (files.length < 2) die('At least 2 files required. Usage: nyx-dlp-cli concat -o <dir> --output <name> <file1> <file2> ...');
+
+    if (flags.check || flags.c) {
+      runners.runConcatenator({
+        files: files.map(f => path.resolve(f)),
+        checkOnly: true,
+        forceEncode: !!flags['force-encode'],
+        ffmpegVersion: flags['ffmpeg-version'] || 'auto'
+      }, broadcastTerminal);
+      break;
+    }
+
     const outName = flags.output || flags.name;
     if (!outName) die('--output <filename> parameter is required');
     const destination = outDir || path.dirname(path.resolve(files[0]));
@@ -714,10 +735,12 @@ switch (toolName) {
       console.log(`\x1b[1mPrimary Video Encoder:\x1b[0m \x1b[32m${best}\x1b[0m`);
       console.log(`\x1b[1mH.264 Video Encoder:\x1b[0m   \x1b[32m${h264}\x1b[0m`);
       console.log('\nSupported Hardware & Software Encoders:');
-      console.log('  • NVIDIA NVENC  (hevc_nvenc, h264_nvenc)');
-      console.log('  • AMD AMF      (hevc_amf, h264_amf)');
-      console.log('  • Intel QuickSync (hevc_qsv, h264_qsv)');
-      console.log('  • CPU Software  (libx264, libx265)\n');
+      console.log('  • NVIDIA NVENC       (hevc_nvenc, h264_nvenc)');
+      console.log('  • AMD AMF           (hevc_amf, h264_amf)');
+      console.log('  • Intel QuickSync   (hevc_qsv, h264_qsv)');
+      console.log('  • Apple VideoToolbox (hevc_videotoolbox, h264_videotoolbox)');
+      console.log('  • Linux VA-API       (hevc_vaapi, h264_vaapi)');
+      console.log('  • CPU Software       (libx264, libx265)\n');
       process.exit(0);
     }).catch(err => {
       console.error('Error detecting encoders:', err);

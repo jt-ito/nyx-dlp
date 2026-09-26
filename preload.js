@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   pickAnyFiles: () => ipcRenderer.invoke('pick-any-files'),
   pickFolders: () => ipcRenderer.invoke('pick-folders'),
   getDiskSpace: (drivePath) => ipcRenderer.invoke('get-disk-space', drivePath),
+  getFileStats: (filePaths) => ipcRenderer.invoke('get-file-stats', filePaths),
   saveTextFile: (opts) => ipcRenderer.invoke('save-text-file', opts),
   
   // Notifications & History
@@ -46,10 +47,13 @@ contextBridge.exposeInMainWorld('api', {
   updateBatchQueue: (opts) => ipcRenderer.send('update-batch-queue', opts),
   runM3u8:       (opts) => ipcRenderer.send('run-m3u8', opts),
   fetchM3u8TwitchMeta: (opts) => ipcRenderer.invoke('fetch-m3u8-twitch-meta', opts),
+  probeMasterPlaylist: (opts) => ipcRenderer.invoke('probe-master-playlist', opts),
+  sniffManifest: (opts) => ipcRenderer.invoke('sniff-manifest', opts),
   saveKickIvsMapping: (opts) => ipcRenderer.invoke('save-kick-ivs-mapping', opts),
   runGalleryDl:  (opts) => ipcRenderer.send('run-gallery-dl', opts),
   runSplitter:   (opts) => ipcRenderer.send('run-splitter', opts),
   runConcatenator: (opts) => ipcRenderer.send('run-concatenator', opts),
+  checkConcatFiles: (opts) => ipcRenderer.invoke('check-concat-files', opts),
   runEncoder:    (opts) => ipcRenderer.send('run-encoder', opts),
   runIaUpload:   (opts) => ipcRenderer.send('run-ia-upload', opts),
   runIaEdit:     (opts) => ipcRenderer.send('run-ia-edit', opts),
@@ -90,6 +94,14 @@ contextBridge.exposeInMainWorld('api', {
   requestFullState: () => ipcRenderer.send('request-full-state'),
   onSyncUiState: (cb) => ipcRenderer.on('sync-ui-state', (_e, d) => cb(d)),
   onFullState: (cb) => ipcRenderer.on('full-state', (_e, d) => cb(d)),
+
+  // Downloader Tools & Engines Hub
+  getAllToolsInfo: () => ipcRenderer.invoke('get-all-tools-info'),
+  getToolInfo: (tool) => ipcRenderer.invoke('get-tool-info', { tool }),
+  checkToolUpdates: (tool) => ipcRenderer.invoke('check-tool-updates', { tool }),
+  installToolVersion: (tool, version) => ipcRenderer.invoke('install-tool-version', { tool, version }),
+  openVendorFolder: (tool) => ipcRenderer.invoke('open-vendor-folder', { tool }),
+  onToolHubProgress: (cb) => ipcRenderer.on('tool-hub-progress', (_e, d) => cb(d)),
 
   // Remove listeners
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),

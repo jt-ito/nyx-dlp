@@ -5,6 +5,7 @@ const TRANSIENT_SYNC_IDS = new Set([
   'yd-url', 'batch-urls', 'ls-url', 'm3-url', 'm3-urls', 'gdl-url', 'gdl-urls',
   'yd-start', 'yd-end', 'm3-start', 'm3-end', 'm3-twitch-title-input',
   'concat-output-name',
+  'sp-file',
   'ia-identifier-up', 'ia-identifier-edit', 'ia-identifier-down', 'ia-identifier-dl',
   'ia-title', 'ia-description', 'ia-creator',
   'ia-date', 'ia-date-y', 'ia-date-m', 'ia-date-d',

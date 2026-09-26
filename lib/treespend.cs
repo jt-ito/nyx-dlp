@@ -79,6 +79,10 @@ public class TreeSpend {
         }
         foreach (var pid in pids) {
             IntPtr h = OpenProcess(0x1F0FFF, false, pid);
+            if (h == IntPtr.Zero) {
+                uint desiredAccess = (action == "suspend" || action == "resume") ? 0x0800u : (0x0800u | 0x0001u);
+                h = OpenProcess(desiredAccess, false, pid);
+            }
             if (h != IntPtr.Zero) {
                 if (action == "suspend") {
                     NtSuspendProcess(h);

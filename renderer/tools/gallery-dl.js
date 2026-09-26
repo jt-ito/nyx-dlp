@@ -24,9 +24,8 @@
     localStorage.removeItem('field:gdl-urls');
     localStorage.removeItem('field:gdl-url');
   } catch (_) {}
-  if (gdlUrlInput && !gdlUrlInput.value.trim() && gdlTextarea) {
-    gdlTextarea.value = '';
-  }
+  if (gdlUrlInput) gdlUrlInput.value = '';
+  if (gdlTextarea) gdlTextarea.value = '';
 
   function scrollToCursor(ta) {
     if (!ta) return;
@@ -54,46 +53,56 @@
     counterGdl.textContent = n + (n === 1 ? ' URL' : ' URLs');
   }
 
-  gdlTextarea.addEventListener('input', () => {
-    updateGdlCount();
-    const list = getGdlUrls();
-    if (list.length === 1 && gdlUrlInput) {
-      gdlUrlInput.value = list[0];
-    } else if (list.length === 0 && gdlUrlInput) {
-      gdlUrlInput.value = '';
+  function syncGdlMultiToSingle() {
+    const lines = gdlTextarea ? gdlTextarea.value.split('\n').map(l => l.trim()).filter(Boolean) : [];
+    if (gdlUrlInput) {
+      gdlUrlInput.value = lines.length > 0 ? lines[0] : '';
     }
+    updateGdlCount();
+  }
+
+  gdlTextarea.addEventListener('input', () => {
+    syncGdlMultiToSingle();
     scrollToCursor(gdlTextarea);
   });
 
   gdlTextarea.addEventListener('paste', (e) => {
     e.preventDefault();
-    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+    const spaceUrls = pasted.trim().split(/\s+/).filter(u => /^https?:\/\//i.test(u));
+    let insertText = pasted;
+    if (!pasted.includes('\n') && !pasted.includes('\r') && spaceUrls.length > 1) {
+      insertText = spaceUrls.join('\n');
+    }
     const start  = gdlTextarea.selectionStart;
     const end    = gdlTextarea.selectionEnd;
     const before = gdlTextarea.value.substring(0, start);
     const after  = gdlTextarea.value.substring(end);
-    const insert = pasted.endsWith('\n') ? pasted : pasted + '\n';
+    const insert = insertText.endsWith('\n') ? insertText : insertText + '\n';
     gdlTextarea.value = before + insert + after;
     const newPos = start + insert.length;
     gdlTextarea.selectionStart = newPos;
     gdlTextarea.selectionEnd   = newPos;
-    updateGdlCount();
+    syncGdlMultiToSingle();
     scrollToCursor(gdlTextarea);
   });
 
   modeBtnGdl.addEventListener('click', () => {
-    gdlMultiMode = !gdlMultiMode;
+    const switchingToMulti = !gdlMultiMode;
+    gdlMultiMode = switchingToMulti;
     singleDivGdl.classList.toggle('hidden', gdlMultiMode);
     multiDivGdl.classList.toggle('hidden', !gdlMultiMode);
     counterGdl.classList.toggle('hidden', !gdlMultiMode);
     modeBtnGdl.classList.toggle('active', gdlMultiMode);
     modeBtnGdl.title = gdlMultiMode ? 'Switch to single URL' : 'Switch to multi-URL mode';
-    if (gdlMultiMode) {
+    if (switchingToMulti) {
       const single = gdlUrlInput ? gdlUrlInput.value.trim() : '';
-      if (single) {
-        const multiUrls = gdlTextarea.value.split('\n').map(l => l.trim()).filter(Boolean);
-        if (multiUrls.length <= 1 || !multiUrls.includes(single)) {
-          gdlTextarea.value = single + '\n';
+      const currentMultiLines = gdlTextarea ? gdlTextarea.value.split('\n').map(l => l.trim()).filter(Boolean) : [];
+      if (!single) {
+        if (gdlTextarea) gdlTextarea.value = '';
+      } else {
+        if (currentMultiLines.length === 0 || currentMultiLines[0] !== single) {
+          if (gdlTextarea) gdlTextarea.value = single + '\n';
         }
       }
       updateGdlCount();
@@ -102,10 +111,12 @@
         setTimeout(() => gdlTextarea.focus(), 50);
       }
     } else {
-      const urls = getGdlUrls();
+      const multiLines = gdlTextarea ? gdlTextarea.value.split('\n').map(l => l.trim()).filter(Boolean) : [];
       if (gdlUrlInput) {
-        gdlUrlInput.value = urls.length > 0 ? urls[0] : '';
+        gdlUrlInput.value = multiLines.length > 0 ? multiLines[0] : '';
+        setTimeout(() => gdlUrlInput.focus(), 50);
       }
+      updateGdlCount();
     }
   });
 
@@ -118,7 +129,12 @@
   }
 
   document.getElementById('gdl-clear').addEventListener('click', () => clearLog(log));
-  stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
+  stopBtn.addEventListener('click', () => {
+    if (currentPid) window.api.stopScript(currentPid);
+    isPaused = false;
+    pauseBtn.innerHTML = pauseIconHTML;
+    pauseBtn.classList.remove('paused');
+  });
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
@@ -166,15 +182,42 @@
     });
 
     gdlUrlInput.addEventListener('paste', (e) => {
-      const pasted = (e.clipboardData || window.clipboardData).getData('text');
-      if (pasted && pasted.includes('\n') && pasted.trim().split('\n').filter(l => l.trim()).length > 1) {
+      const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      const lines = pasted.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const spaceUrls = pasted.trim().split(/\s+/).filter(u => /^https?:\/\//i.test(u));
+
+      if (lines.length > 1) {
         e.preventDefault();
-        if (!gdlMultiMode) {
+        if (!gdlMultiMode && modeBtnGdl) {
           modeBtnGdl.click();
         }
-        gdlTextarea.value = pasted.trim() + '\n';
+        if (gdlTextarea) {
+          gdlTextarea.value = lines.join('\n') + '\n';
+        }
+        if (gdlUrlInput) {
+          gdlUrlInput.value = lines[0] || '';
+        }
         updateGdlCount();
-        scrollToCursor(gdlTextarea);
+        if (gdlTextarea) {
+          scrollToCursor(gdlTextarea);
+          setTimeout(() => gdlTextarea.focus(), 50);
+        }
+      } else if (spaceUrls.length > 1) {
+        e.preventDefault();
+        if (!gdlMultiMode && modeBtnGdl) {
+          modeBtnGdl.click();
+        }
+        if (gdlTextarea) {
+          gdlTextarea.value = spaceUrls.join('\n') + '\n';
+        }
+        if (gdlUrlInput) {
+          gdlUrlInput.value = spaceUrls[0] || '';
+        }
+        updateGdlCount();
+        if (gdlTextarea) {
+          scrollToCursor(gdlTextarea);
+          setTimeout(() => gdlTextarea.focus(), 50);
+        }
       }
     });
   }
@@ -190,9 +233,10 @@
   runBtn.addEventListener('click', () => {
     activeUrls         = getGdlUrls();
     const urls         = activeUrls;
-    const outputDir    = document.getElementById('gdl-output').value.trim();
-    const filetypes    = document.getElementById('gdl-filetypes').value.trim();
-    const metadata     = document.getElementById('gdl-meta').checked;
+    const ftEl         = document.getElementById('gdl-filetypes');
+    const filetypes    = (!ftEl || ftEl.disabled || !getSetting('show-gdl-filetypes')) ? '' : ftEl.value.trim();
+    const metaEl       = document.getElementById('gdl-meta');
+    const metadata     = (!metaEl || metaEl.disabled || !getSetting('show-gdl-meta')) ? false : metaEl.checked;
     const cookiesPath  = (document.getElementById('gdl-use-cookies').checked ? document.getElementById('gdl-cookies').value.trim() : '');
     const installGdl   = getSetting('dep-install-gdl') ? 'y' : 'n';
 
@@ -229,11 +273,18 @@
     let urlIdx = 0;
     window.api.onGalleryDlOutput((data) => {
       if (data.type === 'pid') {
+        if (!currentPid) incRunning('gallery-dl');
         currentPid = data.pid;
         runBtn.classList.add('hidden');
         pauseBtn.classList.remove('hidden');
         stopBtn.classList.remove('hidden');
-        incRunning('gallery-dl');
+        if (isPaused) {
+          pauseBtn.innerHTML = resumeIconHTML;
+          pauseBtn.classList.add('paused');
+        } else {
+          pauseBtn.innerHTML = pauseIconHTML;
+          pauseBtn.classList.remove('paused');
+        }
         return;
       }
       handleOutput(log, data, () => {

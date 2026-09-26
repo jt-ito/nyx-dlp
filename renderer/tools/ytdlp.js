@@ -12,24 +12,20 @@
 
   document.getElementById('yd-clear').addEventListener('click', () => clearLog(log));
 
+  const stopOriginalHTML = stopBtn.innerHTML;
+
   stopBtn.addEventListener('click', () => {
-    window.api.stopScript(currentPid);
+    stopBtn.disabled = true;
+    isPaused = false;
+    pauseBtn.innerHTML = pauseIconHTML;
+    pauseBtn.classList.remove('paused');
+    appendLog(log, '⏹ Stopping yt-dlp download...', 'warning');
+    if (currentPid) window.api.stopScript(currentPid);
+    else window.api.stopScript();
   });
 
   pauseBtn.addEventListener('click', () => {
     if (!currentPid) return;
-    if (pauseBtn.classList.contains('btn-add-queue')) {
-      const newUrls = pauseBtn._newUrls;
-      if (newUrls && newUrls.length > 0) {
-        activeUrls.push(...newUrls);
-        pauseBtn._newUrls = null;
-        pauseBtn.innerHTML = isPaused ? resumeIconHTML : pauseIconHTML;
-        pauseBtn.classList.remove('btn-add-queue');
-        pauseBtn.classList.toggle('paused', isPaused);
-        appendLog(log, '✔ Added ' + newUrls.length + ' new URL(s) to the queue.', 'success');
-      }
-      return;
-    }
     if (!isPaused) {
       isPaused = true;
       window.api.pauseScript(currentPid);
@@ -153,7 +149,8 @@
   runBtn.addEventListener('click', () => {
     const url         = document.getElementById('yd-url').value.trim();
     const outputDir   = document.getElementById('yd-output').value.trim();
-    const format      = document.getElementById('yd-format').value;
+    const formatEl    = document.getElementById('yd-format');
+    const format      = (!formatEl || formatEl.disabled || !getSetting('show-yd-format')) ? 'bestvideo*+bestaudio/best' : (formatEl.value || 'bestvideo*+bestaudio/best');
     const cookiesPath = (document.getElementById('yd-use-cookies').checked ? document.getElementById('yd-cookies').value.trim() : '');
     const container   = document.getElementById('yd-container').value;
     const startTime   = document.getElementById('yd-start').value.trim();
@@ -177,63 +174,95 @@
     const ydPathErr = isProtectedPath(outputDir);
     if (ydPathErr)  { appendLog(log, '⚠ ' + ydPathErr, 'error'); return; }
 
-    clearLog(log);
-    if (getUrl) {
-      appendLog(log, `▶ Grabbing direct stream URL...`, 'info');
-      appendLog(log, `  URL:    ${url}`, 'cmd');
-      if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
-    } else {
-      appendLog(log, `▶ Starting yt-dlp download...`, 'info');
-      appendLog(log, `  URL:    ${url}`, 'cmd');
-      appendLog(log, `  Format: ${format}`, 'cmd');
-      appendLog(log, `  Container: ${container}`, 'cmd');
-      if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
-      appendLog(log, `  Output: ${outputDir}`, 'cmd');
-      if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
-      if (activePresetConcurrent) appendLog(log, `  Concurrent Fragments: ${activePresetConcurrent}`, 'cmd');
+    const startYtdlpDownload = (urlToUse, hasFragment = false) => {
+      clearLog(log);
+      if (getUrl) {
+        appendLog(log, `▶ Grabbing direct stream URL...`, 'info');
+        appendLog(log, `  URL:    ${urlToUse}`, 'cmd');
+        if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
+      } else {
+        appendLog(log, `▶ Starting yt-dlp download...`, 'info');
+        appendLog(log, `  URL:    ${urlToUse}`, 'cmd');
+        appendLog(log, `  Format: ${format}`, 'cmd');
+        appendLog(log, `  Container: ${container}`, 'cmd');
+        if (startTime || endTime) appendLog(log, `  Clip: ${startTime || '0:00:00'} → ${endTime || 'end'}`, 'cmd');
+        appendLog(log, `  Output: ${outputDir}`, 'cmd');
+        if (cookiesPath) appendLog(log, `  Cookies: ${cookiesPath}`, 'cmd');
+        if (activePresetConcurrent) appendLog(log, `  Concurrent Fragments: ${activePresetConcurrent}`, 'cmd');
+      }
+      if (hasFragment && window.NyxFragmentRescue?.FRAGMENT_NOTICE_TEXT) {
+        appendLog(log, window.NyxFragmentRescue.FRAGMENT_NOTICE_TEXT, 'info');
+      }
+      appendLog(log, '', 'stdout');
+      markBodyStart(log);
+
+      currentPid = null;
+      isPaused   = false;
+      pauseBtn.innerHTML = pauseIconHTML;
+      pauseBtn.classList.remove('paused');
+
+      runBtn.classList.add('hidden');
+      pauseBtn.classList.remove('hidden');
+      const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
+      const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
+      const autoYpdl  = getSetting('dep-auto-ypdl');
+
+      let extraArgs = getExtraYtdlpArgs();
+      if (activePresetExtraArgs) {
+        const extraList = activePresetExtraArgs.split(/\s+/).filter(Boolean);
+        extraArgs = [...extraArgs, ...extraList];
+      }
+
+      window.api.runYtdlp({ 
+        url: urlToUse, outputDir, format, cookiesPath, extraArgs, 
+        container, startTime, endTime, bgutilUrl, useDeno,
+        concurrent: activePresetConcurrent,
+        dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair, twitchSubOnly
+      });
+    };
+
+    if (window.NyxFragmentRescue?.isFragmentUrl(url)) {
+      window.NyxFragmentRescue.promptFragmentRescue({
+        originalUrl: url,
+        cookiesPath,
+        onProceedWithFragment: (isFragment) => {
+          startYtdlpDownload(url, isFragment);
+        },
+        onManifestChosen: (newUrl) => {
+          const uInput = document.getElementById('yd-url');
+          if (uInput) uInput.value = newUrl;
+          startYtdlpDownload(newUrl, false);
+        }
+      });
+      return;
     }
-    appendLog(log, '', 'stdout');
-    markBodyStart(log);
 
-    currentPid = null;
-    isPaused   = false;
-    pauseBtn.innerHTML = pauseIconHTML;
-    pauseBtn.classList.remove('paused');
-
-    runBtn.classList.add('hidden');
-    pauseBtn.classList.remove('hidden');
-    const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
-    const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
-    const autoYpdl  = getSetting('dep-auto-ypdl');
-
-    let extraArgs = getExtraYtdlpArgs();
-    if (activePresetExtraArgs) {
-      const extraList = activePresetExtraArgs.split(/\s+/).filter(Boolean);
-      extraArgs = [...extraArgs, ...extraList];
-    }
-
-    window.api.runYtdlp({ 
-      url, outputDir, format, cookiesPath, extraArgs, 
-      container, startTime, endTime, bgutilUrl, useDeno,
-      concurrent: activePresetConcurrent,
-      dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair, twitchSubOnly
-    });
+    startYtdlpDownload(url, false);
   });
 
   if (window.api && window.api.onYtdlpOutput) {
     window.api.onYtdlpOutput((data) => {
       if (data.type === 'pid') {
+        if (!currentPid) incRunning('yt-dlp');
         currentPid = data.pid;
         runBtn.classList.add('hidden');
         pauseBtn.classList.remove('hidden');
         stopBtn.classList.remove('hidden');
-        incRunning('yt-dlp');
+        if (isPaused) {
+          pauseBtn.innerHTML = resumeIconHTML;
+          pauseBtn.classList.add('paused');
+        } else {
+          pauseBtn.innerHTML = pauseIconHTML;
+          pauseBtn.classList.remove('paused');
+        }
         return;
       }
       handleOutput(log, data, () => {
         runBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
         stopBtn.classList.add('hidden');
+        stopBtn.disabled = false;
+        stopBtn.innerHTML = stopOriginalHTML;
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;

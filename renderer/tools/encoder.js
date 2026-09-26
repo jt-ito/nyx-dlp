@@ -12,7 +12,12 @@
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
   document.getElementById('enc-clear').addEventListener('click', () => clearLog(log));
-  stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
+  stopBtn.addEventListener('click', () => {
+    if (currentPid) window.api.stopScript(currentPid);
+    isPaused = false;
+    pauseBtn.innerHTML = pauseIconHTML;
+    pauseBtn.classList.remove('paused');
+  });
   
   const vcodecSelect = document.getElementById('enc-vcodec');
   const encQualityGroup = document.getElementById('enc-quality-group');
@@ -72,11 +77,18 @@
   if (window.api && window.api.onEncoderOutput) {
     window.api.onEncoderOutput((data) => {
       if (data.type === 'pid') {
+        if (!currentPid) incRunning('Encoder');
         currentPid = data.pid;
         runBtn.classList.add('hidden');
         pauseBtn.classList.remove('hidden');
         stopBtn.classList.remove('hidden');
-        incRunning('Encoder');
+        if (isPaused) {
+          pauseBtn.innerHTML = resumeIconHTML;
+          pauseBtn.classList.add('paused');
+        } else {
+          pauseBtn.innerHTML = pauseIconHTML;
+          pauseBtn.classList.remove('paused');
+        }
         return;
       }
       handleOutput(log, data, () => {

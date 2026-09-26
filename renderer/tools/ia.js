@@ -331,9 +331,14 @@
   const uploadStop = document.getElementById('ia-upload-stop');
   const downloadStop = document.getElementById('ia-download-stop');
   
-  const stopHandler = () => { if (currentPid) window.api.stopScript(currentPid); };
-  uploadStop.addEventListener('click', stopHandler);
-  downloadStop.addEventListener('click', stopHandler);
+  const stopHandler = () => {
+    if (currentPid) window.api.stopScript(currentPid);
+    else if (window.api && window.api.stopScript) window.api.stopScript();
+  };
+  uploadStop?.addEventListener('click', stopHandler);
+  downloadStop?.addEventListener('click', stopHandler);
+  const editStop = document.getElementById('ia-edit-stop');
+  editStop?.addEventListener('click', stopHandler);
 
   // IA Auth Modals
   const configBtn = document.getElementById('ia-config-btn');
@@ -814,7 +819,6 @@
   }
 
   // Edit Logic
-  const editStop = document.getElementById('ia-edit-stop');
   setupRun(
     document.getElementById('ia-edit-run'),
     editStop,

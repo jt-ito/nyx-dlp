@@ -107,14 +107,16 @@ function getExtraArgs(prefix) {
 function getExtraYtdlpArgs() {
     let extraArgs = getExtraArgs('ytdlp-opt:');
     if (getSetting('yd-retry-ssl')) { extraArgs.push('--legacy-server-connect'); extraArgs.push('--retries', '10'); }
-    const client = document.getElementById('yd-client').value;
+    const clientEl = document.getElementById('yd-client');
+    const client = (!clientEl || clientEl.disabled || !getSetting('show-yd-client')) ? 'default' : (clientEl.value || 'default');
     if (client && client !== 'default') extraArgs.push('--extractor-args', 'youtube:player_client=' + client);
     return extraArgs;
 }
 function getBatchExtraArgs() {
     let extraArgs = getExtraArgs('batch-opt:');
     if (getSetting('yd-retry-ssl')) { extraArgs.push('--legacy-server-connect'); extraArgs.push('--retries', '10'); }
-    const client = document.getElementById('batch-client').value;
+    const clientEl = document.getElementById('batch-client');
+    const client = (!clientEl || clientEl.disabled || !getSetting('show-batch-client')) ? 'default' : (clientEl.value || 'default');
     if (client && client !== 'default') extraArgs.push('--extractor-args', 'youtube:player_client=' + client);
     return extraArgs;
 }

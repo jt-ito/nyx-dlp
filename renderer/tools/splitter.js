@@ -11,7 +11,12 @@
   const resumeIconHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume`;
 
   document.getElementById('sp-clear').addEventListener('click', () => clearLog(log));
-  stopBtn.addEventListener('click', () => { if (currentPid) window.api.stopScript(currentPid); });
+  stopBtn.addEventListener('click', () => {
+    if (currentPid) window.api.stopScript(currentPid);
+    isPaused = false;
+    pauseBtn.innerHTML = pauseIconHTML;
+    pauseBtn.classList.remove('paused');
+  });
 
   const partsSelect = document.getElementById('sp-parts-select');
   const partsCustom = document.getElementById('sp-parts-custom');
@@ -37,6 +42,11 @@
 
   // Initialize
   updatePartsSave();
+
+  // Ensure input video file is never persisted across sessions or reloads
+  const spFileInput = document.getElementById('sp-file');
+  if (spFileInput) spFileInput.value = '';
+  try { localStorage.removeItem('field:sp-file'); } catch (_) {}
 
   // Mode Toggle
   const spModeToggle = document.getElementById('sp-mode-toggle');
@@ -671,11 +681,13 @@
     // Clear any potential localStorage entries
     const calcKeys = [
       'field:sp-calc-duration', 'field:sp-calc-parts',
-      'field:sp-calc-offset-base', 'field:sp-calc-offset-val'
+      'field:sp-calc-offset-base', 'field:sp-calc-offset-val',
+      'field:sp-file'
     ];
     calcKeys.forEach(k => {
       try { localStorage.removeItem(k); } catch (_) {}
     });
+    if (spFileInput) spFileInput.value = '';
   }
 
   // Clear on startup
@@ -707,7 +719,6 @@
     const parts      = document.getElementById('sp-parts-select').value;
     const partsToSave = document.getElementById('sp-parts-save').value;
     const outputDir  = document.getElementById('sp-output').value.trim();
-    const container  = document.getElementById('sp-container')?.value;
 
     const actualParts = parts === 'custom' ? parseInt(partsCustom.value) || 2 : parseInt(parts);
     const actualPartsToSaveStr = partsToSave.trim();
@@ -736,11 +747,15 @@
   if (window.api && window.api.onSplitterOutput) {
     window.api.onSplitterOutput((data) => {
       if (data.type === 'pid') {
+        if (!currentPid) incRunning('Splitter');
         currentPid = data.pid;
         runBtn.classList.add('hidden');
         pauseBtn.classList.remove('hidden');
         stopBtn.classList.remove('hidden');
-        incRunning('Splitter');
+        if (isPaused) {
+          pauseBtn.innerHTML = resumeIconHTML;
+          pauseBtn.classList.add('paused');
+        }
         return;
       }
       handleOutput(log, data, () => {

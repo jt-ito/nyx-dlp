@@ -20,4 +20,5 @@ internetarchive.log
 *.ts
 scratch/
 TWITCH_CDN_RECOVERY.md
+COMMUNITY_PROPOSALS*
 v*.md

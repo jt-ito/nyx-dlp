@@ -5,19 +5,26 @@ const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const settingsStore = require('./lib/settings-store.js');
+const { getPortableRootDir } = require('./lib/vendor-dir.js');
 
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-gpu-cache');
 
 app.setAppUserModelId('nyx-dlp');
 
-// Portable mode: if a .portable file sits next to the exe, store all user data
-// in a "data" folder alongside the exe instead of %AppData%.
-if (app.isPackaged) {
-  const portableMarker = path.join(path.dirname(app.getPath('exe')), '.portable');
-  if (fs.existsSync(portableMarker)) {
-    const dataDir = path.join(path.dirname(app.getPath('exe')), 'data');
+// Portable mode: if a .portable file sits next to the exe (or in project root for dev/CLI),
+// store all user data in a "data" folder alongside it instead of %AppData%.
+const portableRoot = getPortableRootDir();
+if (portableRoot) {
+  const dataDir = path.join(portableRoot, 'data');
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    fs.accessSync(dataDir, fs.constants.W_OK);
     app.setPath('userData', dataDir);
+  } catch (err) {
+    console.warn('[Portable] data/ is not writable, falling back to default userData:', err.message);
   }
 }
 
@@ -113,7 +120,7 @@ function checkGitHubRelease() {
           const assets = release.assets || [];
           let matchedAsset = null;
           if (process.platform === 'win32') {
-            const isPortable = fs.existsSync(path.join(path.dirname(app.getPath('exe')), '.portable'));
+            const isPortable = !!getPortableRootDir();
             if (isPortable) {
               matchedAsset = assets.find(a => a.name.endsWith('-portable.zip')) || assets.find(a => a.name.endsWith('.zip'));
             } else {
@@ -728,6 +735,32 @@ ipcMain.handle('pick-folders', async () => {
   return result.canceled ? null : result.filePaths;
 });
 
+// File stats (size in bytes, etc.)
+ipcMain.handle('get-file-stats', async (_e, filePaths) => {
+  try {
+    if (!filePaths) return null;
+    if (Array.isArray(filePaths)) {
+      const res = {};
+      for (const fp of filePaths) {
+        try {
+          if (typeof fp === 'string' && fs.existsSync(fp)) {
+            const stat = fs.statSync(fp);
+            res[fp] = { size: stat.size, isFile: stat.isFile(), isDirectory: stat.isDirectory() };
+          }
+        } catch (_) {}
+      }
+      return res;
+    }
+    if (typeof filePaths === 'string' && fs.existsSync(filePaths)) {
+      const stat = fs.statSync(filePaths);
+      return { size: stat.size, isFile: stat.isFile(), isDirectory: stat.isDirectory() };
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+});
+
 // Disk space — returns { free, total } in bytes for the drive containing `drivePath`
 ipcMain.handle('get-disk-space', async (_e, drivePath) => {
   try {
@@ -1079,6 +1112,26 @@ ipcMain.handle('save-kick-ivs-mapping', async (_event, { ivsId, channel }) => {
     return { success: false, error: err.message };
   }
 });
+const { probeMasterPlaylist } = require('./lib/m3u8-resolver');
+const { sniffManifestFromPage } = require('./lib/manifest-sniffer');
+ipcMain.handle('probe-master-playlist', async (_event, opts) => {
+  try {
+    return await probeMasterPlaylist(opts?.url);
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+ipcMain.handle('sniff-manifest', async (_event, opts) => {
+  try {
+    const candidates = await sniffManifestFromPage(opts?.pageUrl, {
+      cookiesPath: opts?.cookiesPath,
+      timeoutMs: opts?.timeoutMs || 12000
+    });
+    return { success: true, candidates };
+  } catch (err) {
+    return { success: false, error: err.message, candidates: [] };
+  }
+});
 ipcMain.on('run-m3u8', (event, opts) => prepareRunner(opts, 'm3u8-output', runners.runM3u8));
 
 // ── Tool 5: gallery-dl ────────────────────────────────────────────────────────────
@@ -1089,6 +1142,14 @@ ipcMain.on('run-splitter', (event, opts) => prepareRunner(opts, 'splitter-output
 
 // ── Tool 7: Video Concatenator ──────────────────────────────────────────────────────
 ipcMain.on('run-concatenator', (event, opts) => prepareRunner(opts, 'concatenator-output', runners.runConcatenator));
+ipcMain.handle('check-concat-files', async (_event, opts) => {
+  try {
+    const ffmpegSettings = getFfmpegSettings();
+    return await runners.checkConcatFiles({ ...(opts || {}), ...ffmpegSettings });
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
 
 // ── Tool 8: Video Encoder ───────────────────────────────────────────────────────────
 ipcMain.on('run-encoder', (event, opts) => prepareRunner(opts, 'encoder-output', runners.runEncoder));
@@ -1181,3 +1242,28 @@ ipcMain.on('sync-ui-state', (event, data) => {
 ipcMain.on('request-full-state', (event) => {
   event.sender.send('full-state', settingsStore.loadAllSettings());
 });
+
+// ── Downloader Tools & Engines Hub ───────────────────────────────────────────
+const toolHub = require('./lib/tool-hub.js');
+
+ipcMain.handle('get-all-tools-info', async () => {
+  return await toolHub.getAllToolsInfo();
+});
+
+ipcMain.handle('get-tool-info', async (_e, { tool }) => {
+  return await toolHub.getToolInfo(tool);
+});
+
+ipcMain.handle('check-tool-updates', async (_e, { tool }) => {
+  return await toolHub.checkToolUpdates(tool);
+});
+
+ipcMain.handle('install-tool-version', async (_event, { tool, version }) => {
+  return await toolHub.installToolVersion(tool, version, (progress) => {
+    broadcastIPC('tool-hub-progress', progress);
+  });
+});
+
+ipcMain.handle('open-vendor-folder', async (_e, { tool }) => {
+  return toolHub.openVendorFolder(tool);
+});

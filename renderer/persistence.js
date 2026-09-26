@@ -5,6 +5,7 @@
   // Text inputs — save on every keystroke
   const TEXT_IDS = [
     'ls-output',    'ls-cookies', 'ls-concurrent',
+    'ls-duration',  'ls-twitch-token', 'ls-live-edge', 'ls-proxy',
     'yd-output',    'yd-cookies',
     'batch-output', 'batch-cookies',
     'm3-output',    'm3-cookies',
@@ -25,7 +26,7 @@
     'yd-container', 'yd-client',
     'batch-format', 'batch-container', 'batch-client',
     'm3-codec', 'm3-container',
-    'sp-container',
+    'ls-engine',
     'gdl-filetypes',
     'dep-ffmpeg-version',
     'concat-quality',
@@ -38,6 +39,7 @@
   // Checkboxes on the tool tabs (not settings-page toggles) — save on change
   const CHECK_IDS = [
     'batch-rest', 'batch-skip-live', 'm3-encode', 'gdl-meta',
+    'ls-ignore-ssl', 'ls-low-latency',
     'ls-use-cookies', 'ls-from-start', 'yd-use-cookies', 'batch-use-cookies', 'm3-use-cookies', 'gdl-use-cookies',
     'ia-noderive', 'concat-force', 'concat-mkv',
     'yd-auto-repair', 'batch-auto-repair', 'm3-auto-repair', 'm3-native-hls', 'm3-auto-title',
@@ -94,7 +96,13 @@
       'discord-def-thumb': true,
       'discord-def-autorepair': true
     };
-    el.checked = v !== null ? v === 'true' : (defaults[id] ?? false);
+    const isHidden = (typeof SETTINGS_MAP !== 'undefined' && SETTINGS_MAP['show-' + id] && typeof getSetting === 'function') ? !getSetting('show-' + id) : false;
+    if (el.disabled || isHidden) {
+      el.disabled = true;
+      el.checked = false;
+    } else {
+      el.checked = v !== null ? v === 'true' : (defaults[id] ?? false);
+    }
     el.dispatchEvent(new Event('change'));
     el.addEventListener('change', () => localStorage.setItem(fkey(id), el.checked));
   });

@@ -6,21 +6,29 @@ var runningCount = 0;
 const runningTools = new Set();
 
 function setStatus(state, text) {
-  statusDot.className = 'status-dot ' + (state || '');
-  statusText.textContent = text || 'Idle';
+  if (statusDot) statusDot.className = 'status-dot ' + (state || '');
+  if (statusText) statusText.textContent = text || 'Idle';
 }
 function updateRunningTooltip() {
-  statusWrap.title = runningTools.size > 0 ? [...runningTools].join('\n') : '';
+  if (statusWrap) statusWrap.title = runningTools.size > 0 ? [...runningTools].join('\n') : '';
 }
 function incRunning(tool) {
-  runningCount++;
-  if (tool) runningTools.add(tool);
+  if (tool) {
+    if (runningTools.has(tool)) {
+      // Already tracked as running for this tool
+      return;
+    }
+    runningTools.add(tool);
+  }
+  runningCount = Math.max(runningCount + 1, runningTools.size);
   updateRunningTooltip();
   setStatus('running', 'Running...');
 }
 function decRunning(tool) {
-  runningCount = Math.max(0, runningCount - 1);
   if (tool) runningTools.delete(tool);
+  runningCount = Math.max(0, runningTools.size);
   updateRunningTooltip();
-  if (runningCount === 0) setStatus('done', 'Done');
+  if (runningCount === 0) {
+    setStatus('done', 'Done');
+  }
 }

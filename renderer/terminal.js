@@ -192,6 +192,7 @@ function appendLog(logEl, text, cls) {
           logEl._pendingLines.push({ text: prefix + cleanText, cls: 'success', count: 1 });
           logEl._liveProgresses.delete(threadId);
           logEl._downloadCompleted = true;
+          logEl._hasCompletedFile = true;
       } else {
           let progressText = text;
           if (logEl.id === 'ls-log' && logEl._fragTracker) {
@@ -291,6 +292,8 @@ function flushPendingLogsSync(logEl) {
                   && !item.text.includes('✔')
                   && !item.text.includes('⚠')
                   && !item.text.includes('✖')
+                  && !item.text.includes('ℹ')
+                  && !item.text.includes('This was a single fragment')
                   && !item.text.includes('Starting')
                   && !item.text.includes('Resumed')
                   && !item.text.includes('Paused')
@@ -448,6 +451,8 @@ function clearLog(logEl) {
   logEl._lineCount = 0;
   logEl._hasError = false;
   logEl._hasMerged = false;
+  logEl._hasDownloadError = false;
+  logEl._hasCompletedFile = false;
   logEl._fragTracker = { downloaded: 0, liveEdge: 0 };
   logEl._destinationList = [];
   logEl._isExited = false;
@@ -598,6 +603,7 @@ function markBodyStart(logEl) {
 
 function convertSubOnlyErrorsToWarnings(logEl) {
   if (!logEl) return;
+  logEl._hasDownloadError = false;
   if (logEl._pendingLines && logEl._pendingLines.length > 0) {
     for (const item of logEl._pendingLines) {
       if (item && item.text && /subscriber-only content/i.test(item.text)) {
@@ -735,11 +741,23 @@ function handleOutput(logEl, data, onExit) {
         if (nameMatch && nameMatch[1]) {
           const rawName = nameMatch[1].trim();
           const baseName = rawName.split(/[\\/]/).pop();
-          if (baseName) logEl._lastCapturedName = baseName;
+          if (baseName && !/\.(vtt|srt|ass|lrc|sub|sbv|webp|jpg|jpeg|png|info\.json)\b/i.test(baseName)) {
+            logEl._lastCapturedName = baseName;
+          }
         }
 
-        if (line.includes('[Merger] Merging formats into') || line.includes('Deleting original file')) {
+        if (line.match(/\[download\]\s+([^\n\r]+?)\s+has already been downloaded/i) || line.includes('✔ Completed')) {
+          logEl._hasCompletedFile = true;
+        }
+
+        const isNonMediaDelete = /\.(vtt|srt|ass|lrc|sub|sbv|ttml|xml|json|webp|jpg|jpeg|png|gif|thumb)\b/i.test(line);
+        if (line.includes('[Merger] Merging formats into') || (line.includes('Deleting original file') && !isNonMediaDelete)) {
           logEl._hasMerged = true;
+          logEl._hasCompletedFile = true;
+        }
+
+        if (/ERROR:\s+(?:unable to download|Video unavailable|Private video|This video is)/i.test(line)) {
+          logEl._hasDownloadError = true;
         }
 
         if (logEl.id === 'ls-log') {
@@ -845,15 +863,32 @@ function handleOutput(logEl, data, onExit) {
         (ft.liveEdge - ft.downloaded <= 3 && logEl._hasMerged)
       );
 
-      let failed = data.code !== 0 || !!logEl._hasError;
-      if (isStopped) {
-        failed = true;
-      } else if (isLiveStream) {
-        failed = !isCompleteLive;
-      } else if (logEl._hasMerged && (data.code === 0 || data.code === 1)) {
-        failed = false;
+      const hadErrors = !!logEl._hasError || !!logEl._hasDownloadError;
+
+      // Determine if the process actually completed its objective successfully
+      let actuallyCompleted = false;
+      if (!isStopped) {
+        if (isLiveStream) {
+          actuallyCompleted = isCompleteLive;
+        } else if (logEl.id === 'ia-log') {
+          // Internet Archive upload/edit/download only emits exit code 0 when all operations succeeded
+          actuallyCompleted = data.code === 0;
+        } else if (logEl.id === 'concat-log' || logEl.id === 'sp-log' || logEl.id === 'enc-log') {
+          actuallyCompleted = data.code === 0;
+        } else if (data.code === 0 || (data.code === 1 && (logEl._hasMerged || logEl._hasCompletedFile))) {
+          if (logEl._hasMerged || logEl._hasCompletedFile) {
+            actuallyCompleted = true;
+          } else if (!logEl._hasDownloadError && data.code === 0) {
+            actuallyCompleted = true;
+          }
+        }
       }
+
+      let failed = !actuallyCompleted;
       logEl._hasError = false;
+      logEl._hasMerged = false;
+      logEl._hasDownloadError = false;
+      logEl._hasCompletedFile = false;
       const bs = logEl._batchStats;
       logEl._batchStats = null;
       
@@ -884,6 +919,15 @@ function handleOutput(logEl, data, onExit) {
         }
         appendLog(logEl, '⏹ Process was manually stopped.', 'warning');
         trailingCount += 1;
+        if (logEl._currentIaJob && window.api && window.api.addHistory) {
+          logEl._currentIaJob.status = 'stopped';
+          if (!window.shouldRecordHistory || window.shouldRecordHistory(logEl._currentIaJob)) {
+            window.api.addHistory(logEl._currentIaJob).then(() => {
+              if (window._refreshHistory) window._refreshHistory();
+            });
+          }
+          logEl._currentIaJob = null;
+        }
       } else if (!failed) {
         if (isLiveStream && isCompleteLive) {
           appendLog(logEl, `✔ Fragment verification: 100% complete (All ${ft.downloaded.toLocaleString()} fragments captured)`, 'success');
@@ -893,15 +937,24 @@ function handleOutput(logEl, data, onExit) {
           const ok = bs.total - bs.failed;
           appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
           trailingCount += 1;
+        } else if (hadErrors) {
+          appendLog(logEl, '✔ Process completed successfully, but reported errors.', 'warning');
+          trailingCount += 1;
         } else {
           appendLog(logEl, '✔ Process finished successfully.', 'success');
           trailingCount += 1;
         }
         
         if (getSetting('show-notifications') && window.api.showNotification) {
+          let notifBody = 'Job completed successfully!';
+          if (bs && bs.failed > 0) {
+            notifBody = 'Batch completed with some errors.';
+          } else if (hadErrors) {
+            notifBody = 'Job completed successfully, but reported errors.';
+          }
           window.api.showNotification({ 
             title: 'nyx-dlp', 
-            body: bs && bs.failed > 0 ? 'Batch completed with some errors.' : 'Job completed successfully!'
+            body: notifBody
           });
         }
         
@@ -942,17 +995,19 @@ function handleOutput(logEl, data, onExit) {
             if (!downloadName && source) downloadName = source.split(/[\\/]/).pop();
           } else if (logEl.id === 'concat-log') {
             toolName = 'Video Concatenator';
-            const list = document.getElementById('concat-list');
+            const list = document.getElementById('concat-file-list');
             const items = list ? Array.from(list.querySelectorAll('.sortable-item')).length : 0;
             source = `${items} File(s)`;
             output = document.getElementById('concat-output-dir')?.value.trim();
-            const customOut = document.getElementById('concat-output')?.value.trim();
+            const customOut = document.getElementById('concat-output-name')?.value.trim();
             if (customOut) downloadName = customOut;
           } else if (logEl.id === 'enc-log') {
             toolName = 'Video Encoder';
-            source = document.getElementById('enc-file')?.value.trim();
-            output = source; // Encoder usually outputs next to source
-            if (!downloadName && source) downloadName = source.split(/[\\/]/).pop();
+            const list = document.getElementById('enc-file-list');
+            const items = list ? Array.from(list.querySelectorAll('.sortable-item')).map(el => el.dataset.path) : [];
+            source = items.length > 0 ? (items.length === 1 ? items[0] : `${items.length} File(s)`) : '';
+            output = document.getElementById('enc-output-dir')?.value.trim() || '';
+            if (!downloadName && items.length > 0) downloadName = items[0].split(/[\\/]/).pop();
           } else if (logEl.id === 'ia-log') {
             toolName = 'Internet Archive';
             const upId = document.getElementById('ia-identifier-up')?.value.trim();
@@ -1004,9 +1059,10 @@ function handleOutput(logEl, data, onExit) {
           }
         }
       } else if (bs && bs.failed > 0) {
-        if (data.code !== 0) appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
-        else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
         const ok = bs.total - bs.failed;
+        if (data.code !== 0) appendLog(logEl, `✖ Process exited: ${getExitMsg(data.code)}`, 'error');
+        else if (ok > 0) appendLog(logEl, '⚠ Process completed partially, but reported errors (exit code 0).', 'warning');
+        else appendLog(logEl, '✖ Process reported errors (exit code 0).', 'error');
         appendLog(logEl, `⚠ ${ok} download${ok !== 1 ? 's' : ''} finished successfully, ${bs.failed} failed. See failed_downloads.txt`, 'warning');
         trailingCount += 2;
         if (logEl._currentIaJob && window.api && window.api.addHistory) {
