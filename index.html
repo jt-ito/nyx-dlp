@@ -1832,6 +1832,7 @@
 
         <div class="scrollable-content">
           <div class="card form-grid" id="ia-upload-form">
+            <div id="ia-upload-fields" style="display: contents;">
             <div class="form-group full-width">
               <label class="form-label">Target File(s)</label>
               <div class="input-folder-group" style="align-items: flex-start;">
@@ -1852,6 +1853,12 @@
                       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                     </svg>
                   </button>
+                  <button class="btn-icon-square" id="ia-add-concurrent-upload" title="Add concurrent upload">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1863,7 +1870,7 @@
               </div>
               <input type="text" id="ia-identifier-up" class="form-input" placeholder="e.g. my-unique-item-id-2026" minlength="5" />
             </div>
-            
+
             <div class="form-group">
               <label class="form-label">Title</label>
               <input type="text" id="ia-title" class="form-input" placeholder="My Awesome Upload" />
@@ -1964,7 +1971,9 @@
                 </div>
               </div>
             </div>
-            
+            <div class="form-error hidden" id="ia-upload-form-error" style="grid-column: 1 / -1;"></div>
+            </div><!-- /#ia-upload-fields -->
+
             <div class="action-row" style="grid-column: 1 / -1; margin-top: 16px;">
               <button class="btn btn-primary btn-run" id="ia-upload-run">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -1974,15 +1983,26 @@
                 </svg>
                 Upload to IA
               </button>
-              <button class="btn btn-ghost btn-stop hidden" id="ia-upload-stop">
+              <button class="btn btn-ghost" id="ia-upload-add-queue" title="Start this upload as a new queued tab without clearing or switching away from the current form">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add to Queue
+              </button>
+              <button class="btn btn-ghost btn-stop hidden" id="ia-upload-stop" title="Stop the selected upload tab">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
                 </svg>
                 Stop
               </button>
               <button class="btn btn-ghost" id="ia-upload-reset">Reset Info</button>
-              <button class="btn btn-ghost" id="ia-upload-clear">Clear Log</button>
+              <button class="btn btn-ghost" id="ia-upload-clear">Clear Selected Log</button>
               <button class="btn btn-ghost" id="ia-config-btn" title="Run 'ia configure' in terminal to login">Login to IA</button>
+            </div>
+
+            <div class="ia-jobs-bar hidden" id="ia-jobs-bar" style="grid-column: 1 / -1;">
+              <div class="ia-job-tabs" id="ia-job-tabs"></div>
             </div>
           </div>
 
@@ -2117,7 +2137,7 @@
             </div>
           </div>
 
-          <div class="terminal-wrap" style="margin-top: 20px;">
+          <div class="terminal-wrap" id="ia-single-terminal-wrap" style="margin-top: 20px;">
             <div class="terminal-container">
               <div class="terminal-header">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -2140,9 +2160,12 @@
                   <span></span><span></span><span></span>
                 </div>
               </div>
-              <div class="terminal-body" id="ia-log" data-log-el="true"></div>
+              <div class="terminal-body" id="ia-log" data-log-el="true" data-ia-tool="1"></div>
             </div>
           </div>
+
+          <!-- Per-job terminal views for queued/concurrent uploads (populated by renderer/tools/ia.js) -->
+          <div id="ia-upload-terminal-host" class="hidden"></div>
         </div>
       </section>
 

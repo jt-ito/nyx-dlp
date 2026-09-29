@@ -741,7 +741,7 @@
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
 
-    window.api.runSplitter({ file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '', containerFormat: container || '' });
+    window.api.runSplitter({ file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '' });
   });
 
   if (window.api && window.api.onSplitterOutput) {

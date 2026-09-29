@@ -233,7 +233,8 @@
   runBtn.addEventListener('click', () => {
     activeUrls         = getGdlUrls();
     const urls         = activeUrls;
-    const ftEl         = document.getElementById('gdl-filetypes');
+    const outputDir    = document.getElementById('gdl-output').value.trim();
+    const ftEl        = document.getElementById('gdl-filetypes');
     const filetypes    = (!ftEl || ftEl.disabled || !getSetting('show-gdl-filetypes')) ? '' : ftEl.value.trim();
     const metaEl       = document.getElementById('gdl-meta');
     const metadata     = (!metaEl || metaEl.disabled || !getSetting('show-gdl-meta')) ? false : metaEl.checked;

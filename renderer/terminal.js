@@ -1,4 +1,33 @@
 /* ── Terminal helpers ─────────────────────────────────────── */
+
+// A log element is visible only while its nearest panel (a main nav tab, or a
+// per-job view such as an IA upload job tab) is the active one, AND — for a
+// nested per-job view — the main tab it lives inside is also active. Hidden
+// logs keep buffering into _pendingLines instead of touching the DOM (see
+// triggerRaf), which is what keeps concurrent background jobs cheap.
+function isLogPanelVisible(logEl) {
+  const panel = logEl.closest('.tab-panel, .ia-job-view');
+  if (panel && !panel.classList.contains('active')) return false;
+  const topPanel = logEl.closest('.tab-panel');
+  if (topPanel && topPanel !== panel && !topPanel.classList.contains('active')) return false;
+  return true;
+}
+
+// Flush + auto-scroll a log that just became visible (tab switch, job-tab switch).
+function activateLogView(logEl) {
+  if (!logEl) return;
+  if (logEl._hasUnflushed || (logEl._pendingLines?.length ?? 0) > 0) {
+    logEl._hasUnflushed = false;
+    flushPendingLogsSync(logEl);
+    if (logEl._autoFollow !== false) {
+      const scrollEl = logEl._scrollEl || logEl;
+      scrollEl.scrollTop = scrollEl.scrollHeight;
+      logEl._lastScrollTop = scrollEl.scrollTop;
+    }
+  }
+  logEl._updateScrollBtn?.();
+}
+
 function classifyLine(text, streamType, logEl) {
   const t = text.trimStart();
   if (t.includes('This live event will begin in')) {
@@ -406,7 +435,7 @@ function flushPendingLogsSync(logEl) {
 function triggerRaf(logEl) {
     // Don't schedule any DOM work for hidden tabs. Lines stay in _pendingLines
     // and are flushed in a single pass when the user switches to this tab.
-    if (!logEl.closest('.tab-panel')?.classList.contains('active')) {
+    if (!isLogPanelVisible(logEl)) {
         logEl._hasUnflushed = true;
         return;
     }
@@ -415,7 +444,7 @@ function triggerRaf(logEl) {
       requestAnimationFrame(() => {
         logEl._rafPending = false;
         const count = flushPendingLogsSync(logEl);
-        if (logEl._autoFollow && !logEl._programmaticScroll && logEl.closest('.tab-panel')?.classList.contains('active')) {
+        if (logEl._autoFollow && !logEl._programmaticScroll && isLogPanelVisible(logEl)) {
           const scrollEl = logEl._scrollEl || logEl;
           scrollEl.scrollTop = scrollEl.scrollHeight;
           logEl._lastScrollTop = scrollEl.scrollTop;
@@ -499,7 +528,7 @@ function markBodyStart(logEl) {
   logEl._programmaticScroll = false;
 
   const updateBtn = () => {
-    if (!logEl.closest('.tab-panel')?.classList.contains('active')) {
+    if (!isLogPanelVisible(logEl)) {
       btn.style.display = 'none';
       return;
     }
@@ -581,7 +610,7 @@ function markBodyStart(logEl) {
   };
 
   logEl._scrollListener = () => {
-    if (!logEl.closest('.tab-panel')?.classList.contains('active')) return;
+    if (!isLogPanelVisible(logEl)) return;
     logEl._scrollBtnHandler?.();
   };
   scrollEl.addEventListener('scroll', logEl._scrollListener, { passive: true });
@@ -870,7 +899,7 @@ function handleOutput(logEl, data, onExit) {
       if (!isStopped) {
         if (isLiveStream) {
           actuallyCompleted = isCompleteLive;
-        } else if (logEl.id === 'ia-log') {
+        } else if (logEl.dataset.iaTool === '1') {
           // Internet Archive upload/edit/download only emits exit code 0 when all operations succeeded
           actuallyCompleted = data.code === 0;
         } else if (logEl.id === 'concat-log' || logEl.id === 'sp-log' || logEl.id === 'enc-log') {
@@ -1008,7 +1037,7 @@ function handleOutput(logEl, data, onExit) {
             source = items.length > 0 ? (items.length === 1 ? items[0] : `${items.length} File(s)`) : '';
             output = document.getElementById('enc-output-dir')?.value.trim() || '';
             if (!downloadName && items.length > 0) downloadName = items[0].split(/[\\/]/).pop();
-          } else if (logEl.id === 'ia-log') {
+          } else if (logEl.dataset.iaTool === '1') {
             toolName = 'Internet Archive';
             const upId = document.getElementById('ia-identifier-up')?.value.trim();
             const downId = document.getElementById('ia-identifier-down')?.value.trim();

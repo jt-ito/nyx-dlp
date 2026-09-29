@@ -39,17 +39,11 @@ window.switchTab = function(tabName) {
       if (contentEl) contentEl.scrollTop = panel._savedScroll;
     }
     panel.querySelectorAll('[data-terminal]').forEach(t => t._updateScrollBtn?.());
+    // Only flush logs that are actually visible now — a background IA upload job
+    // log nested in this panel but not the selected job tab stays buffered.
     panel.querySelectorAll('[data-log-el]').forEach(logEl => {
-      if (logEl._hasUnflushed || (logEl._pendingLines?.length ?? 0) > 0) {
-        logEl._hasUnflushed = false;
-        if (typeof flushPendingLogsSync === 'function') flushPendingLogsSync(logEl);
-        if (logEl._autoFollow !== false) {
-          const scrollEl = logEl._scrollEl || logEl;
-          scrollEl.scrollTop = scrollEl.scrollHeight;
-          logEl._lastScrollTop = scrollEl.scrollTop;
-        }
-        logEl._updateScrollBtn?.();
-      }
+      if (typeof isLogPanelVisible === 'function' && !isLogPanelVisible(logEl)) return;
+      if (typeof activateLogView === 'function') activateLogView(logEl);
     });
   }
 };

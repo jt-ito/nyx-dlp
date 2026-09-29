@@ -990,10 +990,13 @@ function getFfmpegSettings() {
 }
 
 function prepareRunner(opts, channel, runnerFn) {
-  const originalBroadcast = (data) => broadcastIPC(channel, data);
+  // A renderer-supplied opts.jobId (used by the IA upload queue to run several
+  // uploads concurrently on the shared 'ia-output' channel) is echoed onto every
+  // broadcast so the renderer can route each event back to the right job/log.
+  const originalBroadcast = (data) => broadcastIPC(channel, opts.jobId ? { ...data, jobId: opts.jobId } : data);
 
   const cmdName = String(channel || '').replace('-output', '').replace('gallery-dl', 'gallerydl').replace('concatenator', 'concat');
-  const jobId = 'gui-' + cmdName + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  const jobId = opts.jobId || ('gui-' + cmdName + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6));
   let jobTracker = null;
   try {
     const discordBot = require('./lib/discord-bot.js');

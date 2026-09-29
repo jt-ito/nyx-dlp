@@ -1557,6 +1557,22 @@ html, body {
 }
 .btn-folder:hover { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
 
+/* Same look as .btn-folder, but deliberately NOT matched by the generic
+   .btn-folder file/folder-picker wiring in navigation.js (this button opens
+   a new upload tab, not an OS file dialog). */
+.btn-icon-square {
+  flex-shrink: 0;
+  width: 40px; height: 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.btn-icon-square:hover { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
 /* ── Sortable List ────────────────────────────────────────────── */
 .sortable-list-container {
   flex: 1;
@@ -2102,6 +2118,55 @@ html, body {
 .terminal-body .line-error   { color: var(--danger); }
 .terminal-body .line-cmd     { color: var(--terminal-cmd); font-style: italic; }
 .terminal-body .line-input   { color: var(--terminal-input); }
+
+/* ── IA Upload: browser-style concurrent upload tabs ──────────── */
+.form-error {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  color: var(--danger);
+  font-size: 13px;
+}
+.ia-jobs-bar { display: flex; } /* .hidden (global, !important) overrides this when queued */
+.ia-job-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ia-job-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 6px 8px 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-subtle);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.ia-job-tab:hover { color: var(--text); }
+.ia-job-tab.active { border-color: var(--accent); color: var(--text); background: var(--bg-hover); }
+.ia-job-tab .ia-job-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--text-subtle); }
+.ia-job-tab.status-running .ia-job-dot { background: var(--accent); animation: ia-job-pulse 1.2s ease-in-out infinite; }
+.ia-job-tab.status-done .ia-job-dot { background: var(--success); }
+.ia-job-tab.status-error .ia-job-dot { background: var(--danger); }
+.ia-job-tab.status-stopped .ia-job-dot { background: var(--warning); }
+@keyframes ia-job-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.ia-job-tab .ia-job-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ia-job-tab .ia-job-close {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-subtle);
+  line-height: 1;
+}
+.ia-job-tab .ia-job-close:hover { background: var(--danger); color: #fff; }
+.ia-job-view { display: none; }
+.ia-job-view.active { display: flex; flex-direction: column; }
 
 
 /* ── Collapsible log body ─────────────────────────────────────── */

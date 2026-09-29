@@ -911,7 +911,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now nyx-dlp`;
   window.openLinuxServiceModal = function () {
     if (!linuxSvcModal) return;
     if (svcUserInput && !svcUserInput.value) {
-      svcUserInput.value = (typeof os !== 'undefined' && os.userInfo ? os.userInfo().username : '') || 'jt';
+      svcUserInput.value = 'jt';
     }
     if (svcPortInput && !svcPortInput.value) {
       const portVal = document.getElementById('remote-access-port')?.value || '3050';

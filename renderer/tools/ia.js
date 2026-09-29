@@ -8,13 +8,39 @@
   const downloadForm = document.getElementById('ia-download-form');
 
   let currentPid = null;
-  
+  let currentMode = 'upload';
+
+  // ── Concurrent upload tabs (browser-tab style) ────────────────────────────
+  // Each tab is its own independent upload session: its own form field values
+  // while unsent ('draft'), its own output log once started, so several
+  // uploads can run at once and you switch between them like browser tabs.
+  // tabId -> { id, status: 'draft'|'running'|'done'|'error'|'stopped', label,
+  //            tabEl, viewEl, log, pid, opts, snapshot, _stopRequested }
+  const uploadTabs = new Map();
+  let selectedTabId = null;
+  let activeUploadCount = 0;
+
+  // Shows the plain shared log (edit/download) vs. the tab-based upload UI.
+  // The upload output console is always visible (like every other tool's), not
+  // just once you've started a job — only the tab strip is conditional (no point
+  // showing tabs until there's more than one upload open).
+  function updateIaTerminalVisibility() {
+    const singleWrap = document.getElementById('ia-single-terminal-wrap');
+    const jobHost = document.getElementById('ia-upload-terminal-host');
+    const jobsBar = document.getElementById('ia-jobs-bar');
+    const isUpload = currentMode === 'upload';
+    if (singleWrap) singleWrap.classList.toggle('hidden', isUpload);
+    if (jobHost) jobHost.classList.toggle('hidden', !isUpload);
+    if (jobsBar) jobsBar.classList.toggle('hidden', !isUpload || uploadTabs.size <= 1);
+  }
+
   // Mode switching
   modeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       modeBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const mode = btn.dataset.mode;
+      currentMode = mode;
       if (mode === 'upload') {
         uploadForm.style.display = '';
         uploadForm.classList.remove('hidden');
@@ -37,10 +63,18 @@
         downloadForm.style.display = '';
         downloadForm.classList.remove('hidden');
       }
+      updateIaTerminalVisibility();
+      if (currentMode === 'upload' && selectedTabId) {
+        const tab = uploadTabs.get(selectedTabId);
+        if (tab) activateLogView(tab.log);
+      }
     });
   });
 
-  document.getElementById('ia-upload-clear').addEventListener('click', () => clearLog(log));
+  document.getElementById('ia-upload-clear').addEventListener('click', () => {
+    const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    if (tab && tab.log) clearLog(tab.log);
+  });
   document.getElementById('ia-edit-clear').addEventListener('click', () => clearLog(log));
   document.getElementById('ia-download-clear').addEventListener('click', () => clearLog(log));
 
@@ -178,38 +212,84 @@
   setupIdentifierInput(iaIdEdit, iaIdEditCount);
   setupIdentifierInput(iaIdDown, iaIdDownCount);
 
+  // ── Upload form field snapshot (captured per-tab so switching between a
+  // draft tab and a running/finished tab doesn't lose what you were typing) ──
+  function blankFieldSnapshot() {
+    return {
+      files: [], identifier: '', title: '', description: '', subject: '',
+      collection: 'opensource_movies', creator: '', dateY: '', dateM: '', dateD: '',
+      language: '', license: '', mediatype: '', noDerive: false,
+      idModifiedByUser: false, titleModifiedByUser: false, collectionModifiedByUser: false
+    };
+  }
+
+  function captureFieldSnapshot() {
+    return {
+      files: Array.from(document.getElementById('ia-files').querySelectorAll('.sortable-item')).map(el => el.dataset.path),
+      identifier: iaIdUp?.value || '',
+      title: iaTitle?.value || '',
+      description: document.getElementById('ia-description')?.value || '',
+      subject: document.getElementById('ia-subject')?.value || '',
+      collection: document.getElementById('ia-collection')?.value || 'opensource_movies',
+      creator: document.getElementById('ia-creator')?.value || '',
+      dateY: document.getElementById('ia-date-y')?.value || '',
+      dateM: document.getElementById('ia-date-m')?.value || '',
+      dateD: document.getElementById('ia-date-d')?.value || '',
+      language: document.getElementById('ia-language')?.value || '',
+      license: document.getElementById('ia-license')?.value || '',
+      mediatype: document.getElementById('ia-mediatype')?.value || '',
+      noDerive: document.getElementById('ia-noderive')?.checked || false,
+      idModifiedByUser, titleModifiedByUser, collectionModifiedByUser
+    };
+  }
+
+  function applyFieldSnapshot(snap) {
+    const fileList = document.getElementById('ia-files');
+    if (fileList) {
+      fileList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
+      (snap.files || []).forEach(p => window.addSortableItem?.(fileList, p));
+    }
+    if (iaIdUp) iaIdUp.value = snap.identifier || '';
+    updateCharCount(iaIdUp, iaIdUpCount);
+    if (iaTitle) iaTitle.value = snap.title || '';
+    const iaDesc = document.getElementById('ia-description');
+    if (iaDesc) iaDesc.value = snap.description || '';
+    const iaCreator = document.getElementById('ia-creator');
+    if (iaCreator) iaCreator.value = snap.creator || '';
+    const dY = document.getElementById('ia-date-y');
+    const dM = document.getElementById('ia-date-m');
+    const dD = document.getElementById('ia-date-d');
+    if (dY) dY.value = snap.dateY || '';
+    if (dM) dM.value = snap.dateM || '';
+    if (dD) dD.value = snap.dateD || '';
+    const iaSubj = document.getElementById('ia-subject');
+    if (iaSubj) iaSubj.value = snap.subject || '';
+    const iaLic = document.getElementById('ia-license');
+    if (iaLic) iaLic.value = snap.license || '';
+    const iaCol = document.getElementById('ia-collection');
+    if (iaCol) iaCol.value = snap.collection || 'opensource_movies';
+    const iaMed = document.getElementById('ia-mediatype');
+    if (iaMed) iaMed.value = snap.mediatype || '';
+    const iaLang = document.getElementById('ia-language');
+    if (iaLang) iaLang.value = snap.language || '';
+    const iaNd = document.getElementById('ia-noderive');
+    if (iaNd) iaNd.checked = !!snap.noDerive;
+
+    idModifiedByUser = !!snap.idModifiedByUser;
+    titleModifiedByUser = !!snap.titleModifiedByUser;
+    collectionModifiedByUser = !!snap.collectionModifiedByUser;
+
+    const errEl = document.getElementById('ia-upload-form-error');
+    if (errEl) errEl.classList.add('hidden');
+  }
+
+  function resetUploadFields() { applyFieldSnapshot(blankFieldSnapshot()); }
+
   if (resetSubmit) {
     resetSubmit.addEventListener('click', () => {
-      if (iaIdUp) iaIdUp.value = '';
-      updateCharCount(iaIdUp, iaIdUpCount);
-      if (iaTitle) iaTitle.value = '';
-      const iaDesc = document.getElementById('ia-description');
-      if (iaDesc) iaDesc.value = '';
-      const iaCreator = document.getElementById('ia-creator');
-      if (iaCreator) iaCreator.value = '';
-      const dY = document.getElementById('ia-date-y');
-      const dM = document.getElementById('ia-date-m');
-      const dD = document.getElementById('ia-date-d');
-      if (dY) dY.value = '';
-      if (dM) dM.value = '';
-      if (dD) dD.value = '';
-      const iaSubj = document.getElementById('ia-subject');
-      if (iaSubj) iaSubj.value = '';
-      const iaLic = document.getElementById('ia-license');
-      if (iaLic) iaLic.value = '';
-      const iaCol = document.getElementById('ia-collection');
-      if (iaCol) iaCol.value = 'opensource_movies';
-      const iaMed = document.getElementById('ia-mediatype');
-      if (iaMed) iaMed.value = '';
-      const iaLang = document.getElementById('ia-language');
-      if (iaLang) iaLang.value = '';
-      const fileList = document.getElementById('ia-files');
-      if (fileList) fileList.innerHTML = '<div class="sortable-empty-state">No files selected. Use the browse button to add files.</div>';
-
-      idModifiedByUser = false;
-      titleModifiedByUser = false;
-      collectionModifiedByUser = false;
-
+      resetUploadFields();
+      const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+      if (tab) tab.snapshot = blankFieldSnapshot();
       resetModal.style.display = 'none';
     });
   }
@@ -330,13 +410,19 @@
 
   const uploadStop = document.getElementById('ia-upload-stop');
   const downloadStop = document.getElementById('ia-download-stop');
-  
+
   const stopHandler = () => {
     if (currentPid) window.api.stopScript(currentPid);
     else if (window.api && window.api.stopScript) window.api.stopScript();
   };
-  uploadStop?.addEventListener('click', stopHandler);
   downloadStop?.addEventListener('click', stopHandler);
+  uploadStop?.addEventListener('click', () => {
+    const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    if (!tab || tab.status !== 'running') return;
+    // pid may not have arrived from main.js yet — stop as soon as it does.
+    if (tab.pid) window.api.stopScript(tab.pid);
+    else tab._stopRequested = true;
+  });
   const editStop = document.getElementById('ia-edit-stop');
   editStop?.addEventListener('click', stopHandler);
 
@@ -468,113 +554,291 @@
 
   if (window.api && window.api.onIaOutput) {
     window.api.onIaOutput((data) => {
+      // Upload tabs are tagged with jobId (= tab id) by main.js (see prepareRunner)
+      // so several concurrent uploads sharing the single 'ia-output' channel can
+      // be routed back to their own tab/log instead of clobbering one shared log.
+      if (data.jobId) {
+        const tab = uploadTabs.get(data.jobId);
+        if (!tab) return; // tab was closed client-side; ignore stray late events
+        if (data.type === 'pid') {
+          tab.pid = data.pid;
+          if (tab._stopRequested) window.api.stopScript(tab.pid);
+          return;
+        }
+        handleOutput(tab.log, data, (code) => onTabExit(tab, code));
+        return;
+      }
       if (data.type === 'pid') {
         currentPid = data.pid;
         return;
       }
       handleOutput(log, data, () => {
-        document.querySelectorAll('#ia-upload-run, #ia-edit-run, #ia-download-run').forEach(b => b.classList.remove('hidden'));
-        document.querySelectorAll('#ia-upload-stop, #ia-edit-stop, #ia-download-stop').forEach(b => b.classList.add('hidden'));
+        document.querySelectorAll('#ia-edit-run, #ia-download-run').forEach(b => b.classList.remove('hidden'));
+        document.querySelectorAll('#ia-edit-stop, #ia-download-stop').forEach(b => b.classList.add('hidden'));
         currentPid = null;
         decRunning('Internet Archive');
       });
     });
   }
 
-  // Upload Logic
-  setupRun(
-    document.getElementById('ia-upload-run'),
-    uploadStop,
-    'IA Upload',
-    window.api.runIaUpload,
-    async () => {
-      const files = Array.from(document.getElementById('ia-files').querySelectorAll('.sortable-item')).map(el => el.dataset.path);
-      const identifier = document.getElementById('ia-identifier-up').value.trim();
-      const title = document.getElementById('ia-title').value.trim();
-      const description = document.getElementById('ia-description').value.trim();
-      const subject = document.getElementById('ia-subject').value.trim();
-      const collection = document.getElementById('ia-collection').value;
-      const creator = document.getElementById('ia-creator')?.value?.trim() || '';
-      
-      const y = document.getElementById('ia-date-y')?.value?.trim() || '';
-      const m = document.getElementById('ia-date-m')?.value?.trim() || '';
-      const d = document.getElementById('ia-date-d')?.value?.trim() || '';
-      let date = '';
-      if (y && m && d) date = `${y}-${m}-${d}`;
-      else if (y && m) date = `${y}-${m}`;
-      else if (y) date = y;
+  // ── Upload tabs (browser-tab style concurrent uploads) ───────────────────
+  const jobTabsEl = document.getElementById('ia-job-tabs');
+  const jobHostEl = document.getElementById('ia-upload-terminal-host');
+  const uploadRunBtn = document.getElementById('ia-upload-run');
 
-      const language = document.getElementById('ia-language')?.value?.trim() || '';
-      const license = document.getElementById('ia-license')?.value?.trim() || '';
-      const mediatype = document.getElementById('ia-mediatype')?.value || '';
-      const noDerive = document.getElementById('ia-noderive')?.checked || false;
+  function tabStatusLabel(status) {
+    return { draft: 'New', running: 'Running', done: 'Done', error: 'Failed', stopped: 'Stopped' }[status] || status;
+  }
 
-      const showError = (msg) => {
-        appendLog(log, msg, 'error');
-        log.parentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        return null;
-      };
+  function updateTabChipUI(tab) {
+    if (!tab.tabEl) return;
+    tab.tabEl.className = 'ia-job-tab status-' + tab.status + (tab.id === selectedTabId ? ' active' : '');
+    tab.tabEl.title = `${tab.label} — ${tabStatusLabel(tab.status)}`;
+  }
 
-      if (files.length === 0) return showError('⚠ Please select at least one file to upload.');
-      if (!identifier) return showError('⚠ Please provide an identifier.');
-      if (identifier.length < 5) return showError('⚠ Identifier must be at least 5 characters.');
-      if (identifier.length > 100) return showError(`⚠ Identifier exceeds the 100-character maximum limit (${identifier.length}/100). Please shorten it before uploading.`);
-      if (!description) return showError('⚠ Please provide a description.');
-      if (!subject) return showError('⚠ Please provide subject tags.');
+  // Run/Stop toggle by hidden class exactly like every other tool's action row —
+  // Stop only appears while the selected tab is actually running.
+  function updateSelectedTabControls() {
+    const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    const isRunning = !!tab && tab.status === 'running';
+    if (uploadRunBtn) uploadRunBtn.classList.toggle('hidden', isRunning);
+    if (uploadStop) uploadStop.classList.toggle('hidden', !isRunning);
+  }
 
-      fetch(`https://archive.org/metadata/${identifier}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.metadata) {
-            appendLog(log, `⚠ Identifier '${identifier}' already exists. If you do not own it, the upload will fail with Access Denied.`, 'warning');
-          }
-        })
-        .catch(err => {}); // Ignore if fetch fails
-
-      const autoIa = getSetting('dep-auto-ia');
-
-      // Record to history right as the upload starts
-      const historyId = 'ia-up-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
-      const downloadName = title || (files.length > 0 ? files[0].split(/[\\/]/).pop() : identifier);
-      const historyEntry = {
-        id: historyId,
-        date: new Date().toISOString(),
-        tool: 'Internet Archive',
-        subTool: 'upload',
-        name: downloadName,
-        source: identifier ? `archive.org/details/${identifier}` : `${files.length} File(s)`,
-        output: `https://archive.org/details/${identifier}`,
-        status: 'running',
-        uploadData: {
-          files: [...files],
-          identifier,
-          title,
-          description,
-          subject,
-          collection,
-          creator,
-          date,
-          dateY: y,
-          dateM: m,
-          dateD: d,
-          language,
-          license,
-          mediatype,
-          noDerive
-        }
-      };
-      log._currentIaJob = historyEntry;
-      if (window.api && window.api.addHistory && (!window.shouldRecordHistory || window.shouldRecordHistory(historyEntry))) {
-        window.api.addHistory(historyEntry).then(() => {
-          if (window._refreshHistory) window._refreshHistory();
-        });
-      }
-
-      return {
-        files, identifier, title, description, subject, collection, creator, date, language, license, mediatype, noDerive, autoIa
-      };
+  // Switches which tab's form + output log is shown (both stay visible, like
+  // every other tool's panel — only which tab's data fills them changes).
+  function selectTab(tabId) {
+    const tab = uploadTabs.get(tabId);
+    if (!tab) return;
+    if (selectedTabId && selectedTabId !== tabId) {
+      const prev = uploadTabs.get(selectedTabId);
+      if (prev) prev.snapshot = captureFieldSnapshot();
     }
-  );
+    selectedTabId = tabId;
+    for (const t of uploadTabs.values()) {
+      t.tabEl?.classList.toggle('active', t.id === tabId);
+      t.viewEl?.classList.toggle('active', t.id === tabId);
+    }
+    applyFieldSnapshot(tab.snapshot || blankFieldSnapshot());
+    activateLogView(tab.log);
+    updateSelectedTabControls();
+    updateIaTerminalVisibility();
+  }
+
+  function closeTab(tabId) {
+    const tab = uploadTabs.get(tabId);
+    if (!tab) return;
+    if (tab.status === 'running') {
+      // Stop it first — closing a running upload's tab must not orphan the process.
+      if (tab.pid) window.api.stopScript(tab.pid);
+      else tab._stopRequested = true;
+      return;
+    }
+    tab.tabEl?.remove();
+    tab.viewEl?.remove();
+    uploadTabs.delete(tabId);
+    if (uploadTabs.size === 0) {
+      selectTab(createTab().id);
+    } else if (selectedTabId === tabId) {
+      selectTab([...uploadTabs.keys()].pop());
+    } else {
+      updateIaTerminalVisibility();
+    }
+  }
+
+  function createTab() {
+    const id = 'ia-tab-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    const tabEl = document.createElement('div');
+    tabEl.className = 'ia-job-tab status-draft';
+    tabEl.innerHTML = `<span class="ia-job-dot"></span><span class="ia-job-label"></span><span class="ia-job-close" title="Close tab">✕</span>`;
+    tabEl.querySelector('.ia-job-label').textContent = 'New Upload';
+    tabEl.addEventListener('click', (e) => {
+      if (e.target.closest('.ia-job-close')) return;
+      selectTab(id);
+    });
+    tabEl.querySelector('.ia-job-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeTab(id);
+    });
+    jobTabsEl.appendChild(tabEl);
+
+    // The output console is created up front and stays visible the whole time
+    // this tab exists — same as every other tool's log panel — it's just empty
+    // until you click Upload.
+    const logId = 'ia-log-' + id;
+    const viewEl = document.createElement('div');
+    viewEl.className = 'terminal-wrap ia-job-view';
+    viewEl.innerHTML = `
+      <div class="terminal-container">
+        <div class="terminal-header">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-actions">
+              <button class="btn-term-action btn-term-scroll" title="Follow log" data-terminal="${logId}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+              </button>
+              <button class="btn-term-action btn-term-copy" title="Copy output" data-terminal="${logId}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="terminal-dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="terminal-body" id="${logId}" data-log-el="true" data-ia-tool="1"></div>
+      </div>`;
+    jobHostEl.appendChild(viewEl);
+
+    const tab = { id, status: 'draft', label: 'New Upload', tabEl, viewEl, log: viewEl.querySelector('.terminal-body'), pid: null, opts: null, snapshot: blankFieldSnapshot(), _stopRequested: false };
+    uploadTabs.set(id, tab);
+    updateIaTerminalVisibility();
+    return tab;
+  }
+
+  // "+" next to Target File(s) — like a browser's new-tab button. If the current
+  // tab is already a blank draft there's nothing to add, so just keep it selected.
+  document.getElementById('ia-add-concurrent-upload').addEventListener('click', () => {
+    const current = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    if (current && current.status === 'draft') return;
+    selectTab(createTab().id);
+  });
+
+  function startTab(tab, opts) {
+    tab.status = 'running';
+    tab.opts = opts;
+    tab.label = opts.identifier || (opts.files[0] || '').split(/[\\/]/).pop() || 'Upload';
+    tab.tabEl.querySelector('.ia-job-label').textContent = tab.label;
+    updateTabChipUI(tab);
+    clearLog(tab.log); // re-running an already-used tab starts its console fresh
+
+    // Record to history right as the upload starts (matches prior single-upload behavior)
+    const downloadName = opts.title || (opts.files.length > 0 ? opts.files[0].split(/[\\/]/).pop() : opts.identifier);
+    const historyEntry = {
+      id: tab.id,
+      date: new Date().toISOString(),
+      tool: 'Internet Archive',
+      subTool: 'upload',
+      name: downloadName,
+      source: opts.identifier ? `archive.org/details/${opts.identifier}` : `${opts.files.length} File(s)`,
+      output: `https://archive.org/details/${opts.identifier}`,
+      status: 'running',
+      uploadData: { ...opts }
+    };
+    tab.log._currentIaJob = historyEntry;
+    if (window.api && window.api.addHistory && (!window.shouldRecordHistory || window.shouldRecordHistory(historyEntry))) {
+      window.api.addHistory(historyEntry).then(() => {
+        if (window._refreshHistory) window._refreshHistory();
+      });
+    }
+
+    if (activeUploadCount === 0) incRunning('Internet Archive');
+    activeUploadCount++;
+
+    appendLog(tab.log, '▶ Starting IA Upload...', 'info');
+    appendLog(tab.log, '', 'stdout');
+    markBodyStart(tab.log);
+
+    window.api.runIaUpload({ ...opts, jobId: tab.id });
+
+    // Refresh the view now that this (selected) tab has left the draft state.
+    if (tab.id === selectedTabId) selectTab(tab.id);
+  }
+
+  function onTabExit(tab, code) {
+    tab.status = code === 0 ? 'done' : (code === null ? 'stopped' : 'error');
+    updateTabChipUI(tab);
+    activeUploadCount = Math.max(0, activeUploadCount - 1);
+    if (activeUploadCount === 0) decRunning('Internet Archive');
+    if (tab.id === selectedTabId) updateSelectedTabControls();
+  }
+
+  // The initial tab, present from the start (mirrors the classic single-upload form).
+  selectTab(createTab().id);
+  updateIaTerminalVisibility();
+
+  // Reads + validates the upload form as it currently stands. excludeTabId is the
+  // tab about to be (re-)started — its own stale opts.identifier (from a prior
+  // run) shouldn't trip the "already uploading" check against itself.
+  function readAndValidateUploadOpts(excludeTabId) {
+    const files = Array.from(document.getElementById('ia-files').querySelectorAll('.sortable-item')).map(el => el.dataset.path);
+    const identifier = document.getElementById('ia-identifier-up').value.trim();
+    const title = document.getElementById('ia-title').value.trim();
+    const description = document.getElementById('ia-description').value.trim();
+    const subject = document.getElementById('ia-subject').value.trim();
+    const collection = document.getElementById('ia-collection').value;
+    const creator = document.getElementById('ia-creator')?.value?.trim() || '';
+
+    const y = document.getElementById('ia-date-y')?.value?.trim() || '';
+    const m = document.getElementById('ia-date-m')?.value?.trim() || '';
+    const d = document.getElementById('ia-date-d')?.value?.trim() || '';
+    let date = '';
+    if (y && m && d) date = `${y}-${m}-${d}`;
+    else if (y && m) date = `${y}-${m}`;
+    else if (y) date = y;
+
+    const language = document.getElementById('ia-language')?.value?.trim() || '';
+    const license = document.getElementById('ia-license')?.value?.trim() || '';
+    const mediatype = document.getElementById('ia-mediatype')?.value || '';
+    const noDerive = document.getElementById('ia-noderive')?.checked || false;
+
+    const errEl = document.getElementById('ia-upload-form-error');
+    const showError = (msg) => {
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.classList.remove('hidden');
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return null;
+    };
+    if (errEl) errEl.classList.add('hidden');
+
+    if (files.length === 0) return showError('⚠ Please select at least one file to upload.');
+    if (!identifier) return showError('⚠ Please provide an identifier.');
+    if (identifier.length < 5) return showError('⚠ Identifier must be at least 5 characters.');
+    if (identifier.length > 100) return showError(`⚠ Identifier exceeds the 100-character maximum limit (${identifier.length}/100). Please shorten it before uploading.`);
+    if (!description) return showError('⚠ Please provide a description.');
+    if (!subject) return showError('⚠ Please provide subject tags.');
+    for (const t of uploadTabs.values()) {
+      if (t.id !== excludeTabId && t.status === 'running' && t.opts?.identifier === identifier) {
+        return showError(`⚠ '${identifier}' is already uploading in another tab.`);
+      }
+    }
+
+    const autoIa = getSetting('dep-auto-ia');
+    return { files, identifier, title, description, subject, collection, creator, date, language, license, mediatype, noDerive, autoIa };
+  }
+
+  function warnIfIdentifierAlreadyExists(identifier, targetTabId) {
+    fetch(`https://archive.org/metadata/${identifier}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.metadata) {
+          const t = uploadTabs.get(targetTabId);
+          if (t && t.log) appendLog(t.log, `⚠ Identifier '${identifier}' already exists. If you do not own it, the upload will fail with Access Denied.`, 'warning');
+        }
+      })
+      .catch(() => {}); // Ignore if fetch fails
+  }
+
+  uploadRunBtn.addEventListener('click', () => {
+    const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    if (!tab || tab.status === 'running') return;
+    const opts = readAndValidateUploadOpts(tab.id);
+    if (!opts) return;
+    warnIfIdentifierAlreadyExists(opts.identifier, tab.id);
+    startTab(tab, opts);
+  });
+
+  // "Add to Queue" — starts the CURRENT form's data as a brand-new tab running
+  // in the background, without touching or switching away from the tab you're
+  // looking at. Handy for firing off several similar uploads back to back:
+  // tweak one field, click, tweak again, click, etc.
+  document.getElementById('ia-upload-add-queue').addEventListener('click', () => {
+    const opts = readAndValidateUploadOpts(null);
+    if (!opts) return;
+    const newTab = createTab();
+    warnIfIdentifierAlreadyExists(opts.identifier, newTab.id);
+    startTab(newTab, opts);
+  });
 
   window.fillIaUploadForm = function (data) {
     if (!data) return;
@@ -586,6 +850,11 @@
     // Switch mode to Upload
     const uploadModeBtn = document.querySelector('#ia-mode-toggle .segment[data-mode="upload"]');
     if (uploadModeBtn) uploadModeBtn.click();
+
+    // The form is only live/visible while a draft (not-yet-started) tab is selected —
+    // open one if the currently selected tab has already started or finished.
+    const activeTab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    if (!activeTab || activeTab.status !== 'draft') selectTab(createTab().id);
 
     // Fill primary metadata
     if (iaIdUp) {
