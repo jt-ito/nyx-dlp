@@ -32,6 +32,31 @@ if (portableRoot) {
 }
 
 const settingsStore = require('./lib/settings-store.js');
+const bgutilServer = require('./lib/ensure-bgutil-server.js');
+
+// Two separate audiences, two separate toggles:
+//  - "dep-use-bgutil": run nyx-dlp's own bundled PO-token server automatically.
+//  - "dep-use-bgutil-external": point at a PO-token server the user already runs
+//    themselves — nyx-dlp never starts anything in that case. The two are mutually
+//    exclusive in the UI (see settings.js), but guard defensively here too.
+function shouldRunBundledBgutilServer() {
+  if (settingsStore.getSettingValue('dep-use-bgutil-external', false)) return false;
+  return !!settingsStore.getSettingValue('dep-use-bgutil', true);
+}
+
+function getBundledBgutilPort() {
+  const port = parseInt(settingsStore.getSettingValue('dep-bgutil-port', ''), 10);
+  return (Number.isFinite(port) && port > 0 && port < 65536) ? port : bgutilServer.DEFAULT_PORT;
+}
+
+let bgutilReconcileDebounce = null;
+function reconcileBgutilServer() {
+  if (shouldRunBundledBgutilServer()) {
+    bgutilServer.startBgutilServer((msg) => broadcastIPC('bgutil-status-log', msg), getBundledBgutilPort()).catch(() => {});
+  } else {
+    bgutilServer.stopBgutilServer();
+  }
+}
 
 const lastPathFile = path.join(app.getPath('userData'), 'last-used-path.txt');
 let lastUsedPath = '';
@@ -623,6 +648,18 @@ app.whenReady().then(() => {
     }, 4000);
   }
 
+  // Auto-start the bundled bgutil PO-token server (delayed 2s) so yt-dlp downloads
+  // that need cookies (age-restricted videos, etc.) can still get full-quality
+  // formats without the user running anything externally themselves. Skipped when
+  // "Use my own bgutil server" is on instead — no point managing a redundant local
+  // instance for people who already have their own.
+  bgutilServer.onStatusChange((status) => broadcastIPC('bgutil-status', status));
+  if (shouldRunBundledBgutilServer()) {
+    setTimeout(() => {
+      bgutilServer.startBgutilServer((msg) => broadcastIPC('bgutil-status-log', msg), getBundledBgutilPort()).catch(() => {});
+    }, 2000);
+  }
+
   app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -647,6 +684,9 @@ app.on('will-quit', () => {
     if (runners && typeof runners.stopAll === 'function') {
       runners.stopAll();
     }
+  } catch (e) {}
+  try {
+    bgutilServer.stopBgutilServer();
   } catch (e) {}
 });
 
@@ -1243,9 +1283,19 @@ ipcMain.on('sync-ui-state', (event, data) => {
     if (data.type === 'checkbox') fullUiState[data.id] = { type: data.type, checked: data.checked };
     else fullUiState[data.id] = { type: data.type, value: data.value };
     settingsStore.updateSetting(data.id, fullUiState[data.id]);
+    if (data.id === 'dep-use-bgutil' || data.id === 'dep-use-bgutil-external') {
+      reconcileBgutilServer();
+    } else if (data.id === 'dep-bgutil-port') {
+      // The port field syncs on every keystroke — debounce so typing a port doesn't
+      // repeatedly stop/restart the bundled server mid-edit.
+      clearTimeout(bgutilReconcileDebounce);
+      bgutilReconcileDebounce = setTimeout(reconcileBgutilServer, 1200);
+    }
   }
   broadcastIPC('sync-ui-state', data);
 });
+
+ipcMain.handle('get-bgutil-status', () => bgutilServer.getStatus());
 
 ipcMain.on('request-full-state', (event) => {
   event.sender.send('full-state', settingsStore.loadAllSettings());

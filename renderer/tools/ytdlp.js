@@ -203,7 +203,7 @@
 
       runBtn.classList.add('hidden');
       pauseBtn.classList.remove('hidden');
-      const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
+      const bgutilUrl = getBgutilUrl();
       const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
       const autoYpdl  = getSetting('dep-auto-ypdl');
 

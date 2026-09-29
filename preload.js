@@ -89,6 +89,11 @@ contextBridge.exposeInMainWorld('api', {
   syncDiscordCommands: () => ipcRenderer.invoke('sync-discord-commands'),
   onDiscordBotStatus: (cb) => ipcRenderer.on('discord-bot-status', (_e, d) => cb(d)),
 
+  // bgutil PO-token server (auto-managed background helper, see lib/ensure-bgutil-server.js)
+  getBgutilStatus: () => ipcRenderer.invoke('get-bgutil-status'),
+  onBgutilStatus: (cb) => ipcRenderer.on('bgutil-status', (_e, d) => cb(d)),
+  onBgutilStatusLog: (cb) => ipcRenderer.on('bgutil-status-log', (_e, d) => cb(d)),
+
   // State synchronization
   syncUiState: (data) => ipcRenderer.send('sync-ui-state', data),
   requestFullState: () => ipcRenderer.send('request-full-state'),

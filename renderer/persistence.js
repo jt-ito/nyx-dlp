@@ -12,6 +12,7 @@
     'gdl-output',   'gdl-cookies',
     'sp-output',
     'concat-output-dir',
+    'dep-bgutil-port',
     'dep-bgutil-url',
     'ntf-storage-threshold',
     'discord-download-dir',

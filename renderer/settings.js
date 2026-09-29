@@ -31,7 +31,8 @@ const SETTINGS_MAP = {
   'show-ls-proxy': { el: 'ls-proxy-group' },
   'ls-sync-fix': {},
   'ls-twitch-codecs': {},
-  'dep-use-bgutil': { el: 'dep-bgutil-url-group' },
+  'dep-use-bgutil': { el: 'dep-bgutil-port-group' },
+  'dep-use-bgutil-external': { el: 'dep-bgutil-url-group' },
   'show-disk-space': { custom: 'disk-space' },
   'minimize-to-tray': { custom: 'tray' },
   'run-on-startup': { custom: 'startup' },
@@ -85,6 +86,7 @@ const SETTINGS_DEFAULTS = {
   'ls-sync-fix': true,
   'ls-twitch-codecs': true,
   'dep-use-bgutil': true,
+  'dep-use-bgutil-external': false,
   'dep-use-deno': true,
   'dep-install-gdl': true,
   'show-disk-space': false,
@@ -112,6 +114,20 @@ function getSetting(key) {
   const stored = localStorage.getItem('setting:' + key);
   if (stored === null) return SETTINGS_DEFAULTS[key] !== false;
   return stored === 'true';
+}
+
+// Shared by every tool that passes --extractor-args to yt-dlp for PO Tokens.
+// "Use my own bgutil server" always wins when on; otherwise falls back to the
+// bundled server nyx-dlp manages itself (on its configured port) when that's on.
+function getBgutilUrl() {
+  if (getSetting('dep-use-bgutil-external')) {
+    return (localStorage.getItem('field:dep-bgutil-url') || '').trim();
+  }
+  if (getSetting('dep-use-bgutil')) {
+    const port = (localStorage.getItem('field:dep-bgutil-port') || '').trim() || '4416';
+    return `http://127.0.0.1:${port}`;
+  }
+  return '';
 }
 
 function applySetting(key, value) {
@@ -696,6 +712,53 @@ document.addEventListener('DOMContentLoaded', () => {
   // Real-time Gateway status updates
   if (window.api && window.api.onDiscordBotStatus) {
     window.api.onDiscordBotStatus(updateDiscordStatusUI);
+  }
+
+  // bgutil PO-token server: two separate, mutually exclusive audiences —
+  // "dep-use-bgutil" (bundled, auto-managed by main.js) vs "dep-use-bgutil-external"
+  // (their own already-running server). Only one can be active at a time.
+  const bgutilStatusEl = document.getElementById('dep-bgutil-status');
+  const bgutilToggle = document.querySelector('[data-setting="dep-use-bgutil"]');
+  const bgutilExternalToggle = document.querySelector('[data-setting="dep-use-bgutil-external"]');
+  let lastBgutilStatus = null;
+  function updateBgutilStatusUI(status) {
+    if (status) lastBgutilStatus = status;
+    status = status || lastBgutilStatus;
+    if (!bgutilStatusEl || !status) return;
+    const usingExternal = !!bgutilExternalToggle?.checked;
+    const labels = {
+      stopped: usingExternal ? '● Using your own server' : '● Not running',
+      installing: '● Installing (one-time, ~100MB)...',
+      starting: '● Starting...',
+      running: `● Running on 127.0.0.1:${status.port}`,
+      error: `● ${status.detail || 'Failed to start'}`
+    };
+    bgutilStatusEl.textContent = labels[status.state] || `● ${status.state}`;
+    bgutilStatusEl.style.color = (status.state === 'running' || (status.state === 'stopped' && usingExternal)) ? 'var(--success)'
+      : status.state === 'error' ? 'var(--danger)'
+      : 'var(--text-subtle)';
+  }
+  if (window.api && window.api.getBgutilStatus) {
+    window.api.getBgutilStatus().then(updateBgutilStatusUI).catch(() => {});
+  }
+  if (window.api && window.api.onBgutilStatus) {
+    window.api.onBgutilStatus(updateBgutilStatusUI);
+  }
+  if (bgutilToggle && bgutilExternalToggle) {
+    bgutilToggle.addEventListener('change', () => {
+      if (bgutilToggle.checked && bgutilExternalToggle.checked) {
+        bgutilExternalToggle.checked = false;
+        bgutilExternalToggle.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      updateBgutilStatusUI();
+    });
+    bgutilExternalToggle.addEventListener('change', () => {
+      if (bgutilExternalToggle.checked && bgutilToggle.checked) {
+        bgutilToggle.checked = false;
+        bgutilToggle.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      updateBgutilStatusUI();
+    });
   }
 
   if (discordToggleTokenVis && discordTokenInput) {

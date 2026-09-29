@@ -391,7 +391,7 @@
 
       try {
         const extraArgs = getBatchExtraArgs();
-        const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
+        const bgutilUrl = getBgutilUrl();
         const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
         window.api.runBatch({ 
           urls: urlsToRun, outputDir, format, rest, skipLive, cookiesPath, 

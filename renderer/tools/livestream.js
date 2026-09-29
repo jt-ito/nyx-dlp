@@ -79,7 +79,7 @@
       pauseBtn.innerHTML = pauseIconHTML;
       pauseBtn.classList.remove('paused');
 
-      const bgutilUrl = getSetting('dep-use-bgutil') ? (localStorage.getItem('field:dep-bgutil-url') || '') : '';
+      const bgutilUrl = getBgutilUrl();
       const useDeno   = getSetting('dep-use-deno') ? 'y' : 'n';
       const clientEl  = document.getElementById('ls-client');
       const client    = (!clientEl || clientEl.disabled || !getSetting('show-ls-client')) ? 'default' : (clientEl.value || 'default');
