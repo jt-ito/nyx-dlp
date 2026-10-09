@@ -2129,23 +2129,25 @@ html, body {
   font-size: 13px;
 }
 .ia-jobs-bar { display: flex; } /* .hidden (global, !important) overrides this when queued */
-.ia-job-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ia-job-tabs { display: flex; flex-wrap: wrap; gap: 2px; }
 .ia-job-tab {
   display: flex;
   align-items: center;
   gap: 6px;
   max-width: 220px;
-  padding: 6px 8px 6px 10px;
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  padding: 7px 8px 7px 12px;
+  margin-bottom: -1px; /* overlap the card's top border so the active tab joins it */
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text-subtle);
   font-size: 12px;
   cursor: pointer;
   user-select: none;
+  position: relative;
 }
 .ia-job-tab:hover { color: var(--text); }
-.ia-job-tab.active { border-color: var(--accent); color: var(--text); background: var(--bg-hover); }
+.ia-job-tab.active { color: var(--text); background: var(--bg-surface); border-bottom-color: var(--bg-surface); z-index: 1; }
 .ia-job-tab .ia-job-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--text-subtle); }
 .ia-job-tab.status-running .ia-job-dot { background: var(--accent); animation: ia-job-pulse 1.2s ease-in-out infinite; }
 .ia-job-tab.status-done .ia-job-dot { background: var(--success); }
@@ -4863,3 +4865,29 @@ input[type="checkbox"]:not(.toggle-switch input):checked::after {
 }
 
 
+
+.ia-jobs-bar:not(.hidden) + #ia-upload-form { border-top-left-radius: 0; }
+
+.ia-tab-kind { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: -4px; }
+.ia-job-tab .ia-job-kind { font-size: 10px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 0 4px; line-height: 14px; }
+
+.ia-jobs-bar { position: relative; align-items: flex-end; gap: 6px; }
+.ia-queue-btn { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md) var(--radius-md) 0 0; color: var(--text-subtle); font-size: 14px; line-height: 1; padding: 6px 9px; margin-bottom: -1px; cursor: pointer; }
+.ia-queue-btn:hover { color: var(--text); }
+.ia-queue-menu { position: absolute; top: 100%; left: 0; z-index: 50; min-width: 280px; max-width: 420px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.ia-qm-title { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 6px 4px 4px; }
+.ia-qm-row { display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-radius: 4px; }
+.ia-qm-row:hover { background: var(--bg-hover); }
+.ia-qm-name { flex: 1; font-size: 12px; color: var(--text); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ia-qm-btn { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-subtle); font-size: 10px; padding: 1px 6px; cursor: pointer; }
+.ia-qm-btn:hover { color: var(--text); border-color: var(--accent); }
+.ia-qm-note { font-size: 11px; color: var(--text-subtle); padding: 2px 4px; }
+.ia-job-tab.status-waiting .ia-job-dot { background: var(--warning); }
+
+.ia-jobs-bar { gap: 0; }
+.ia-job-tabs { gap: 0; }
+.ia-job-tab, .ia-queue-btn { margin-left: -1px; }
+.ia-queue-btn { margin-left: 0; }
+
+.ia-job-tab, .ia-queue-btn { box-sizing: border-box; height: 32px; }
+.ia-queue-btn { display: flex; align-items: center; }

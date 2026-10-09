@@ -19,6 +19,13 @@
   const uploadTabs = new Map();
   let selectedTabId = null;
   let activeUploadCount = 0;
+  // Queued tabs run one at a time, in the order Upload to IA was pressed, with a
+  // 30s gap after the previous one fully finishes. Concurrent tabs bypass this.
+  const QUEUE_GAP_MS = 30000;
+  let queueOrder = [];        // tab ids waiting to start, in order
+  let queueRunningTab = null; // the queued tab currently uploading
+  let queueTimer = null;
+  let queueNextAt = 0;
 
   // Shows the plain shared log (edit/download) vs. the tab-based upload UI.
   // The upload output console is always visible (like every other tool's), not
@@ -272,8 +279,7 @@
     if (iaMed) iaMed.value = snap.mediatype || '';
     const iaLang = document.getElementById('ia-language');
     if (iaLang) iaLang.value = snap.language || '';
-    const iaNd = document.getElementById('ia-noderive');
-    if (iaNd) iaNd.checked = !!snap.noDerive;
+    // ia-noderive is deliberately not touched here: it keeps the user's choice across resets and tab switches.
 
     idModifiedByUser = !!snap.idModifiedByUser;
     titleModifiedByUser = !!snap.titleModifiedByUser;
@@ -418,6 +424,7 @@
   downloadStop?.addEventListener('click', stopHandler);
   uploadStop?.addEventListener('click', () => {
     const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    if (tab && tab.status === 'waiting') { dequeueTab(tab); return; }
     if (!tab || tab.status !== 'running') return;
     // pid may not have arrived from main.js yet — stop as soon as it does.
     if (tab.pid) window.api.stopScript(tab.pid);
@@ -587,26 +594,49 @@
   const uploadRunBtn = document.getElementById('ia-upload-run');
 
   function tabStatusLabel(status) {
-    return { draft: 'New', running: 'Running', done: 'Done', error: 'Failed', stopped: 'Stopped' }[status] || status;
+    return { draft: 'New', waiting: 'Waiting in queue', running: 'Running', done: 'Done', error: 'Failed', stopped: 'Stopped' }[status] || status;
   }
 
   function updateTabChipUI(tab) {
     if (!tab.tabEl) return;
     tab.tabEl.className = 'ia-job-tab status-' + tab.status + (tab.id === selectedTabId ? ' active' : '');
     tab.tabEl.title = `${tab.label} — ${tabStatusLabel(tab.status)}`;
+    refreshQueueMenu();
   }
 
   // Run/Stop toggle by hidden class exactly like every other tool's action row —
   // Stop only appears while the selected tab is actually running.
   function updateSelectedTabControls() {
     const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
-    const isRunning = !!tab && tab.status === 'running';
+    const isRunning = !!tab && (tab.status === 'running' || tab.status === 'waiting');
     if (uploadRunBtn) uploadRunBtn.classList.toggle('hidden', isRunning);
     if (uploadStop) uploadStop.classList.toggle('hidden', !isRunning);
+    const warn = document.getElementById('ia-edit-warning');
+    if (warn) warn.classList.add('hidden'); // re-shown only if the user edits after it started/queued
+  }
+
+  // Edits made after Upload was pressed can't reach the upload (its options were captured then).
+  document.getElementById('ia-upload-fields')?.addEventListener('input', showStaleEditWarning);
+  document.getElementById('ia-upload-fields')?.addEventListener('change', showStaleEditWarning);
+  function showStaleEditWarning() {
+    const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    const warn = document.getElementById('ia-edit-warning');
+    if (!tab || !warn || (tab.status !== 'running' && tab.status !== 'waiting')) return;
+    warn.textContent = tab.status === 'waiting'
+      ? '⚠ This upload is already queued — changes made now will not be included. Press Stop to take it out of the queue, edit, then queue it again.'
+      : '⚠ This upload has already started — changes made now will not be included.';
+    warn.classList.remove('hidden');
   }
 
   // Switches which tab's form + output log is shown (both stay visible, like
   // every other tool's panel — only which tab's data fills them changes).
+  function updateKindBadge(tab) {
+    const el = document.getElementById('ia-tab-kind');
+    if (!el) return;
+    el.textContent = tab.kind === 'queued' ? 'Queued' : tab.kind === 'concurrent' ? 'Concurrent' : '';
+    el.classList.toggle('hidden', !tab.kind);
+  }
+
   function selectTab(tabId) {
     const tab = uploadTabs.get(tabId);
     if (!tab) return;
@@ -614,12 +644,15 @@
       const prev = uploadTabs.get(selectedTabId);
       if (prev) prev.snapshot = captureFieldSnapshot();
     }
+    const reselect = selectedTabId === tabId;
     selectedTabId = tabId;
     for (const t of uploadTabs.values()) {
       t.tabEl?.classList.toggle('active', t.id === tabId);
       t.viewEl?.classList.toggle('active', t.id === tabId);
     }
-    applyFieldSnapshot(tab.snapshot || blankFieldSnapshot());
+    // Re-selecting the current tab: fields on screen are already current; a stored snapshot would be stale.
+    if (!reselect) applyFieldSnapshot(tab.snapshot || blankFieldSnapshot());
+    updateKindBadge(tab);
     activateLogView(tab.log);
     updateSelectedTabControls();
     updateIaTerminalVisibility();
@@ -628,6 +661,7 @@
   function closeTab(tabId) {
     const tab = uploadTabs.get(tabId);
     if (!tab) return;
+    if (tab.status === 'waiting') dequeueTab(tab);
     if (tab.status === 'running') {
       // Stop it first — closing a running upload's tab must not orphan the process.
       if (tab.pid) window.api.stopScript(tab.pid);
@@ -646,12 +680,14 @@
     }
   }
 
-  function createTab() {
+  function createTab(kind) {
     const id = 'ia-tab-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
     const tabEl = document.createElement('div');
     tabEl.className = 'ia-job-tab status-draft';
-    tabEl.innerHTML = `<span class="ia-job-dot"></span><span class="ia-job-label"></span><span class="ia-job-close" title="Close tab">✕</span>`;
+    tabEl.innerHTML = `<span class="ia-job-dot"></span><span class="ia-job-kind"></span><span class="ia-job-label"></span><span class="ia-job-close" title="Close tab">✕</span>`;
     tabEl.querySelector('.ia-job-label').textContent = 'New Upload';
+    tabEl.querySelector('.ia-job-kind').textContent = kind === 'queued' ? 'Q' : kind === 'concurrent' ? 'C' : '';
+    if (!kind) tabEl.querySelector('.ia-job-kind').remove();
     tabEl.addEventListener('click', (e) => {
       if (e.target.closest('.ia-job-close')) return;
       selectTab(id);
@@ -688,18 +724,16 @@
       </div>`;
     jobHostEl.appendChild(viewEl);
 
-    const tab = { id, status: 'draft', label: 'New Upload', tabEl, viewEl, log: viewEl.querySelector('.terminal-body'), pid: null, opts: null, snapshot: blankFieldSnapshot(), _stopRequested: false };
+    const tab = { id, kind, status: 'draft', label: 'New Upload', tabEl, viewEl, log: viewEl.querySelector('.terminal-body'), pid: null, opts: null, snapshot: blankFieldSnapshot(), _stopRequested: false };
     uploadTabs.set(id, tab);
     updateIaTerminalVisibility();
     return tab;
   }
 
-  // "+" next to Target File(s) — like a browser's new-tab button. If the current
-  // tab is already a blank draft there's nothing to add, so just keep it selected.
+  // "+" next to Target File(s) — like a browser's new-tab button. Always opens a
+  // new tab, even over an empty draft, so you can fill several back and forth.
   document.getElementById('ia-add-concurrent-upload').addEventListener('click', () => {
-    const current = selectedTabId ? uploadTabs.get(selectedTabId) : null;
-    if (current && current.status === 'draft') return;
-    selectTab(createTab().id);
+    selectTab(createTab('concurrent').id);
   });
 
   function startTab(tab, opts) {
@@ -749,7 +783,126 @@
     activeUploadCount = Math.max(0, activeUploadCount - 1);
     if (activeUploadCount === 0) decRunning('Internet Archive');
     if (tab.id === selectedTabId) updateSelectedTabControls();
+    if (tab === queueRunningTab) {
+      queueRunningTab = null;
+      if (queueOrder.length > 0) {
+        queueNextAt = Date.now() + QUEUE_GAP_MS;
+        appendLog(tab.log, `⏳ Next queued upload starts in ${QUEUE_GAP_MS / 1000}s.`, 'info');
+        queueTimer = setTimeout(() => { queueTimer = null; queueNextAt = 0; startNextQueued(); }, QUEUE_GAP_MS);
+      }
+    }
+    refreshQueueMenu();
   }
+
+  function startNextQueued() {
+    if (queueRunningTab || queueTimer) return;
+    const tab = uploadTabs.get(queueOrder.shift());
+    if (!tab) { if (queueOrder.length) startNextQueued(); return; }
+    queueRunningTab = tab;
+    warnIfIdentifierAlreadyExists(tab.opts.identifier, tab.id);
+    startTab(tab, tab.opts);
+  }
+
+  function dequeueTab(tab) {
+    queueOrder = queueOrder.filter(id => id !== tab.id);
+    tab.status = 'draft';
+    tab.opts = null;
+    tab.label = 'New Upload';
+    tab.tabEl.querySelector('.ia-job-label').textContent = tab.label;
+    updateTabChipUI(tab);
+    if (tab.id === selectedTabId) updateSelectedTabControls();
+  }
+
+  function moveQueued(id, delta) {
+    const i = queueOrder.indexOf(id), j = i + delta;
+    if (i < 0 || j < 0 || j >= queueOrder.length) return;
+    [queueOrder[i], queueOrder[j]] = [queueOrder[j], queueOrder[i]];
+    refreshQueueMenu();
+  }
+
+  // ── Queue / concurrent manager menu (button at the left of the tab strip) ──
+  const queueMenuBtn = document.getElementById('ia-queue-menu-btn');
+  const queueMenuEl = document.getElementById('ia-queue-menu');
+  let queueMenuTick = null;
+
+  function refreshQueueMenu() {
+    if (!queueMenuEl || queueMenuEl.classList.contains('hidden')) return;
+    queueMenuEl.textContent = '';
+    const note = (text) => {
+      const el = document.createElement('div');
+      el.className = 'ia-qm-note';
+      el.textContent = text;
+      queueMenuEl.appendChild(el);
+    };
+    const section = (title) => {
+      const h = document.createElement('div');
+      h.className = 'ia-qm-title';
+      h.textContent = title;
+      queueMenuEl.appendChild(h);
+    };
+    const row = (tab, label, controls) => {
+      const el = document.createElement('div');
+      el.className = 'ia-qm-row';
+      const name = document.createElement('span');
+      name.className = 'ia-qm-name';
+      name.textContent = label;
+      name.title = tab.label;
+      name.addEventListener('click', () => { selectTab(tab.id); });
+      el.appendChild(name);
+      for (const [text, title, fn] of controls) {
+        const b = document.createElement('button');
+        b.className = 'ia-qm-btn';
+        b.textContent = text;
+        b.title = title;
+        b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+        el.appendChild(b);
+      }
+      queueMenuEl.appendChild(el);
+    };
+    const stopTab = (tab) => () => {
+      if (tab.pid) window.api.stopScript(tab.pid); else tab._stopRequested = true;
+    };
+
+    section('Queue');
+    if (queueRunningTab) row(queueRunningTab, `▶ ${queueRunningTab.label}`, [['■', 'Stop', stopTab(queueRunningTab)]]);
+    if (queueTimer) note(`Next starts in ${Math.max(0, Math.ceil((queueNextAt - Date.now()) / 1000))}s`);
+    queueOrder.forEach((id, i) => {
+      const tab = uploadTabs.get(id);
+      if (!tab) return;
+      row(tab, `${i + 1}. ${tab.label}`, [
+        ['▲', 'Move up', () => moveQueued(id, -1)],
+        ['▼', 'Move down', () => moveQueued(id, 1)],
+        ['✕', 'Remove from queue', () => dequeueTab(tab)],
+      ]);
+    });
+    if (!queueRunningTab && queueOrder.length === 0) note('No queued items. Press Upload to IA on a queued tab to add it.');
+
+    section('Concurrent');
+    const conc = [...uploadTabs.values()].filter(t => t.kind === 'concurrent');
+    if (conc.length === 0) note('No concurrent uploads.');
+    for (const tab of conc) {
+      row(tab, `${tab.label} — ${tabStatusLabel(tab.status)}`,
+        tab.status === 'running' ? [['■', 'Stop', stopTab(tab)]] : [['✕', 'Close tab', () => closeTab(tab.id)]]);
+    }
+  }
+
+  function toggleQueueMenu(open) {
+    if (!queueMenuEl) return;
+    queueMenuEl.classList.toggle('hidden', !open);
+    clearInterval(queueMenuTick);
+    queueMenuTick = null;
+    if (open) {
+      refreshQueueMenu();
+      queueMenuTick = setInterval(refreshQueueMenu, 1000); // live countdown
+    }
+  }
+  queueMenuBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleQueueMenu(queueMenuEl.classList.contains('hidden'));
+  });
+  document.addEventListener('click', (e) => {
+    if (queueMenuEl && !queueMenuEl.contains(e.target)) toggleQueueMenu(false);
+  });
 
   // The initial tab, present from the start (mirrors the classic single-upload form).
   selectTab(createTab().id);
@@ -821,9 +974,23 @@
 
   uploadRunBtn.addEventListener('click', () => {
     const tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
-    if (!tab || tab.status === 'running') return;
+    if (!tab || tab.status === 'running' || tab.status === 'waiting') return;
     const opts = readAndValidateUploadOpts(tab.id);
     if (!opts) return;
+    if (tab.kind === 'queued') {
+      // Join the queue in press order; it starts when the one(s) ahead are done.
+      tab.opts = opts;
+      tab.status = 'waiting';
+      tab.label = opts.identifier || (opts.files[0] || '').split(/[\\/]/).pop() || 'Upload';
+      tab.tabEl.querySelector('.ia-job-label').textContent = tab.label;
+      queueOrder.push(tab.id);
+      clearLog(tab.log);
+      appendLog(tab.log, `⏳ Queued (position ${queueOrder.length + (queueRunningTab ? 1 : 0)}). Starts after the previous upload finishes plus ${QUEUE_GAP_MS / 1000}s.`, 'info');
+      updateTabChipUI(tab);
+      updateSelectedTabControls();
+      startNextQueued();
+      return;
+    }
     warnIfIdentifierAlreadyExists(opts.identifier, tab.id);
     startTab(tab, opts);
   });
@@ -833,11 +1000,7 @@
   // looking at. Handy for firing off several similar uploads back to back:
   // tweak one field, click, tweak again, click, etc.
   document.getElementById('ia-upload-add-queue').addEventListener('click', () => {
-    const opts = readAndValidateUploadOpts(null);
-    if (!opts) return;
-    const newTab = createTab();
-    warnIfIdentifierAlreadyExists(opts.identifier, newTab.id);
-    startTab(newTab, opts);
+    selectTab(createTab('queued').id);
   });
 
   window.fillIaUploadForm = function (data) {
