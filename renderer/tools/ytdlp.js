@@ -217,7 +217,8 @@
         url: urlToUse, outputDir, format, cookiesPath, extraArgs, 
         container, startTime, endTime, bgutilUrl, useDeno,
         concurrent: activePresetConcurrent,
-        dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair, twitchSubOnly
+        dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair, twitchSubOnly,
+        resumeSaved: window._takeResumeFlag ? window._takeResumeFlag() : false
       });
     };
 

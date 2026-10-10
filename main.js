@@ -282,6 +282,8 @@ const activeProcs = new Map(); // pid → ChildProcess
 
 let tray = null;
 let isQuitting = false;
+let exitPromptPending = false;
+let confirmedQuit = false; // set once the user OKs exiting (or when nothing is running)
 let minimizeToTray = false;
 
 ipcMain.on('set-minimize-to-tray', (e, val) => {
@@ -413,14 +415,14 @@ ipcMain.on('install-app-update', (e, filePath) => {
             }
           }
           setTimeout(() => {
-            isQuitting = true;
+            isQuitting = true; confirmedQuit = true;
             app.quit();
           }, 600);
         }).catch((err) => {
           console.error('[Auto-Update] shell.openPath rejected:', err);
           shell.showItemInFolder(filePath);
           setTimeout(() => {
-            isQuitting = true;
+            isQuitting = true; confirmedQuit = true;
             app.quit();
           }, 600);
         });
@@ -431,7 +433,7 @@ ipcMain.on('install-app-update', (e, filePath) => {
     } else if (isMac) {
       shell.openPath(filePath).then(() => {
         setTimeout(() => {
-          isQuitting = true;
+          isQuitting = true; confirmedQuit = true;
           app.quit();
         }, 600);
       });
@@ -446,7 +448,7 @@ ipcMain.on('install-app-update', (e, filePath) => {
         });
         child.unref();
         setTimeout(() => {
-          isQuitting = true;
+          isQuitting = true; confirmedQuit = true;
           app.quit();
         }, 600);
         return;
@@ -593,7 +595,55 @@ function createWindow() {
       e.preventDefault();
       mainWindow.hide();
       createTray();
+      return;
     }
+    if (!confirmedQuit) {
+      // Really exiting: check for running work first (async, so cancel this close and re-quit if OK).
+      e.preventDefault();
+      if (exitPromptPending) return; // already asking
+      exitPromptPending = true;
+      confirmExitIfBusy().then((ok) => {
+        exitPromptPending = false;
+        if (!ok) { isQuitting = false; return; }
+        confirmedQuit = true;
+        isQuitting = true;
+        app.quit();
+      });
+    }
+  });
+}
+
+// Names of things that would be lost by exiting right now (empty = safe to quit).
+async function getRunningWork() {
+  const work = [];
+  try {
+    // Timeout so a hung renderer can never make the app impossible to close.
+    const names = await Promise.race([
+      mainWindow.webContents.executeJavaScript(
+        `[typeof runningTools !== 'undefined' ? [...runningTools] : [], typeof window.getIaQueuedCount === 'function' ? window.getIaQueuedCount() : 0]`),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('renderer timeout')), 1500))
+    ]);
+    work.push(...names[0]);
+    if (names[1] > 0) work.push(`Internet Archive queue (${names[1]} waiting)`);
+  } catch (_) {}
+  try {
+    if (work.length === 0 && runners.getActiveTaskCount() > 0) work.push('Background task');
+  } catch (_) {}
+  return work;
+}
+
+// Resolves true if it's OK to exit (nothing running, or the user confirmed in the in-app modal).
+async function confirmExitIfBusy() {
+  const work = await getRunningWork();
+  if (work.length === 0) return true;
+  if (!mainWindow || mainWindow.isDestroyed()) return true;
+  if (!mainWindow.isVisible()) mainWindow.show(); // e.g. Quit chosen from the tray
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.focus();
+  return new Promise((resolve) => {
+    ipcMain.removeAllListeners('exit-confirm-response');
+    ipcMain.once('exit-confirm-response', (_e, ok) => resolve(!!ok));
+    mainWindow.webContents.send('confirm-exit', { work });
   });
 }
 
@@ -856,6 +906,7 @@ function applyRetentionToHistory(history) {
     if (!isNaN(days) && days > 0 && Array.isArray(history)) {
       const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
       return history.filter(item => {
+        if (item.savedPaused) return true; // saved paused downloads never expire
         if (!item.date) return true;
         const itemTime = new Date(item.date).getTime();
         return isNaN(itemTime) || itemTime >= cutoffTime;
@@ -882,7 +933,8 @@ ipcMain.handle('get-history', async () => {
 ipcMain.handle('add-history', async (e, entry) => {
   try {
     const saveHistory = settingsStore.getSettingValue('save-history', true);
-    if (saveHistory === false) return false;
+    // Saved paused downloads are stored even when normal history is switched off.
+    if (saveHistory === false && !(entry && entry.savedPaused)) return false;
 
     let history = [];
     if (fs.existsSync(historyFile)) {
@@ -895,7 +947,10 @@ ipcMain.handle('add-history', async (e, entry) => {
       history.unshift(entry);
     }
     history = applyRetentionToHistory(history);
-    if (history.length > 1000) history = history.slice(0, 1000); // keep last 1000
+    if (history.length > 1000) { // keep the last 1000, but never drop saved paused downloads
+      let room = 1000 - history.filter(h => h.savedPaused).length;
+      history = history.filter(h => h.savedPaused || room-- > 0);
+    }
     await fs.promises.writeFile(historyFile, JSON.stringify(history, null, 2));
     return true;
   } catch (e) {
@@ -905,7 +960,12 @@ ipcMain.handle('add-history', async (e, entry) => {
 
 ipcMain.handle('clear-history', async () => {
   try {
-    await fs.promises.writeFile(historyFile, JSON.stringify([]));
+    // Saved paused downloads are unfinished work, not history — keep them.
+    let kept = [];
+    if (fs.existsSync(historyFile)) {
+      try { kept = JSON.parse(await fs.promises.readFile(historyFile, 'utf8')).filter(h => h.savedPaused); } catch (_) {}
+    }
+    await fs.promises.writeFile(historyFile, JSON.stringify(kept, null, 2));
     return true;
   } catch (e) {
     return false;

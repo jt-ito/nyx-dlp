@@ -2,14 +2,16 @@
 
 # ⚡ nyx-dlp
 
-**One dark-mode cockpit for every download and encode job you've got.**
+**One cockpit for every download, archive and encode job you've got.**
 
-yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive · Deno — nine tools, one native app, zero Python.
+yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive · aria2c · Deno — nine tools, one native app, zero Python.
 
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-4.0.9-orange)
+![Version](https://img.shields.io/badge/version-5.0.1-orange)
+
+<img src="docs/screenshots/01b-yt-dlp-dark.png" alt="nyx-dlp yt-dlp downloader in the OLED Obsidian theme" width="100%" />
 
 </div>
 
@@ -17,88 +19,179 @@ yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive · Deno — nin
 
 ## Why this exists
 
-If you've ever managed a pile of media-download scripts, you know the drill: half-remembered CLI flags, a terminal window you're afraid to close, and no easy way to pause a 40GB download without killing it outright. **nyx-dlp** is the GUI layer for that — nine tools behind one consistent interface, with your settings remembered every time you open it.
+Juggling a pile of download scripts gets old fast. You forget the flags, you leave a terminal window open because closing it might kill something, and pausing a 40 GB download isn't really an option. **nyx-dlp** puts all of it in one app: nine tools, one interface, and your settings are still there the next time you open it.
 
-It's built entirely in native Node.js — no Python involved anywhere. Every tool runs as a direct `child_process.spawn` call, and nyx-dlp manages its own vendored copies of `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, `ia`, and `deno` in a local `vendor/` folder, downloading and updating them automatically. Nothing to install except the app itself.
+It's built entirely in Node.js — no Python anywhere. Every tool runs as a direct `child_process.spawn` call, and nyx-dlp manages its own copies of `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, `ia`, `aria2c`, `deno` and a bundled PO-token server in a local `vendor/` folder, downloading and updating them for you. Nothing to install except the app itself.
 
-Because every job is a real OS process nyx-dlp owns directly, pause/resume/stop actually work — on Windows that's done via native NT process tree suspension (`treespend`), not just severing the connection and hoping the CLI recovers gracefully.
+Because every job is a real OS process nyx-dlp owns, pause / resume / stop actually work. On Windows that's done with native NT process-tree suspension (`treespend`), not by severing the connection and hoping the CLI recovers.
+
+---
+
+## Screenshots
+
+Light and dark themes are both built in — there are 20+ presets in **Appearance**, from OLED pitch black to soft paper tones.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/01-yt-dlp-light.png" alt="yt-dlp downloader, light theme" /></td>
+    <td width="50%"><img src="docs/screenshots/03-batch-downloader.png" alt="Batch downloader with rest intervals and queue status" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>yt-dlp</b> — Nyx Light</sub></td>
+    <td align="center"><sub><b>Batch Downloader</b> — OLED Obsidian</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/02-live-archiver.png" alt="Live stream archiver capturing a broadcast" /></td>
+    <td width="50%"><img src="docs/screenshots/04-m3u8-downloader.png" alt="M3U8 downloader pulling an HLS playlist" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Live Archiver</b></sub></td>
+    <td align="center"><sub><b>M3U8 Downloader</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/10b-internet-archive-upload.png" alt="Internet Archive uploader with concurrent and queued tabs" /></td>
+    <td width="50%"><img src="docs/screenshots/10-internet-archive-queue-menu.png" alt="Internet Archive queue and concurrent upload manager" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Internet Archive</b> — concurrent (C) and queued (Q) upload tabs</sub></td>
+    <td align="center"><sub><b>Queue manager</b> — reorder, remove and stop</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/11-internet-archive-download.png" alt="Internet Archive download with aria2c progress" /></td>
+    <td width="50%"><img src="docs/screenshots/13-tools-and-engines-hub-light.png" alt="Downloader Tools and Engines Hub" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Internet Archive download</b> via aria2c</sub></td>
+    <td align="center"><sub><b>Tools &amp; Engines Hub</b> — Nyx Light</sub></td>
+  </tr>
+</table>
+
+<details>
+<summary><b>More screenshots</b> — splitter, concatenator, encoder, gallery-dl, history</summary>
+<br>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/05-gallery-dl.png" alt="gallery-dl image downloader" /></td>
+    <td width="50%"><img src="docs/screenshots/06-video-splitter.png" alt="Video splitter" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>gallery-dl</b></sub></td>
+    <td align="center"><sub><b>Video Splitter</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/07-video-concatenator.png" alt="Video concatenator" /></td>
+    <td width="50%"><img src="docs/screenshots/08-video-encoder.png" alt="GPU-accelerated video encoder" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Video Concatenator</b></sub></td>
+    <td align="center"><sub><b>Video Encoder</b></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/09-internet-archive-upload-light.png" alt="Internet Archive upload, light theme" /></td>
+    <td width="50%"><img src="docs/screenshots/12-history.png" alt="Download history" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Internet Archive upload</b> — Nyx Light</sub></td>
+    <td align="center"><sub><b>History</b></sub></td>
+  </tr>
+</table>
+
+</details>
 
 ---
 
 ## Features
 
-- 🧰 **9 built-in tools** — one unified interface for the download, archival, and video processing workflows you actually use
-- ⚙️ **Downloader Tools & Engines Hub** — centralized dashboard auditing installed versions across all 6 core engines (`yt-dlp`, `ffmpeg`/`ffprobe`, `gallery-dl`, `streamlink`, `ia`, `deno`) with one-click "Update All", upstream release checks, version switching/downgrading, custom version inputs, and NVIDIA GPU hardware presets
-- 🕵️ **Manifest Sniffer & Fragment Rescue** — detects raw transport stream fragments (`.ts`, `.m4s`, `.m4a`, `.m4v`) and features an opt-in headless sniffing engine with Netscape cookie authentication to automatically recover master `.m3u8` playlists and stream renditions (`4K Max`, `1080p`, etc.)
-- 🤖 **Discord Bot Integration** — run all tools via Discord slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/progress`, `/status`, `/help`) with live progress embeds, automatic file uploads (≤ 24MB), download history tracking, keep-alive heartbeat monitoring, and automatic gateway reconnection
-- 🎯 **Per-Site Download Presets** — configure domain-specific rules (concurrent fragments, cookies, quality ceiling, and subtitle preferences) that auto-apply on URL paste and sync with Discord slash commands
-- 📡 **Hardened Live Archiver & Smart DVR** — record YouTube and Twitch broadcasts with drift-free A/V sync (`--ffmpeg-copyts`), sliding-buffer DVR rewind (`--hls-live-restart`), modern Twitch codecs (`h264`, `hevc`, `av1`), Twitch low-latency, custom duration limits, and SSL verification bypass
-- 🔍 **Video Concatenator Pre-Flight Analysis** — interactive "Check Files" modal auditing codecs, resolutions, timebases, and audio channels, with automatic cover art / thumbnail exclusion to prevent corrupted or audio-only merges
-- 📺 **Twitch & TwitchTracker Metadata Engine** — automatic stream title resolution, channel avatar previews, 30-day TwitchTracker statistics, title-first naming (`[Title] - [Date].mp4`), and rich FFmpeg video metadata tag embedding
-- 🎞️ **Multi-Platform GPU Acceleration & Encoder Tool** — batch re-encode queues with hardware GPU acceleration across NVIDIA NVENC, AMD AMF, Intel QSV, Apple Silicon VideoToolbox (`videotoolbox`), and Linux VA-API
-- 🗄️ **Internet Archive integration** — authenticate, upload with full metadata (title, collection, subject tags, license, mediatype), or bulk-download an identifier, with automatic retry on failed uploads
-- ⚡ **High-Performance History & Fast Multi-Mode M3U8** — instant History tab navigation powered by dirty-state caching and progressive DOM batching, plus collapsible multi-URL batch mode with dynamic per-stream auto-naming and live preview card tracking
-- 📑 **Two-Pane Categorized Settings & Instant Search** — modern categorized sidebar (General, Tools, Presets, Integrations, Dependencies, All Settings) with instant cross-category live search
-- 🐍 **No Python, no manual dependencies** — pure Node.js execution; all binaries are managed and auto-updated with permission-safe user data fallbacks
-- ⏯️ **Instant non-blocking process management** — genuine OS-level suspension (`treespend`) and instant asynchronous tree termination across Windows, macOS, and Linux with zero UI freezing
-- 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock, and more) with live search
-- 🔑 **Automated PO Tokens** — natively integrates `yt-dlp-get-pot` with bundled Deno runtime to bypass challenges without manual token passing
-- 💾 **Form persistence & Download History** — every field is remembered; unified history tracks Desktop, Web Remote, and Discord Bot jobs with title resolution and smooth hover-to-shrink delete actions
-- 🔄 **GitHub Auto-Updates** — checks for latest releases on startup or via one-click manual check in Settings with an interactive progress banner
-- 🚀 **Autostart & Startup Options** — configure launch on startup (Windows, macOS, Linux), start minimized, or minimize to system tray
-- 🚨 **Low Storage Notifications** — warns you via native OS notifications when the active download drive drops below a customizable threshold
-- 🩹 **Failed download recovery & Rate-limit protections** — interrupted downloads are logged, and Batch mode auto-injects required delays to prevent IP bans
-- 🛠️ **Twitch VOD Auto-Repair** — seamlessly intercepts CloudFront/HLS timestamp desyncs and missing initialization fragments, automatically rebuilding corrupted Twitch VODs
-- 🎨 **Appearance & Theme Gallery** — curated Dark and Light theme presets, custom accent color picker, glassmorphism / translucent styling, and color-coded output logs
-- 🖥️ **System tray support** — minimize to tray instead of quitting
-- 🌐 **Remote Web Cockpit & Headless Server** — host the web cockpit over HTTP/WebSocket (`nyx-dlp-cli server`) with PIN/password protection, real-time cross-client sync, and a themed remote host file browser
-- ⌨️ **Headless CLI mode** — drive every tool from a terminal or server script via `nyx-dlp-cli`, no window or GUI required
-- 📦 **Zero-Split-Brain Portable Mode (Windows)** — explicit marker detection (`.portable`, `portable.txt`, or `portable.ini` adjacent to the executable, pre-bundled in official portable releases) stores all companion binaries, app settings, and history in a self-contained `data/` directory. *(Note: Portable mode is currently supported on Windows only; macOS and Linux use standard OS application paths).*
-- 🧪 **Automated UI Integrity & AST Test Suite** — built-in regression testing verifying DOM tag balance, 580+ element IDs, and full-codebase JavaScript AST syntax integrity
+### The tools
+
+- 🧰 **9 built-in tools** behind one interface: yt-dlp, Batch Downloader, Live Archiver, M3U8 Downloader, gallery-dl, Video Splitter, Video Concatenator, Video Encoder and Internet Archive.
+- ⏯️ **Real pause / resume / stop** on every job — OS-level process-tree suspension on Windows, `SIGSTOP`/`SIGCONT` on macOS and Linux, with instant, non-blocking tree termination.
+- 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock and more) with live search.
+- 🎯 **Per-site presets** — domain-specific rules (concurrent fragments, cookies, quality ceiling, subtitles) that apply automatically when you paste a URL, and sync with the Discord bot.
+
+### Downloading
+
+- 🔑 **Full-quality YouTube with cookies** — nyx-dlp bundles and manages its own bgutil PO-token server (run via Deno) so signed-in downloads aren't capped at 360p. Prefer your own server? There's a separate toggle for that. Neither needs Docker, Node or npm on your machine.
+- 📚 **Batch mode** with configurable rest intervals, automatic rate-limit cooldowns, live mid-run queue editing and a status view.
+- 🖼️ **gallery-dl** for image galleries and albums from 300+ sites, with multi-URL auto-expansion.
+- 💾 **Save paused downloads** — pause a yt-dlp, Batch or gallery-dl job and hit **Save Paused** to park it in History (even with history switched off), then close nyx-dlp. Press **Resume** on the card later and it picks up where it stopped. A **Saved Paused** filter in History shows just those.
+- 🛠️ **Twitch VOD auto-repair** — rebuilds VODs hit by CloudFront / HLS timestamp desyncs and missing init fragments.
+
+### Live capture & streams
+
+- 📡 **Live Archiver** — record YouTube and Twitch broadcasts from the live edge or DVR-style from the start, with drift-free A/V sync, engine selection (Auto / Streamlink / yt-dlp), Twitch low-latency, modern Twitch codecs (`h264`, `hevc`, `av1`), duration limits and SSL bypass.
+- 🕵️ **Manifest sniffer & fragment rescue** — spots raw `.ts` / `.m4s` fragments and, if you opt in, uses a headless sniffer (with Netscape cookie support) to recover the master `.m3u8` and its renditions.
+- 📺 **Twitch & TwitchTracker metadata** — stream title resolution, avatar previews, title-first file naming and rich FFmpeg metadata tags.
+- 🔗 **M3U8 Downloader** — single or multi-URL mode, master-playlist discovery, per-stream auto-naming, GPU-accelerated remux / re-encode.
+
+### Internet Archive
+
+- 📑 **Browser-style upload tabs** — open several uploads at once. **Concurrent** tabs (`+`, marked **C**) start immediately and run in parallel; **queued** tabs (**New Queue Item**, marked **Q**) run one at a time in the order you pressed *Upload to IA*, each starting 30 seconds after the previous one finishes.
+- 🗂️ **Queue & concurrent manager** — the ☰ menu beside the tabs lists everything: reorder waiting items, remove them, stop running uploads, and watch the countdown to the next one.
+- ⚠️ **Edit-after-upload warning** — change a form after its upload started or was queued and you'll be told the change won't apply.
+- 🔗 **Paste any archive.org link** into the downloader — an identifier, a `/details/…` page, a `/download/…` item, a single file, or a folder URL all work.
+- 🚀 **Fast downloads with aria2c** — 16 connections per file, 4 files at once, resumable. aria2c is fetched automatically on Windows (or uses your own); switch it off in Settings to fall back to the standard `ia download`.
+- 🔐 Authenticate once, upload with full metadata (title, collection, subjects, license, mediatype, "no derive"), automatic retries on failed uploads.
+
+### Video processing
+
+- ✂️ **Splitter** — equal parts or exact timestamp intervals, with lossless stream copy or GPU transcoding.
+- 🔍 **Concatenator** — drag-and-drop ordering with sequence badges, plus a pre-flight **Check Files** analysis (codecs, resolutions, timebases, audio channels) and automatic cover-art exclusion so merges don't break.
+- 🎞️ **Encoder** — batch re-encode with hardware acceleration: NVIDIA NVENC, AMD AMF, Intel QSV, Apple VideoToolbox and Linux VA-API, falling back to software only when no GPU encoder exists.
+
+### Engines & dependencies
+
+- ⚙️ **Downloader Tools & Engines Hub** — one dashboard for `yt-dlp`, `ffmpeg`/`ffprobe`, `gallery-dl`, `streamlink`, `ia`, `aria2c`, `deno` and the bundled bgutil server. See install status, versions and paths, check upstream releases, update everything in one click, or switch / downgrade to a specific version. FFmpeg presets cover older NVIDIA GPUs that can't use the newest NVENC SDK.
+- 🧩 **Control over auto-install** — every managed tool has an auto-download toggle in **Settings → Dependencies**, so you can use your own copies instead.
+
+### Automation & remote control
+
+- 🤖 **Discord bot** — run the tools with slash commands (`/ytdlp`, `/batch`, `/livestream`, `/m3u8`, `/gallerydl`, `/splitter`, `/concat`, `/encoder`, `/ia`, `/progress`, `/status`, `/help`) with live progress embeds, automatic uploads (≤ 24 MB), history, heartbeat monitoring and automatic reconnection.
+- 🌐 **Remote web cockpit** — host the full UI over HTTP/WebSocket with PIN / password protection, real-time cross-client sync and a themed remote file browser.
+- ⌨️ **Headless CLI** — every tool is available through `nyx-dlp-cli` for scripts and servers with no display.
+
+### Everyday polish
+
+- 💾 **Everything is remembered** — form persistence and a unified history covering desktop, web-remote and Discord jobs.
+- 🛑 **Exit confirmation** — closing the app while jobs (or queued IA uploads) are running asks first, in a themed popup.
+- 🎨 **Themes** — 20+ dark and light presets (including OLED Obsidian), custom accent colors and color-coded logs.
+- 📑 **Settings with instant search**, categorized into General, Tools, Presets, Integrations and Dependencies.
+- 🔄 **GitHub auto-updates**, autostart, start-minimized and minimize-to-tray.
+- 🚨 **Low-storage warnings** when the active drive drops below your threshold.
+- 📦 **Portable mode (Windows)** — drop a `.portable`, `portable.txt` or `portable.ini` marker next to the executable and all binaries, settings and history live in a self-contained folder. macOS and Linux use the standard OS paths.
 
 ---
 
 ## The toolbox
 
-### 📥 Media Downloading
-- **yt-dlp Downloader** `yt-dlp`  
-  Single-video and audio downloads from 1,000+ sites with the full advanced options panel — 70+ flags across Network, Subtitles, Post-Processing, SponsorBlock, site presets, and SSL verification bypass.
-- **Batch Downloader** `yt-dlp`  
-  Process multi-URL queues with customizable rest intervals, automatic rate-limit cooldowns, live mid-run queue appending, fragment pre-scanning, and visual progress tracking.
-- **gallery-dl** `gallery-dl`  
-  Bulk-download high-resolution image galleries, albums, and multi-URL batches from 300+ platforms in one click with smart multi-mode URL auto-expansion.
-
-### 📡 Live Capture & Streams
-- **Live Archiver** `yt-dlp` · `streamlink`  
-  Record live YouTube and Twitch broadcasts from the live edge or DVR-style from the start (`--hls-live-restart`), with drift-free A/V sync (`--ffmpeg-copyts`), engine selection (`Auto`, `Streamlink`, `yt-dlp`), Twitch low-latency, duration limits, and SSL verification bypass.
-- **M3U8 Downloader** `ffmpeg`  
-  Pull direct HLS playlists and streaming manifests with single/multi-URL batch mode, independent per-stream metadata resolution, collision prevention, master playlist discovery, opt-in manifest rescue, GPU-accelerated remuxing/re-encoding, and TwitchTracker metadata tag embedding.
-
-### 🎬 Video Processing & Editing
-- **Video Splitter** `ffmpeg`  
-  Split media into equal chunk counts or extract exact timestamp intervals with zero-loss stream copy or GPU transcoding.
-- **Video Concatenator** `ffmpeg`  
-  Merge multiple video and audio clips into a single file with interactive drag-and-drop reordering, dynamic sequence badges, pre-flight file compatibility analysis ("Check Files" modal), and embedded cover art / thumbnail exclusion safeguards.
-- **Video Encoder** `ffmpeg`  
-  Batch re-encode video queues with automatic hardware GPU acceleration across NVIDIA NVENC, AMD AMF, Intel QSV, Apple Silicon VideoToolbox, and Linux VA-API.
-
-### 🗄️ Archival & Integrations
-- **Internet Archive** `ia`  
-  Authenticate against archive.org to bulk-download items or upload media with full metadata (title, collection, license, mediatype).
-- **Discord Bot** `node`  
-  Full remote control of all tools via interactive Discord slash commands with live progress embeds, direct file uploads, site presets resolution, and session persistence.
-- **Dependencies & Engine Hub** `node`  
-  Audit installed versions, check upstream APIs, switch or downgrade versions, install GPU-optimized FFmpeg presets, and update all 6 core dependencies in one click.
+| Tool | Powered by | What it does |
+|---|---|---|
+| **yt-dlp Downloader** | `yt-dlp` | Single videos and audio from 1,000+ sites with the full advanced options panel and site presets. |
+| **Batch Downloader** | `yt-dlp` | Multi-URL queues with rest intervals, rate-limit cooldowns and live queue editing. |
+| **Live Archiver** | `yt-dlp` · `streamlink` | Record live YouTube / Twitch streams from the live edge or from the start. |
+| **M3U8 Downloader** | `yt-dlp` · `ffmpeg` | Direct HLS playlists and manifests, multi-URL mode, optional manifest rescue and GPU re-encode. |
+| **gallery-dl** | `gallery-dl` | Image galleries and albums from 300+ platforms. |
+| **Video Splitter** | `ffmpeg` | Equal parts or exact intervals, stream copy or GPU transcode. |
+| **Video Concatenator** | `ffmpeg` | Merge clips with drag-and-drop ordering and pre-flight compatibility checks. |
+| **Video Encoder** | `ffmpeg` | Batch re-encode with automatic GPU acceleration. |
+| **Internet Archive** | `ia` · `aria2c` | Upload (concurrent + queued), edit metadata and download from archive.org. |
 
 <div align="center">
 
-*Every tool above runs through the same execution core — `lib/runners.js` — so behavior is identical whether you're driving it from the GUI, Discord Bot, CLI, or a browser over remote access.*
+*Every tool runs through the same execution core — `lib/runners.js` — so behavior is identical whether you drive it from the GUI, the Discord bot, the CLI, or a browser over remote access.*
 
 </div>
 
 ---
 
 ## Getting started
+
+### Download a build
+
+Grab the installer or portable ZIP for your platform from the [Releases](https://github.com/jt-ito/nyx-dlp/releases) page. On first launch nyx-dlp fetches the tools it needs; after that everything runs from its local `vendor/` folder.
+
+### Run from source
 
 ```bash
 git clone https://github.com/jt-ito/nyx-dlp.git
@@ -107,19 +200,30 @@ npm install
 npm start
 ```
 
-> First run will take a little longer — nyx-dlp fetches its vendored copies of `yt-dlp`, `ffmpeg`, and friends before the first job kicks off. After that, everything runs from the local `vendor/` folder.
-
-### Running Tests
-
-Verify UI tag balance, DOM selector integrity, and JavaScript AST syntax across the entire codebase:
+### Running the tests
 
 ```bash
 npm test
 ```
 
-### Prefer the command line?
+The suite covers more than syntax. In order, it runs:
 
-Every tool is also reachable headlessly through the bundled CLI, useful for scripting or running on a machine with no display:
+| Check | What it verifies |
+|---|---|
+| UI integrity | HTML tag balance, required panels/buttons, and every `getElementById` reference. |
+| Static analysis | ESLint bug rules (undefined variables, const reassignment…) plus `window.api` ↔ `preload.js` ↔ `main.js` IPC wiring. |
+| Portable hardening | Portable-mode marker detection and vendor path rules. |
+| Batch runtime | Drives the real batch loop with `spawn` stubbed (cookies path, aria2c input and log formatting). |
+| Manifest rescue | Fragment detection and cookie-authenticated manifest recovery. |
+| IA tabs | Headless-renderer run of the upload tabs, queue order, queue menu, link parsing and exit-confirm popup. |
+| Save paused | Pause → Save Paused → History filter → Resume, end to end in the headless renderer, plus the real app's history rules (saved even with history off, kept through retention and Clear History). |
+| Exit confirmation | Launches the real app, fakes a running job and exercises the close flow end to end. |
+
+---
+
+## Prefer the command line?
+
+Every tool is also reachable headlessly through the bundled CLI — useful for scripting or machines with no display:
 
 ```bash
 # Downloads
@@ -129,16 +233,24 @@ nyx-dlp-cli livestream <url> -o <dir> [-f format] [--container mp4]
 nyx-dlp-cli m3u8   <url> -o <dir> [--encode] [--codec h264] [--bitrate 5M]
 nyx-dlp-cli gallery-dl <url> -o <dir> [--filetypes "jpg,png,gif"]
 
-# Video Processing & Diagnostics
+# Video processing & diagnostics
 nyx-dlp-cli splitter <file> -o <dir> --parts <n>
 nyx-dlp-cli concat  -o <dir> --output <name> [--check] <file1> <file2> ...
 nyx-dlp-cli encoder -o <dir> [--vcodec libx264] [--acodec aac] <file1> ...
-nyx-dlp-cli encoders # Test and list available GPU hardware encoders
+nyx-dlp-cli encoders   # list available GPU hardware encoders
 
-# Remote Web Cockpit & Configuration
+# Internet Archive
+nyx-dlp-cli ia upload --id <id> [options] <files/folders...>
+nyx-dlp-cli ia download <id> -o <dir>
+nyx-dlp-cli ia edit --id <id> [options]
+nyx-dlp-cli ia config [--check | --login | --unlink]
+
+# Remote web cockpit & configuration
 nyx-dlp-cli server --port 3050 --user admin --pass secret
-nyx-dlp-cli config # View or edit persistent CLI configuration
+nyx-dlp-cli config     # view or edit persistent CLI configuration
 ```
+
+Run `nyx-dlp-cli <tool> --help` for every option.
 
 ---
 
@@ -152,14 +264,14 @@ npm run build:installer    # NSIS installer
 # Other platforms
 npm run build:mac          # macOS .dmg (x64 + arm64)
 npm run build:linux        # Linux AppImage
-npm run build:linux-cli    # Headless Linux CLI tarball
+npm run build:linux-cli    # headless Linux CLI tarball
 ```
 
-Windows outputs land in `dist/portable/` and `dist/installer/`. Nothing beyond the app itself needs to be installed on the target machine — vendored dependencies download themselves on first launch.
+Windows outputs land in `dist/portable/` and `dist/installer/`. Nothing beyond the app itself needs to be installed on the target machine — managed tools download themselves on first launch.
 
 > [!NOTE]
-> **Antivirus & Microsoft Defender Notice**:
-> Because nyx-dlp automatically downloads and updates standalone CLI tools (such as `yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, `ia`, and `deno`) directly when enabled, Windows Defender or SmartScreen may occasionally trigger a false positive due to the nature of runtime binary fetching. All downloads are fetched directly and securely from official verified upstream releases.
+> **Antivirus & Microsoft Defender notice**
+> Because nyx-dlp downloads and updates standalone CLI tools (`yt-dlp`, `ffmpeg`, `gallery-dl`, `streamlink`, `ia`, `aria2c`, `deno`) at runtime when auto-install is enabled, Windows Defender or SmartScreen may occasionally raise a false positive. Downloads come straight from the official upstream releases, and every auto-install can be turned off in **Settings → Dependencies**.
 
 ---
 
@@ -167,53 +279,49 @@ Windows outputs land in `dist/portable/` and `dist/installer/`. Nothing beyond t
 
 ```
 nyx-dlp/
-├── main.js               # Electron main process — window, tray, auto-updates, IPC routing
-├── preload.js             # Context bridge exposing window.api to renderer
+├── main.js                 # Electron main process — window, tray, auto-updates, exit guard, IPC routing
+├── preload.js              # Context bridge exposing window.api to the renderer
 ├── server.js               # Remote HTTP/WebSocket server for browser-based control
-├── cli.js                  # Headless CLI entry point — drives the exact same runners
-├── index.html / styles.css # App shell, dark/light theme gallery, and UI subsystems
-├── test/
-│   ├── verify_ui_integrity.js   # Automated DOM balance, AST syntax & selector audit
-│   └── test_manifest_rescue.js  # Cookie authentication & manifest recovery tests
+├── cli.js                  # Headless CLI entry point — drives the same runners
+├── index.html / styles.css # App shell, theme gallery and UI subsystems
+├── docs/screenshots/       # Images used in this README
+├── test/                   # UI integrity, static analysis, portable hardening, runtime and end-to-end tests
 ├── lib/
-│   ├── runners.js          # Centralized process spawning for every tool — execution core
-│   ├── manifest-sniffer.js # Headless network sniffing & fragment rescue engine
+│   ├── runners.js          # Centralized process spawning for every tool — the execution core
+│   ├── runner-utils.js     # OS-level pause / resume / kill across Windows, macOS and Linux
+│   ├── treespend.cs        # Native NT process-tree suspension (NtSuspendProcess)
+│   ├── tool-hub.js         # Engines Hub: versions, upstream checks, install / switch
+│   ├── ensure-*.js         # Managed tools: yt-dlp, ffmpeg, gallery-dl, streamlink, ia, aria2c, deno,
+│   │                       #   treespend, and the bgutil plugin + PO-token server
+│   ├── vendor-dir.js       # Permission-safe vendor path resolver (installed vs portable)
+│   ├── download-helper.js  # Resilient download helper with curl fallback
+│   ├── manifest-sniffer.js # Headless network sniffing & fragment rescue
 │   ├── m3u8-resolver.js    # Master playlist discovery & variant probing
 │   ├── cookie-utils.js     # Netscape-to-Electron session cookie translator
-│   ├── tool-hub.js         # Dependencies & Engine Hub version and update manager
-│   ├── site-presets.js     # Per-site download presets & Discord defaults engine
-│   ├── twitch-meta.js      # Twitch & TwitchTracker metadata engine & FFmpeg tag builder
-│   ├── discord-bot.js      # Zero-dependency Discord Gateway & REST client with slash commands
-│   ├── settings-store.js   # Centralized JSON configuration & settings store
-│   ├── vendor-dir.js       # Permission-safe vendor binary path resolver
-│   ├── download-helper.js  # Resilient download helper with curl fallback
-│   ├── runner-utils.js     # OS-level pause/resume/kill across Win/macOS/Linux
-│   ├── treespend.cs        # Native NT process tree suspension utility (C# / NtSuspendProcess)
-│   ├── ensure-treespend.js  # Compiles native NT process tree suspension helper
-│   ├── ensure-ytdlp.js      # Vendors & auto-updates standalone yt-dlp binary
-│   ├── ensure-ffmpeg.js     # Vendors ffmpeg/ffprobe, selectable by version for GPU support
-│   ├── ensure-gallerydl.js  # Vendors & updates gallery-dl standalone binary
-│   ├── ensure-ia.js         # Vendors the archive.org ia CLI
-│   ├── ensure-streamlink.js # Vendors streamlink for live capture
-│   └── ensure-deno.js       # Vendors Deno runtime for YouTube challenge solving
+│   ├── site-presets.js     # Per-site download presets & Discord defaults
+│   ├── twitch-meta.js / kick-meta.js  # Twitch & Kick metadata resolution and FFmpeg tag builders
+│   ├── discord-bot.js      # Zero-dependency Discord gateway & REST client with slash commands
+│   └── settings-store.js   # Centralized JSON configuration store
 └── renderer/
-    ├── tools/               # Per-tool UI logic (ytdlp, batch, livestream, m3u8, concatenator, tool-hub, etc.)
-    ├── fragment-rescue.js   # Interactive manifest rescue modal & resolution badges
-    ├── file-browser.js      # Themed remote host file browser with path auto-completion
-    ├── settings.js, theme.js, sync.js, persistence.js  # Two-pane settings & UI subsystems
-    ├── history.js           # High-performance download history with dirty-state caching
-    ├── terminal.js          # Custom log terminal with output coloring & stream parsing
-    └── remote-api.js         # Client-side glue for remote web-access mode
+    ├── tools/              # Per-tool UI logic (ytdlp, batch, livestream, m3u8, ia, tool-hub, …)
+    ├── settings.js, theme.js, sync.js, persistence.js  # Settings and UI state subsystems
+    ├── history.js          # Download history with dirty-state caching
+    ├── terminal.js         # Log terminal with output coloring, in-place progress and stream parsing
+    ├── status.js           # Status bar and the exit-confirmation popup
+    ├── fragment-rescue.js  # Manifest rescue modal & resolution badges
+    ├── file-browser.js     # Themed remote host file browser
+    └── remote-api.js       # Client glue for remote web-access mode
 ```
 
 ---
 
 <details>
-<summary><b>🐧 Headless Linux Server: Install & systemd Setup</b></summary>
+<summary><b>🐧 Headless Linux server: install &amp; systemd setup</b></summary>
 <br>
 
-### 1. Global Installation
-Run the following commands on your headless Linux machine to download, extract, and link the CLI executable globally:
+### 1. Global installation
+
+Download, extract and link the CLI globally on your headless machine:
 
 ```bash
 # Download and extract the latest CLI release into /opt/nyx-dlp
@@ -229,7 +337,8 @@ nyx-dlp-cli --help
 ```
 
 ### 2. Run as a 24/7 background service (`systemd`)
-To have the web cockpit and Discord bot run automatically in the background on system boot:
+
+To keep the web cockpit and Discord bot running across reboots (replace `youruser` with the account that should own it):
 
 ```bash
 # Create the systemd service file
@@ -240,7 +349,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=jt
+User=youruser
 WorkingDirectory=/opt/nyx-dlp
 ExecStart=/usr/local/bin/nyx-dlp-cli server --port 3050
 Restart=always
@@ -263,9 +372,9 @@ sudo systemctl status nyx-dlp
 
 ---
 
-## Feedback & Issues
+## Feedback & issues
 
-Have a question, encountered a bug, or have ideas for new features and improvements? Feel free to open an [Issue](https://github.com/jt-ito/nyx-dlp/issues) or start a discussion on GitHub!
+Have a question, hit a bug, or want to suggest an improvement? Open an [Issue](https://github.com/jt-ito/nyx-dlp/issues) or start a discussion on GitHub.
 
 ---
 

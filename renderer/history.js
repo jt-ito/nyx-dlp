@@ -9,6 +9,9 @@
   let isHistoryDirty = true;
   let loadMoreBtn = null;
   let intersectionObserver = null;
+  let fullHistory = [];
+  let savedOnly = false;
+  const savedFilterBtn = document.getElementById('history-saved-filter');
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -79,10 +82,13 @@
     if (item.uploadData) {
       wrap._uploadData = item.uploadData;
     }
+    if (item.savedPaused) wrap._savedItem = item;
 
     let statusBadge = '';
     const isToolActuallyRunning = typeof runningTools !== 'undefined' && item.tool && runningTools.has(item.tool);
-    if (item.status === 'partial') {
+    if (item.savedPaused) {
+      statusBadge = `<span style="display: inline-block; padding: 2px 6px; font-size: 11px; font-weight: 600; border-radius: 4px; background: var(--accent); color: #fff; margin-left: 8px;">PAUSED</span>`;
+    } else if (item.status === 'partial') {
       statusBadge = `<span style="display: inline-block; padding: 2px 6px; font-size: 11px; font-weight: 600; border-radius: 4px; background: var(--terminal-warning); color: var(--bg-body); margin-left: 8px;">PARTIAL</span>`;
     } else if (item.status === 'failed') {
       statusBadge = `<span style="display: inline-block; padding: 2px 6px; font-size: 11px; font-weight: 600; border-radius: 4px; background: var(--danger); color: #fff; margin-left: 8px;">FAILED</span>`;
@@ -115,6 +121,13 @@
       </button>
     ` : '';
 
+    const resumeBtnHtml = item.savedPaused ? `
+      <button type="button" class="history-fill-btn history-resume-btn" title="Restore the form and resume this download where it left off">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+        <span>Resume</span>
+      </button>
+    ` : '';
+
     wrap.innerHTML = `
       <div class="history-card-body">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
@@ -123,6 +136,7 @@
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
             ${fillBtnHtml}
+            ${resumeBtnHtml}
             <div style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">${formatDate(item.date)}</div>
           </div>
         </div>
@@ -200,6 +214,24 @@
     }
   }
 
+  // The filter button only exists while there are saved paused downloads; clicking it toggles the filter.
+  function updateSavedFilterButton() {
+    const count = fullHistory.filter(h => h.savedPaused).length;
+    if (count === 0) savedOnly = false;
+    if (!savedFilterBtn) return;
+    savedFilterBtn.classList.toggle('hidden', count === 0);
+    savedFilterBtn.textContent = `Saved Paused (${count})`;
+    savedFilterBtn.classList.toggle('btn-primary', savedOnly);
+    savedFilterBtn.classList.toggle('btn-ghost', !savedOnly);
+  }
+
+  if (savedFilterBtn) {
+    savedFilterBtn.addEventListener('click', () => {
+      savedOnly = !savedOnly;
+      loadHistory(true);
+    });
+  }
+
   async function loadHistory(force = false) {
     if (!window.api || !window.api.getHistory || !historyList) return;
     
@@ -216,13 +248,16 @@
       if (!isNaN(days) && days > 0 && Array.isArray(history)) {
         const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
         history = history.filter(item => {
+          if (item.savedPaused) return true;
           if (!item.date) return true;
           const itemTime = new Date(item.date).getTime();
           return isNaN(itemTime) || itemTime >= cutoffTime;
         });
       }
       
-      allFilteredHistory = Array.isArray(history) ? history : [];
+      fullHistory = Array.isArray(history) ? history : [];
+      updateSavedFilterButton();
+      allFilteredHistory = savedOnly ? fullHistory.filter(h => h.savedPaused) : fullHistory;
       isHistoryDirty = false;
       currentRenderedCount = 0;
 
@@ -262,7 +297,19 @@
             await window.api.deleteHistoryItem(itemId);
           }
           allFilteredHistory = allFilteredHistory.filter(h => (h.id || h.date) !== itemId);
+          fullHistory = fullHistory.filter(h => (h.id || h.date) !== itemId);
+          const wasFiltered = savedOnly;
+          updateSavedFilterButton();
+          if (wasFiltered && !savedOnly) loadHistory(true);
         }, 220);
+        return;
+      }
+
+      const resumeBtn = e.target.closest('.history-resume-btn');
+      if (resumeBtn) {
+        e.stopPropagation();
+        const wrap = resumeBtn.closest('.history-card-wrap');
+        if (wrap && wrap._savedItem && window.resumeSavedDownload) window.resumeSavedDownload(wrap._savedItem);
         return;
       }
 

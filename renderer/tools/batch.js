@@ -133,6 +133,9 @@
     }
   });
 
+  // URLs still to download (the current one included) — used when saving a paused batch.
+  window.getBatchRemainingUrls = () => batchUrlStatuses.filter(s => s.status === 'pending' || s.status === 'downloading').map(s => s.url);
+
   function getPendingQueueDifference() {
     const currentUrls = getUrls();
     const activePending = batchUrlStatuses.filter(s => s.status === 'pending').map(s => s.url);
@@ -396,7 +399,8 @@
         window.api.runBatch({ 
           urls: urlsToRun, outputDir, format, rest, skipLive, cookiesPath, 
           extraArgs, container, bgutilUrl, useDeno,
-          dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoRepair, twitchSubOnly
+          dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoRepair, twitchSubOnly,
+          resumeSaved: window._takeResumeFlag ? window._takeResumeFlag() : false
         });
       } catch (e) {
         appendLog(log, '⚠ Internal error: ' + e.message, 'error');

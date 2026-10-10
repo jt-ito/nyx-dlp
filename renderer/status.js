@@ -32,3 +32,33 @@ function decRunning(tool) {
     setStatus('done', 'Done');
   }
 }
+
+/* ── Exit confirmation (main.js asks before quitting while tasks run) ── */
+(function () {
+  const modal = document.getElementById('exit-confirm-modal');
+  const list = document.getElementById('exit-confirm-list');
+  const cancelBtn = document.getElementById('exit-confirm-cancel');
+  const submitBtn = document.getElementById('exit-confirm-submit');
+  if (!modal || !window.api || !window.api.onConfirmExit) return;
+
+  const respond = (ok) => {
+    modal.style.display = 'none';
+    window.api.respondExitConfirm(ok);
+  };
+  window.api.onConfirmExit(({ work }) => {
+    list.textContent = '';
+    for (const name of work) {
+      const li = document.createElement('li');
+      li.textContent = name;
+      list.appendChild(li);
+    }
+    modal.style.display = 'flex';
+    cancelBtn.focus();
+  });
+  cancelBtn.addEventListener('click', () => respond(false));
+  submitBtn.addEventListener('click', () => respond(true));
+  modal.addEventListener('click', (e) => { if (e.target === modal) respond(false); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display !== 'none') respond(false);
+  });
+})();

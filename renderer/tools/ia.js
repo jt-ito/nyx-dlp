@@ -206,7 +206,6 @@
   const iaIdEdit = document.getElementById('ia-identifier-edit');
   const iaIdEditCount = document.getElementById('ia-identifier-edit-count');
   const iaIdDown = document.getElementById('ia-identifier-down');
-  const iaIdDownCount = document.getElementById('ia-identifier-down-count');
   const iaTitle = document.getElementById('ia-title');
 
   let idModifiedByUser = !!(iaIdUp && iaIdUp.value);
@@ -217,7 +216,6 @@
     idModifiedByUser = modified !== undefined ? modified : true;
   });
   setupIdentifierInput(iaIdEdit, iaIdEditCount);
-  setupIdentifierInput(iaIdDown, iaIdDownCount);
 
   // ── Upload form field snapshot (captured per-tab so switching between a
   // draft tab and a running/finished tab doesn't lose what you were typing) ──
@@ -1286,6 +1284,33 @@
     }
   );
 
+  // Accepts a bare identifier or any archive.org link:
+  //   .../details/<id>, .../download/<id>, .../download/<id>/<file or folder/>, embed/stream/metadata links.
+  // Returns { identifier, files, glob } or null. A trailing "/" after a folder path downloads that folder.
+  function parseIaLink(input) {
+    let text = String(input || '').trim();
+    if (!text) return null;
+    const idOk = (s) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(s);
+    if (!/^(https?:\/\/|(www\.)?archive\.org\/)/i.test(text)) {
+      return idOk(text) ? { identifier: text, files: [], glob: '' } : null;
+    }
+    let url;
+    try { url = new URL(/^https?:/i.test(text) ? text : 'https://' + text); } catch (_) { return null; }
+    if (!/(^|\.)archive\.org$/i.test(url.hostname)) return null;
+    const segs = url.pathname.split('/').filter(Boolean).map(s => { try { return decodeURIComponent(s); } catch (_) { return s; } });
+    if (!['details', 'download', 'embed', 'stream', 'metadata', 'compress'].includes(segs[0] || '')) return null;
+    const identifier = segs[1];
+    if (!identifier || !idOk(identifier)) return null;
+    const rest = segs.slice(2);
+    if (rest.length === 0 || !['details', 'download'].includes(segs[0])) return { identifier, files: [], glob: '' };
+    const path = rest.join('/');
+    return url.pathname.endsWith('/')
+      ? { identifier, files: [], glob: path + '/*' }
+      : { identifier, files: [path], glob: '' };
+  }
+  window.parseIaLink = parseIaLink;
+  window.getIaQueuedCount = () => queueOrder.length; // read by main.js for the exit confirmation
+
   // Download Logic
   setupRun(
     document.getElementById('ia-download-run'),
@@ -1293,10 +1318,13 @@
     'IA Download',
     window.api.runIaDownload,
     () => {
-      const identifier = document.getElementById('ia-identifier-down').value.trim();
+      const raw = document.getElementById('ia-identifier-down').value.trim();
       const outputDir = document.getElementById('ia-output').value.trim();
 
-      if (!identifier) { appendLog(log, '⚠ Please provide an identifier to download.', 'error'); return null; }
+      if (!raw) { appendLog(log, '⚠ Please provide an identifier or archive.org link to download.', 'error'); return null; }
+      const parsed = parseIaLink(raw);
+      if (!parsed) { appendLog(log, '⚠ Could not read that as an identifier or archive.org details/download link.', 'error'); return null; }
+      const { identifier, files, glob } = parsed;
       if (identifier.length < 5 || identifier.length > 100) { appendLog(log, '⚠ Identifier must be between 5 and 100 characters.', 'error'); return null; }
       if (!outputDir) { appendLog(log, '⚠ Please specify an output directory.', 'error'); return null; }
 
@@ -1317,7 +1345,9 @@
           if (window._refreshHistory) window._refreshHistory();
         });
       }
-      return { identifier, outputDir, autoIa };
+      const target = files[0] || glob;
+      if (target) appendLog(log, `Downloading ${files.length ? 'file' : 'folder'}: ${target}`, 'info');
+      return { identifier, files, glob, outputDir, autoIa, useAria2: getSetting('ia-use-aria2c'), autoAria2: getSetting('dep-auto-aria2c') };
     }
   );
 

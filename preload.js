@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('api', {
   installAppUpdate:  (filePath) => ipcRenderer.send('install-app-update', filePath),
   openExternal:      (url) => ipcRenderer.send('open-external', url),
   onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_e, d) => cb(d)),
+  onConfirmExit:     (cb) => ipcRenderer.on('confirm-exit', (_e, d) => cb(d)),
+  respondExitConfirm: (ok) => ipcRenderer.send('exit-confirm-response', !!ok),
   onAppUpdateProgress: (cb) => ipcRenderer.on('app-update-progress', (_e, d) => cb(d)),
   onAppUpdateDownloaded: (cb) => ipcRenderer.on('app-update-downloaded', (_e, d) => cb(d)),
 

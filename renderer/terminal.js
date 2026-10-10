@@ -144,11 +144,13 @@ function appendLog(logEl, text, cls) {
         logEl._destinationList.push(fileName);
         logEl._threadDestinations.set('main', fileName);
       }
+      // A new file is starting, so its progress must show even if the previous file just hit 100%.
+      logEl._downloadCompleted = false;
       logEl._pendingLines.push({ text, cls, count: 1 });
       if (!logEl._rafPending) triggerRaf(logEl);
       return;
   }
-  
+
   // 1b. Check for already downloaded line
   const alreadyMatch = text.match(/^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:(\d+):\s*)?\[download\]\s+(.+?)\s+has already been downloaded/i);
   if (alreadyMatch) {
@@ -1040,7 +1042,8 @@ function handleOutput(logEl, data, onExit) {
           } else if (logEl.dataset.iaTool === '1') {
             toolName = 'Internet Archive';
             const upId = document.getElementById('ia-identifier-up')?.value.trim();
-            const downId = document.getElementById('ia-identifier-down')?.value.trim();
+            const downRaw = document.getElementById('ia-identifier-down')?.value.trim();
+            const downId = (window.parseIaLink && window.parseIaLink(downRaw)?.identifier) || downRaw;
             const editId = document.getElementById('ia-identifier-edit')?.value.trim();
             const id = upId || downId || editId || '';
             const files = Array.from(document.getElementById('ia-files')?.querySelectorAll('.sortable-item') || []).map(el => el.dataset.path);

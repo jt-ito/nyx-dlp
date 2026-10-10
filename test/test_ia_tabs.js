@@ -108,7 +108,54 @@ app.whenReady().then(async () => {
   await run(`const nd = document.getElementById('ia-noderive'); nd.checked = true; document.querySelectorAll('#ia-job-tabs .ia-job-tab')[0].click(); document.querySelectorAll('#ia-job-tabs .ia-job-tab')[3].click(); document.getElementById('ia-upload-reset')?.click(); 0`);
   assert('checkbox keeps its state across tab switches', await run(`document.getElementById('ia-noderive').checked`));
 
-  console.log('\n8. No renderer errors...');
+  console.log('\n8. IA download link parsing...');
+  const parsed = await run(`[
+    'https://archive.org/download/ps4-fpkg-collection-english-f/FINAL%20FANTASY%20-%20%5BEU%5D%20%5BEN%5D%20%5B1.02%5D.pkg',
+    'https://archive.org/details/ps4-fpkg-collection-english-f',
+    'https://archive.org/download/ps4-fpkg-collection-english-f',
+    'archive.org/download/some-item-id/folder/sub/',
+    'my-plain-item-id',
+    'https://evil.example.com/download/some-item-id',
+    'https://archive.org/about',
+  ].map(parseIaLink)`);
+  assert('download link to one file', parsed[0] && parsed[0].identifier === 'ps4-fpkg-collection-english-f' && parsed[0].files[0] === 'FINAL FANTASY - [EU] [EN] [1.02].pkg', JSON.stringify(parsed[0]));
+  assert('details link = whole item', parsed[1] && parsed[1].identifier === 'ps4-fpkg-collection-english-f' && !parsed[1].files.length && !parsed[1].glob);
+  assert('download link without file = whole item', parsed[2] && parsed[2].identifier === 'ps4-fpkg-collection-english-f' && !parsed[2].files.length);
+  assert('folder link becomes a glob', parsed[3] && parsed[3].identifier === 'some-item-id' && parsed[3].glob === 'folder/sub/*', JSON.stringify(parsed[3]));
+  assert('plain identifier still works', parsed[4] && parsed[4].identifier === 'my-plain-item-id');
+  assert('non-archive.org and non-item links are rejected', parsed[5] === null && parsed[6] === null);
+
+  console.log('\n9. Exit confirmation modal...');
+  const answers = [];
+  ipcMain.on('exit-confirm-response', (_e, ok) => answers.push(ok));
+  win.webContents.send('confirm-exit', { work: ['yt-dlp', 'Internet Archive queue (2 waiting)'] });
+  await sleep(300);
+  assert('modal opens listing running work', await run(`getComputedStyle(document.getElementById('exit-confirm-modal')).display === 'flex' && document.getElementById('exit-confirm-list').children.length === 2`));
+  await run(`document.getElementById('exit-confirm-cancel').click(); 0`);
+  await sleep(200);
+  assert('Keep Running closes it and answers "no"', answers[0] === false && (await run(`document.getElementById('exit-confirm-modal').style.display === 'none'`)));
+  win.webContents.send('confirm-exit', { work: ['yt-dlp'] });
+  await sleep(300);
+  await run(`document.getElementById('exit-confirm-submit').click(); 0`);
+  await sleep(200);
+  assert('Quit Anyway answers "yes"', answers[1] === true);
+
+  console.log('\n10. Progress of a second stream shows after the first hits 100%...');
+  const shown = await run(`(() => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const feed = (t) => handleOutput(el, { type: 'stdout', text: t + '\\n' });
+    feed('[download] Destination: video.f401.mp4');
+    feed('[download] 100% of  412.80MiB in 00:00:22 at 18.71MiB/s');
+    feed('[download] Destination: audio.f251.webm');
+    feed('[download]  42.0% of    9.62MiB at    2.40MiB/s ETA 00:04');
+    const n = el._liveProgresses ? el._liveProgresses.size : 0;
+    el.remove();
+    return n;
+  })()`);
+  assert('audio progress line is pinned after the video stream completes', shown === 1, `pinned=${shown}`);
+
+  console.log('\n11. No renderer errors...');
   assert('no console errors / uncaught exceptions', errors.length === 0, errors.join(' | '));
 
   console.log(failures ? `\n ${failures} IA TAB TEST(S) FAILED` : '\n ✔ ALL IA TAB TESTS PASSED');

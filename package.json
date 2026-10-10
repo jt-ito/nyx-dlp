@@ -1,6 +1,6 @@
 {
     "name": "nyx-dlp",
-    "version": "5.0.0",
+    "version": "5.0.1",
     "description": "Modern Electron GUI for yt-dlp, gallery-dl, M3U8 downloads and YouTube live archiving",
     "main": "main.js",
     "bin": {
@@ -9,7 +9,7 @@
     "scripts": {
         "start": "electron .",
         "cli": "node cli.js",
-        "test": "node test/verify_ui_integrity.js && node test/verify_static_analysis.js && node test/test_portable_hardening.js && node test/test_batch_runtime.js && electron test/test_manifest_rescue.js && electron test/test_ia_tabs.js",
+        "test": "node test/verify_ui_integrity.js && node test/verify_static_analysis.js && node test/test_portable_hardening.js && node test/test_batch_runtime.js && electron test/test_manifest_rescue.js && electron test/test_ia_tabs.js && electron test/test_paused_save.js && node test/test_exit_confirm.js && node test/test_history_saved.js",
         "build:portable": "node build.js portable",
         "build:installer": "node build.js installer",
         "build:mac": "node build.js mac",
@@ -40,6 +40,7 @@
         "files": [
             "**/*",
             "!dist/**/*",
+            "!docs/**/*",
             "!scripts/**/*",
             "!*.md",
             "!**/__pycache__/**/*"

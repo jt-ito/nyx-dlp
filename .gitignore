@@ -22,3 +22,8 @@ scratch/
 TWITCH_CDN_RECOVERY.md
 COMMUNITY_PROPOSALS*
 v*.md
+# Screenshot/demo copy (spoofed data, never part of the app)
+Script_UI_Screenshots/
+Script_UI_Demo/
+demo-stubs.js
+renderer/demo-data.js

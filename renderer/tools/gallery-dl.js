@@ -267,7 +267,7 @@
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
 
-    window.api.runGalleryDl({ urls, url: urls[0], outputDir, filetypes, metadata, cookiesPath, installGdl });
+    window.api.runGalleryDl({ urls, url: urls[0], outputDir, filetypes, metadata, cookiesPath, installGdl, resumeSaved: window._takeResumeFlag ? window._takeResumeFlag() : false });
   });
 
   if (window.api && window.api.onGalleryDlOutput) {
