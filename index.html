@@ -1993,7 +1993,7 @@
             <div class="hidden" id="ia-edit-warning" style="grid-column: 1 / -1; font-size: 12px; color: var(--warning);"></div>
             </div><!-- /#ia-upload-fields -->
 
-            <div class="action-row" style="grid-column: 1 / -1; margin-top: 16px;">
+            <div class="action-row ia-action-row" style="grid-column: 1 / -1; margin-top: 16px;">
               <button class="btn btn-primary btn-run" id="ia-upload-run">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2013,7 +2013,13 @@
                   <line x1="12" y1="5" x2="12" y2="19"/>
                   <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-                New Queue Item
+                <span class="ia-btn-label">New Queue Item</span>
+              </button>
+              <button class="btn btn-ghost" id="ia-autofill-btn" title="Fill the form from a saved set (creator, tags, description…) or save the current one">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                <span class="ia-btn-label">Autofill</span>
               </button>
               <button class="btn btn-ghost" id="ia-upload-reset">Reset Info</button>
               <button class="btn btn-ghost" id="ia-upload-clear">Clear Log</button>
@@ -3429,6 +3435,46 @@
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn btn-ghost" id="exit-confirm-cancel">Keep Running</button>
         <button class="btn btn-primary" id="exit-confirm-submit" style="background: #ff5f57; color: #fff; border: none;">Quit Anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IA Autofill: saved sets of upload fields -->
+  <div id="ia-autofill-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 580px; max-width: 92vw; max-height: 84vh; display: flex; flex-direction: column;">
+      <div id="ia-autofill-list-view" style="display: flex; flex-direction: column; min-height: 0;">
+        <h3 style="margin-bottom: 6px; font-size: 16px; font-weight: 600;">Autofill</h3>
+        <p class="ia-af-hint">Pick a saved set to fill into this upload. Only the fields it contains are changed.</p>
+        <div id="ia-autofill-list" class="ia-af-list"></div>
+        <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 16px;">
+          <button class="btn btn-ghost" id="ia-autofill-close">Close</button>
+          <button class="btn btn-primary" id="ia-autofill-save-new">Save current form&hellip;</button>
+        </div>
+      </div>
+      <div id="ia-autofill-save-view" style="display: none; flex-direction: column; min-height: 0;">
+        <h3 style="margin-bottom: 6px; font-size: 16px; font-weight: 600;">Save to Autofill</h3>
+        <label class="form-label" for="ia-autofill-name">Name</label>
+        <input type="text" id="ia-autofill-name" class="form-input" placeholder="e.g. yawning" autocomplete="off" />
+        <div id="ia-autofill-name-note" class="ia-af-hint" style="min-height: 18px; margin-top: 4px;"></div>
+        <label class="form-label" style="margin-top: 8px;">What to save</label>
+        <div id="ia-autofill-fields" class="ia-af-fields"></div>
+        <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 16px;">
+          <button class="btn btn-ghost" id="ia-autofill-back">Back</button>
+          <button class="btn btn-primary" id="ia-autofill-save-confirm">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IA: closing an upload tab that is still uploading -->
+  <div id="ia-close-running-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 400px; max-width: 90vw;">
+      <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">Stop this upload?</h3>
+      <p style="font-size: 14px; color: var(--text); margin-bottom: 8px;"><strong id="ia-close-running-name"></strong> is still uploading.</p>
+      <p style="font-size: 14px; color: var(--text); margin-bottom: 24px;">Closing the tab stops the upload, and whatever has not been sent yet will be lost. You can reopen the tab with Ctrl+Shift+T and start it again.</p>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-ghost" id="ia-close-running-cancel">Keep Uploading</button>
+        <button class="btn btn-primary" id="ia-close-running-submit" style="background: #ff5f57; color: #fff; border: none;">Stop &amp; Close</button>
       </div>
     </div>
   </div>

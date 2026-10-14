@@ -656,16 +656,79 @@
     updateIaTerminalVisibility();
   }
 
+  // ── Recently closed tabs (Ctrl+Shift+T). In memory only, so it is gone when the app closes. ──
+  const closedTabs = []; // oldest first, newest last
+  const MAX_CLOSED_TABS = 25;
+
+  function rememberClosedTab(tab) {
+    const snapshot = tab.id === selectedTabId ? captureFieldSnapshot() : (tab.snapshot || blankFieldSnapshot());
+    const hasInfo = snapshot.files.length || snapshot.identifier || snapshot.title || snapshot.description || snapshot.subject;
+    if (!hasInfo) return; // nothing worth restoring
+    closedTabs.push({ kind: tab.kind, snapshot, label: snapshot.identifier || snapshot.title || 'New Upload' });
+    if (closedTabs.length > MAX_CLOSED_TABS) closedTabs.shift();
+  }
+
+  function reopenClosedTab(index = closedTabs.length - 1) {
+    const entry = closedTabs[index];
+    if (!entry) return false;
+    closedTabs.splice(index, 1);
+    const tab = createTab(entry.kind);
+    tab.snapshot = entry.snapshot;
+    tab.label = entry.label;
+    tab.tabEl.querySelector('.ia-job-label').textContent = entry.label;
+    selectTab(tab.id);
+    refreshQueueMenu();
+    return true;
+  }
+
+  // Closing a tab that is uploading is destructive, so ask first (middle-click and the ✕ both land here).
+  const closeRunModal = document.getElementById('ia-close-running-modal');
+  let closeRunPendingId = null;
+  function hideCloseRunModal() {
+    if (closeRunModal) closeRunModal.style.display = 'none';
+    closeRunPendingId = null;
+  }
+  function requestCloseTab(tabId) {
+    const tab = uploadTabs.get(tabId);
+    if (!tab) return;
+    if (tab.status !== 'running' || !closeRunModal) { closeTab(tabId); return; }
+    closeRunPendingId = tabId;
+    document.getElementById('ia-close-running-name').textContent = tab.label;
+    closeRunModal.style.display = 'flex';
+    document.getElementById('ia-close-running-cancel').focus();
+  }
+  document.getElementById('ia-close-running-cancel')?.addEventListener('click', hideCloseRunModal);
+  closeRunModal?.addEventListener('click', (e) => { if (e.target === closeRunModal) hideCloseRunModal(); });
+  document.getElementById('ia-close-running-submit')?.addEventListener('click', () => {
+    const tab = uploadTabs.get(closeRunPendingId);
+    hideCloseRunModal();
+    if (!tab || tab.status !== 'running') { if (tab) closeTab(tab.id); return; }
+    tab._closeAfterStop = true; // closed as soon as the process reports it has stopped
+    if (tab.pid) window.api.stopScript(tab.pid);
+    else tab._stopRequested = true;
+  });
+
+  // Ctrl+Shift+T reopens the most recently closed upload tab with its form filled back in.
+  document.addEventListener('keydown', (e) => {
+    if (closeRunModal && closeRunModal.style.display !== 'none' && e.key === 'Escape') { hideCloseRunModal(); return; }
+    if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.key.toLowerCase() !== 't') return;
+    if (!document.getElementById('tab-ia')?.classList.contains('active') || currentMode !== 'upload') return;
+    e.preventDefault();
+    reopenClosedTab();
+  });
+
   function closeTab(tabId) {
     const tab = uploadTabs.get(tabId);
     if (!tab) return;
     if (tab.status === 'waiting') dequeueTab(tab);
     if (tab.status === 'running') {
       // Stop it first — closing a running upload's tab must not orphan the process.
+      tab._closeAfterStop = true;
       if (tab.pid) window.api.stopScript(tab.pid);
       else tab._stopRequested = true;
       return;
     }
+    rememberClosedTab(tab);
     tab.tabEl?.remove();
     tab.viewEl?.remove();
     uploadTabs.delete(tabId);
@@ -692,7 +755,14 @@
     });
     tabEl.querySelector('.ia-job-close').addEventListener('click', (e) => {
       e.stopPropagation();
-      closeTab(id);
+      requestCloseTab(id);
+    });
+    // Middle-click closes the tab (and keeps Windows from starting its autoscroll cursor).
+    tabEl.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
+    tabEl.addEventListener('auxclick', (e) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      requestCloseTab(id);
     });
     jobTabsEl.appendChild(tabEl);
 
@@ -781,6 +851,7 @@
     activeUploadCount = Math.max(0, activeUploadCount - 1);
     if (activeUploadCount === 0) decRunning('Internet Archive');
     if (tab.id === selectedTabId) updateSelectedTabControls();
+    const closeNow = tab._closeAfterStop;
     if (tab === queueRunningTab) {
       queueRunningTab = null;
       if (queueOrder.length > 0) {
@@ -790,6 +861,7 @@
       }
     }
     refreshQueueMenu();
+    if (closeNow) closeTab(tab.id);
   }
 
   function startNextQueued() {
@@ -874,6 +946,33 @@
       ]);
     });
     if (!queueRunningTab && queueOrder.length === 0) note('No queued items. Press Upload to IA on a queued tab to add it.');
+
+    if (closedTabs.length) {
+      section('Recently closed (Ctrl+Shift+T)');
+      for (let i = closedTabs.length - 1; i >= 0; i--) {
+        const entry = closedTabs[i];
+        const el = document.createElement('div');
+        el.className = 'ia-qm-row';
+        const name = document.createElement('span');
+        name.className = 'ia-qm-name';
+        name.textContent = `${entry.kind === 'queued' ? 'Q ' : entry.kind === 'concurrent' ? 'C ' : ''}${entry.label}`;
+        name.title = entry.label;
+        name.addEventListener('click', () => reopenClosedTab(i));
+        const btn = document.createElement('button');
+        btn.className = 'ia-qm-btn';
+        btn.textContent = '↺';
+        btn.title = 'Reopen';
+        btn.addEventListener('click', (e) => { e.stopPropagation(); reopenClosedTab(i); });
+        el.append(name, btn);
+        queueMenuEl.appendChild(el);
+      }
+      const clear = document.createElement('button');
+      clear.className = 'ia-qm-btn';
+      clear.style.margin = '4px';
+      clear.textContent = 'Clear recently closed';
+      clear.addEventListener('click', (e) => { e.stopPropagation(); closedTabs.length = 0; refreshQueueMenu(); });
+      queueMenuEl.appendChild(clear);
+    }
 
     section('Concurrent');
     const conc = [...uploadTabs.values()].filter(t => t.kind === 'concurrent');
@@ -999,6 +1098,250 @@
   // tweak one field, click, tweak again, click, etc.
   document.getElementById('ia-upload-add-queue').addEventListener('click', () => {
     selectTab(createTab('queued').id);
+  });
+
+  // ── Autofill: named sets of upload fields (creator, tags, description with its exact spacing…) ──
+  // Stored in localStorage on this machine. Values are saved exactly as typed — never trimmed.
+  const AF_KEY = 'nyx-ia-autofill';
+  const AF_FIELDS = [
+    { key: 'identifier', label: 'Identifier', perUpload: true },
+    { key: 'title', label: 'Title', perUpload: true },
+    { key: 'description', label: 'Description' },
+    { key: 'subject', label: 'Subject tags' },
+    { key: 'collection', label: 'Collection' },
+    { key: 'creator', label: 'Creator' },
+    { key: 'date', label: 'Date', perUpload: true },
+    { key: 'language', label: 'Language' },
+    { key: 'license', label: 'License' },
+    { key: 'mediatype', label: 'Media type' },
+  ];
+  const afModal = document.getElementById('ia-autofill-modal');
+  const afList = document.getElementById('ia-autofill-list');
+  const afListView = document.getElementById('ia-autofill-list-view');
+  const afSaveView = document.getElementById('ia-autofill-save-view');
+  const afName = document.getElementById('ia-autofill-name');
+  const afNameNote = document.getElementById('ia-autofill-name-note');
+  const afFieldsEl = document.getElementById('ia-autofill-fields');
+
+  function loadAutofill() {
+    try {
+      const v = JSON.parse(localStorage.getItem(AF_KEY) || '[]');
+      return Array.isArray(v) ? v : [];
+    } catch (_) { return []; }
+  }
+  function storeAutofill(list) {
+    try { localStorage.setItem(AF_KEY, JSON.stringify(list)); return true; } catch (_) { return false; }
+  }
+  function afDateText(d) { return d ? [d.y, d.m, d.d].filter(Boolean).join('-') : ''; }
+  function afValueText(key, v) { return key === 'date' ? afDateText(v) : String(v == null ? '' : v); }
+
+  // What the form holds right now, as autofill values.
+  function currentAutofillValues() {
+    const s = captureFieldSnapshot();
+    return {
+      identifier: s.identifier, title: s.title, description: s.description, subject: s.subject,
+      collection: s.collection, creator: s.creator,
+      date: (s.dateY || s.dateM || s.dateD) ? { y: s.dateY, m: s.dateM, d: s.dateD } : null,
+      language: s.language, license: s.license, mediatype: s.mediatype,
+    };
+  }
+
+  function showAutofillView(view) {
+    afListView.style.display = view === 'list' ? 'flex' : 'none';
+    afSaveView.style.display = view === 'save' ? 'flex' : 'none';
+  }
+
+  function renderAutofillList() {
+    afList.textContent = '';
+    const presets = loadAutofill();
+    if (presets.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'ia-af-empty';
+      empty.textContent = 'Nothing saved yet. Fill in the form the way you want it, then choose “Save current form…”.';
+      afList.appendChild(empty);
+      return;
+    }
+    presets.forEach((p) => {
+      const item = document.createElement('div');
+      item.className = 'ia-af-item';
+      item.tabIndex = 0;
+      const head = document.createElement('div');
+      head.className = 'ia-af-item-head';
+      const name = document.createElement('span');
+      name.className = 'ia-af-item-name';
+      name.textContent = p.name;
+      name.title = p.name;
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'ia-af-del';
+      del.textContent = 'Delete';
+      let armed = null;
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!del.classList.contains('confirm')) {
+          del.classList.add('confirm');
+          del.textContent = 'Delete?';
+          armed = setTimeout(() => { del.classList.remove('confirm'); del.textContent = 'Delete'; }, 3000);
+          return;
+        }
+        clearTimeout(armed);
+        storeAutofill(loadAutofill().filter(x => x.id !== p.id));
+        renderAutofillList();
+      });
+      head.append(name, del);
+      item.appendChild(head);
+
+      const chips = document.createElement('div');
+      chips.className = 'ia-af-item-chips';
+      AF_FIELDS.filter(f => f.key in p.fields).forEach((f) => {
+        const c = document.createElement('span');
+        c.className = 'ia-af-chip';
+        c.textContent = f.label;
+        chips.appendChild(c);
+      });
+      item.appendChild(chips);
+
+      const previewKey = ['description', 'subject', 'creator', 'title'].find(k => k in p.fields && afValueText(k, p.fields[k]).trim());
+      if (previewKey) {
+        const pre = document.createElement('div');
+        pre.className = 'ia-af-preview';
+        pre.textContent = afValueText(previewKey, p.fields[previewKey]);
+        item.appendChild(pre);
+      }
+      const use = () => { applyAutofill(p.fields); closeAutofill(); };
+      item.addEventListener('click', use);
+      item.addEventListener('keydown', (e) => { if (e.key === 'Enter') use(); });
+      afList.appendChild(item);
+    });
+  }
+
+  function openAutofill() {
+    if (!afModal) return;
+    renderAutofillList();
+    showAutofillView('list');
+    afModal.style.display = 'flex';
+  }
+  function closeAutofill() { if (afModal) afModal.style.display = 'none'; }
+
+  function openAutofillSave() {
+    const values = currentAutofillValues();
+    afName.value = '';
+    afFieldsEl.textContent = '';
+    const rows = AF_FIELDS.filter(f => afValueText(f.key, values[f.key]).trim() !== '');
+    rows.forEach((f) => {
+      const row = document.createElement('label');
+      row.className = 'ia-af-field';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.dataset.key = f.key;
+      cb.checked = !f.perUpload; // identifier, title and date normally change every upload
+      const body = document.createElement('div');
+      body.className = 'ia-af-field-body';
+      const lab = document.createElement('div');
+      lab.className = 'ia-af-field-label';
+      lab.textContent = f.label;
+      if (f.perUpload) {
+        const tag = document.createElement('span');
+        tag.className = 'ia-af-field-tag';
+        tag.textContent = 'usually different each upload';
+        lab.appendChild(tag);
+      }
+      const pre = document.createElement('div');
+      pre.className = 'ia-af-preview';
+      pre.textContent = afValueText(f.key, values[f.key]);
+      body.append(lab, pre);
+      row.append(cb, body);
+      afFieldsEl.appendChild(row);
+    });
+    if (rows.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'ia-af-empty';
+      empty.textContent = 'The form is empty — fill in the fields you want to reuse first.';
+      afFieldsEl.appendChild(empty);
+    }
+    updateAutofillSaveState();
+    showAutofillView('save');
+    afName.focus();
+  }
+
+  function updateAutofillSaveState() {
+    const name = afName.value.trim();
+    const exists = loadAutofill().find(p => p.name.toLowerCase() === name.toLowerCase());
+    afNameNote.textContent = name && exists ? `“${exists.name}” already exists — saving will replace it.` : '';
+    const any = afFieldsEl.querySelectorAll('input[type="checkbox"]').length > 0;
+    document.getElementById('ia-autofill-save-confirm').disabled = !name || !any;
+  }
+
+  function saveAutofill() {
+    const name = afName.value.trim();
+    if (!name) return;
+    const values = currentAutofillValues();
+    const fields = {};
+    afFieldsEl.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => { fields[cb.dataset.key] = values[cb.dataset.key]; });
+    if (Object.keys(fields).length === 0) { afNameNote.textContent = 'Tick at least one field to save.'; return; }
+    const list = loadAutofill();
+    const existing = list.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existing) { existing.name = name; existing.fields = fields; existing.savedAt = new Date().toISOString(); }
+    else list.unshift({ id: 'af-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7), name, fields, savedAt: new Date().toISOString() });
+    if (!storeAutofill(list)) { afNameNote.textContent = 'Could not save (browser storage is unavailable).'; return; }
+    renderAutofillList();
+    showAutofillView('list');
+  }
+
+  // Writes the saved fields into the upload form; fields the set does not contain are left alone.
+  function applyAutofill(fields) {
+    let tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    // A tab that is uploading (or queued) is locked to what it was started with — fill a fresh tab instead.
+    if (!tab || tab.status === 'running' || tab.status === 'waiting') {
+      tab = createTab(tab && tab.kind);
+      selectTab(tab.id);
+    }
+    const setField = (el, value, evt) => {
+      if (!el) return;
+      el.value = value == null ? '' : value;
+      el.dispatchEvent(new Event(evt || 'input', { bubbles: true }));
+    };
+    if ('identifier' in fields && iaIdUp) {
+      setField(iaIdUp, fields.identifier);
+      idModifiedByUser = true;
+      updateCharCount(iaIdUp, iaIdUpCount);
+    }
+    if ('title' in fields && iaTitle) { setField(iaTitle, fields.title); titleModifiedByUser = true; }
+    if ('description' in fields) setField(document.getElementById('ia-description'), fields.description);
+    if ('subject' in fields) setField(document.getElementById('ia-subject'), fields.subject);
+    if ('collection' in fields && iaCollection) { setField(iaCollection, fields.collection, 'change'); collectionModifiedByUser = true; }
+    if ('creator' in fields) setField(document.getElementById('ia-creator'), fields.creator);
+    if ('date' in fields && dateY && dateM && dateD) {
+      const d = fields.date || {};
+      dateY.value = d.y || ''; dateM.value = d.m || ''; dateD.value = d.d || '';
+    }
+    if ('language' in fields) setField(document.getElementById('ia-language'), fields.language, 'change');
+    if ('license' in fields) setField(document.getElementById('ia-license'), fields.license);
+    if ('mediatype' in fields) setField(document.getElementById('ia-mediatype'), fields.mediatype, 'change');
+
+    // The advanced fields live in a collapsible section — open it so the user can see what changed.
+    if (['creator', 'date', 'language', 'license', 'mediatype'].some(k => k in fields)) {
+      const advBody = document.getElementById('ia-adv');
+      const advToggle = document.querySelector('.form-adv-toggle[data-adv="ia-adv"]');
+      if (advBody && !advBody.classList.contains('open')) {
+        advBody.classList.add('open');
+        if (advToggle) advToggle.setAttribute('aria-expanded', 'true');
+      }
+    }
+  }
+
+  document.getElementById('ia-autofill-btn')?.addEventListener('click', openAutofill);
+  document.getElementById('ia-autofill-close')?.addEventListener('click', closeAutofill);
+  document.getElementById('ia-autofill-save-new')?.addEventListener('click', openAutofillSave);
+  document.getElementById('ia-autofill-back')?.addEventListener('click', () => showAutofillView('list'));
+  document.getElementById('ia-autofill-save-confirm')?.addEventListener('click', saveAutofill);
+  afName?.addEventListener('input', updateAutofillSaveState);
+  afName?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveAutofill(); } });
+  afModal?.addEventListener('click', (e) => { if (e.target === afModal) closeAutofill(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && afModal && afModal.style.display !== 'none') {
+      if (afSaveView.style.display !== 'none') showAutofillView('list'); else closeAutofill();
+    }
   });
 
   window.fillIaUploadForm = function (data) {

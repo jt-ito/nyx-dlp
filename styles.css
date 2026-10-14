@@ -4891,3 +4891,50 @@ input[type="checkbox"]:not(.toggle-switch input):checked::after {
 
 .ia-job-tab, .ia-queue-btn { box-sizing: border-box; height: 32px; }
 .ia-queue-btn { display: flex; align-items: center; }
+
+/* Tabs share the row and shrink like browser tabs (down to the dot + C/Q badge). Only when even that no longer fits do they wrap, with the new rows going ABOVE the older ones. */
+.ia-job-tabs { flex: 1 1 0; min-width: 0; flex-wrap: wrap-reverse; align-items: flex-end; }
+.ia-job-tab { flex: 1 1 0; min-width: 56px; max-width: 220px; overflow: hidden; }
+.ia-job-tab.active { min-width: 92px; }
+.ia-job-tab .ia-job-label { flex: 1 1 auto; min-width: 0; }
+.ia-job-tab .ia-job-kind, .ia-job-tab .ia-job-close { flex-shrink: 0; }
+.ia-job-tab { container-type: inline-size; }
+.ia-job-tab.active { min-width: 124px; }
+/* Squeezed tabs show only the status dot and the C/Q badge (the label and close button return when there is room, and the active tab always has room). */
+@container (max-width: 80px) { .ia-job-tab .ia-job-label, .ia-job-tab .ia-job-close { display: none; } }
+
+/* Status marker: grey dot = not run, pulsing dot = running, amber dot = waiting in queue, check = finished, ! = failed, square = stopped. (A solid green dot looked like "still going".) */
+.ia-job-tab .ia-job-dot { width: 12px; height: 12px; background: none !important; animation: none !important; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ia-job-tab .ia-job-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--text-subtle); }
+.ia-job-tab.status-running .ia-job-dot::before { background: var(--accent); animation: ia-job-pulse 1.2s ease-in-out infinite; }
+.ia-job-tab.status-waiting .ia-job-dot::before { background: var(--warning); }
+.ia-job-tab.status-done .ia-job-dot::before, .ia-job-tab.status-error .ia-job-dot::before, .ia-job-tab.status-stopped .ia-job-dot::before { width: auto; height: auto; border-radius: 0; background: none; font-weight: 800; line-height: 1; }
+.ia-job-tab.status-done .ia-job-dot::before { content: "\2713"; color: var(--success); font-size: 13px; }
+.ia-job-tab.status-error .ia-job-dot::before { content: "!"; color: var(--danger); font-size: 13px; }
+.ia-job-tab.status-stopped .ia-job-dot::before { content: "\25A0"; color: var(--warning); font-size: 9px; }
+.ia-job-tab { min-width: 62px; }
+.ia-job-tab.active { min-width: 124px; }
+
+/* IA Autofill popup */
+.ia-af-hint { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; }
+.ia-af-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 52vh; padding-right: 2px; }
+.ia-af-empty { font-size: 13px; color: var(--text-muted); padding: 18px 8px; text-align: center; }
+.ia-af-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--bg-elevated); }
+.ia-af-item:hover, .ia-af-item:focus { border-color: var(--accent); outline: none; }
+.ia-af-item-head { display: flex; align-items: center; gap: 8px; }
+.ia-af-item-name { flex: 1; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ia-af-item-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.ia-af-chip { font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
+.ia-af-preview { margin-top: 6px; font-size: 11.5px; color: var(--text-muted); white-space: pre-wrap; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; font-family: var(--font-mono, monospace); }
+.ia-af-del { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-subtle); font-size: 11px; padding: 1px 8px; cursor: pointer; }
+.ia-af-del:hover, .ia-af-del.confirm { color: #fff; background: #ff5f57; border-color: #ff5f57; }
+.ia-af-fields { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 44vh; }
+.ia-af-field { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.ia-af-field input { margin-top: 3px; }
+.ia-af-field-body { min-width: 0; flex: 1; }
+.ia-af-field-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.ia-af-field-tag { font-weight: 400; color: var(--text-subtle); margin-left: 6px; }
+
+/* IA upload buttons: keep them on one line. When the row gets too narrow for every label, the two extra buttons collapse to icon-only (their tooltips still say what they do). */
+.ia-action-row { container-type: inline-size; }
+@container (max-width: 830px) { .ia-action-row .ia-btn-label { display: none; } }

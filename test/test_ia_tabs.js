@@ -18,6 +18,8 @@ app.whenReady().then(async () => {
 
   const uploads = [];
   ipcMain.on('run-ia-upload', (_e, opts) => uploads.push(opts));
+  const stops = [];
+  ipcMain.on('stop-script', (_e, d) => stops.push(d));
   ipcMain.handle('get-history', () => []);
   ipcMain.handle('add-history', () => true);
 
@@ -139,6 +141,129 @@ app.whenReady().then(async () => {
   await run(`document.getElementById('exit-confirm-submit').click(); 0`);
   await sleep(200);
   assert('Quit Anyway answers "yes"', answers[1] === true);
+
+  console.log('\n9b. Tab strip shrinks like a browser, then wraps upward...');
+  await run(`document.querySelector('.nav-item[data-tab="ia"]').click(); 0`);
+  // The earlier steps left 4 tabs; open enough more that even the minimum width can't fit one row.
+  await run(`for (let i = 0; i < 20; i++) document.getElementById('ia-add-concurrent-upload').click(); 0`);
+  await sleep(400);
+  const geo = await run(`(() => {
+    const strip = document.getElementById('ia-job-tabs');
+    const tabs = [...strip.querySelectorAll('.ia-job-tab')];
+    const r = (el) => { const b = el.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, w: b.width }; };
+    return { n: tabs.length, stripW: strip.getBoundingClientRect().width, tabs: tabs.map(t => ({ ...r(t), dot: r(t.querySelector('.ia-job-dot')), badge: t.querySelector('.ia-job-kind') ? r(t.querySelector('.ia-job-kind')) : null, active: t.classList.contains('active') })) };
+  })()`);
+  const minW = Math.min(...geo.tabs.filter(t => !t.active).map(t => t.w));
+  const rows = [...new Set(geo.tabs.map(t => Math.round(t.t)))].sort((a, b) => a - b);
+  assert('24 tabs are open', geo.n === 24, `n=${geo.n}`);
+  assert('tabs shrink to ~56px before wrapping', minW >= 55 && minW <= 80, `min=${minW}`);
+  assert('active tab keeps room for its close button', geo.tabs.find(t => t.active).w >= 90);
+  assert('they wrap onto more than one row', rows.length > 1, JSON.stringify(rows));
+  assert('the oldest tab is on the bottom row, newest on the top', geo.tabs[0].t > geo.tabs[geo.tabs.length - 1].t, `${geo.tabs[0].t} vs ${geo.tabs[geo.tabs.length - 1].t}`);
+  assert('dot and C/Q badge stay fully visible on every tab', geo.tabs.every(t => t.dot.l >= t.l - 0.5 && t.dot.r <= t.r + 0.5 && (!t.badge || (t.badge.l >= t.l - 0.5 && t.badge.r <= t.r + 0.5))));
+  await run(`const closers = [...document.querySelectorAll('#ia-job-tabs .ia-job-close')]; closers.slice(1).forEach(c => c.click()); 0`);
+  await sleep(300);
+  // Tabs that were still uploading asked for confirmation instead of closing; dismiss that popup.
+  await run(`document.getElementById('ia-close-running-cancel').click(); 0`);
+
+  console.log('\n9c. Middle-click closes a tab, Ctrl+Shift+T reopens it with its info...');
+  const tabCount = () => run(`document.querySelectorAll('#ia-job-tabs .ia-job-tab').length`);
+  const middleClickActive = () => run(`document.querySelector('#ia-job-tabs .ia-job-tab.active').dispatchEvent(new MouseEvent('auxclick', { button: 1, bubbles: true, cancelable: true })); 0`);
+  const reopenKey = () => run(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'T', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true })); 0`);
+  // Earlier sections closed plenty of tabs; start from an empty recently-closed list.
+  await run(`document.getElementById('ia-queue-menu-btn').click(); 0`);
+  await sleep(200);
+  await run(`[...document.querySelectorAll('#ia-queue-menu .ia-qm-btn')].find(b => /Clear recently closed/.test(b.textContent))?.click(); document.body.click(); 0`);
+  await sleep(200);
+  await run(`document.getElementById('ia-add-concurrent-upload').click(); __t.fill('reopen-me-12345'); 0`);
+  const before = await tabCount();
+  await middleClickActive();
+  await sleep(300);
+  assert('middle-click closed the tab (no popup for an idle tab)', (await tabCount()) === before - 1 && (await run(`getComputedStyle(document.getElementById('ia-close-running-modal')).display`)) === 'none');
+  await reopenKey();
+  await sleep(300);
+  assert('Ctrl+Shift+T brought it back', (await tabCount()) === before);
+  assert('with its identifier and file still filled in', (await run(`__t.val('ia-identifier-up')`)) === 'reopen-me-12345' && (await run(`document.querySelectorAll('#ia-files .sortable-item').length`)) === 1);
+  assert('and its Concurrent badge', (await run(`document.getElementById('ia-tab-kind').textContent`)) === 'Concurrent');
+
+  // A tab that is still uploading asks first.
+  const uploadsBefore = uploads.length;
+  await run(`__t.click('ia-upload-run'); 0`);
+  await sleep(300);
+  const closeJobId = uploads[uploadsBefore] && uploads[uploadsBefore].jobId;
+  sendIa({ type: 'pid', pid: 31337, jobId: closeJobId });
+  await sleep(200);
+  await middleClickActive();
+  await sleep(300);
+  assert('middle-click on an uploading tab shows the warning', (await run(`getComputedStyle(document.getElementById('ia-close-running-modal')).display`)) === 'flex' && (await tabCount()) === before);
+  await run(`document.getElementById('ia-close-running-cancel').click(); 0`);
+  await sleep(200);
+  assert('Keep Uploading leaves it alone', (await tabCount()) === before && !stops.some(s => s.pid === 31337));
+  await middleClickActive();
+  await sleep(300);
+  await run(`document.getElementById('ia-close-running-submit').click(); 0`);
+  await sleep(300);
+  assert('Stop & Close sends the stop', stops.some(s => s.pid === 31337));
+  sendIa({ type: 'exit', code: null, jobId: closeJobId });
+  await sleep(400);
+  assert('and the tab closes once the upload has stopped', (await tabCount()) === before - 1);
+  await reopenKey();
+  await sleep(300);
+  assert('it can be reopened with its info', (await tabCount()) === before && (await run(`__t.val('ia-identifier-up')`)) === 'reopen-me-12345');
+
+  // Recently-closed list in the menu, and clearing it.
+  await middleClickActive();
+  await sleep(300);
+  await run(`document.getElementById('ia-queue-menu-btn').click(); 0`);
+  await sleep(300);
+  assert('the menu lists recently closed tabs', /Recently closed/.test(await run(`document.getElementById('ia-queue-menu').textContent`)));
+  await run(`[...document.querySelectorAll('#ia-queue-menu .ia-qm-btn')].find(b => /Clear recently closed/.test(b.textContent)).click(); 0`);
+  await sleep(200);
+  assert('Clear empties it', !/Recently closed/.test(await run(`document.getElementById('ia-queue-menu').textContent`)));
+  await run(`document.body.click(); 0`);
+  await reopenKey();
+  await sleep(200);
+  assert('so Ctrl+Shift+T has nothing to reopen', (await tabCount()) === before - 1);
+
+  console.log('\n9d. Autofill saves and restores whole fields, spacing included...');
+  const descExact = "Stream VOD\n\n\nyawning's links:\nhttps://www.youtube.com/channel/UCK-RAnreajOXWzBCOaeOWiQ\nhttps://www.twitch.tv/yawn\nhttps://x.com/yawninguh\n";
+  await run(`localStorage.removeItem('nyx-ia-autofill'); document.querySelector('.nav-item[data-tab="ia"]').click(); document.getElementById('ia-add-concurrent-upload').click(); 0`);
+  await run(`(() => {
+    const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    set('ia-identifier-up', 'yawn-vod-0001'); set('ia-title', 'Yawn VOD 1');
+    set('ia-description', ${JSON.stringify(descExact)});
+    set('ia-subject', 'yawning; twitch; vod'); set('ia-creator', 'yawning');
+    return 0; })()`);
+  await run(`document.getElementById('ia-autofill-btn').click(); 0`);
+  assert('Autofill popup opens (empty at first)', (await run(`getComputedStyle(document.getElementById('ia-autofill-modal')).display`)) === 'flex' && /Nothing saved yet/.test(await run(`document.getElementById('ia-autofill-list').textContent`)));
+  await run(`document.getElementById('ia-autofill-save-new').click(); 0`);
+  const checks = await run(`Object.fromEntries([...document.querySelectorAll('#ia-autofill-fields input[type="checkbox"]')].map(c => [c.dataset.key, c.checked]))`);
+  assert('per-upload fields (identifier, title) start unticked, the rest ticked', checks.identifier === false && checks.title === false && checks.description === true && checks.subject === true && checks.creator === true, JSON.stringify(checks));
+  assert('Save is disabled until it has a name', await run(`document.getElementById('ia-autofill-save-confirm').disabled`));
+  await run(`(() => { const n = document.getElementById('ia-autofill-name'); n.value = 'Yawning'; n.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('ia-autofill-save-confirm').click(); return 0; })()`);
+  await sleep(200);
+  assert('it is listed after saving', /Yawning/.test(await run(`document.getElementById('ia-autofill-list').textContent`)));
+  const stored = JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`));
+  assert('the description is stored exactly (blank lines kept)', stored[0] && stored[0].fields.description === descExact, JSON.stringify(stored[0] && stored[0].fields.description));
+  assert('identifier and title were not stored', stored[0] && !('identifier' in stored[0].fields) && !('title' in stored[0].fields));
+  await run(`document.getElementById('ia-autofill-close').click(); document.getElementById('ia-add-concurrent-upload').click(); 0`);
+  assert('a new tab starts blank', (await run(`__t.val('ia-description')`)) === '' && (await run(`__t.val('ia-creator')`)) === '');
+  await run(`document.getElementById('ia-autofill-btn').click(); document.querySelector('#ia-autofill-list .ia-af-item').click(); 0`);
+  await sleep(200);
+  assert('choosing it fills the description with the exact spacing', (await run(`__t.val('ia-description')`)) === descExact);
+  assert('and the tags and creator', (await run(`__t.val('ia-subject')`)) === 'yawning; twitch; vod' && (await run(`__t.val('ia-creator')`)) === 'yawning');
+  assert('but leaves identifier/title alone', (await run(`__t.val('ia-identifier-up')`)) === '' && (await run(`__t.val('ia-title')`)) === '');
+  assert('and the popup closed', (await run(`getComputedStyle(document.getElementById('ia-autofill-modal')).display`)) === 'none');
+  // Saving under the same name replaces it, and Delete asks twice.
+  await run(`document.getElementById('ia-autofill-btn').click(); document.getElementById('ia-autofill-save-new').click(); (() => { const n = document.getElementById('ia-autofill-name'); n.value = 'yawning'; n.dispatchEvent(new Event('input', { bubbles: true })); })(); 0`);
+  assert('reusing a name warns that it will replace', /already exists/.test(await run(`document.getElementById('ia-autofill-name-note').textContent`)));
+  await run(`document.getElementById('ia-autofill-save-confirm').click(); 0`);
+  assert('still just one saved set', JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`)).length === 1);
+  await run(`document.querySelector('#ia-autofill-list .ia-af-del').click(); 0`);
+  assert('the first Delete click only arms it', JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`)).length === 1);
+  await run(`document.querySelector('#ia-autofill-list .ia-af-del').click(); 0`);
+  assert('the second one deletes it', JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`)).length === 0);
+  await run(`document.getElementById('ia-autofill-close').click(); 0`);
 
   console.log('\n10. Progress of a second stream shows after the first hits 100%...');
   const shown = await run(`(() => {
