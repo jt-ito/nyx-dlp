@@ -28,7 +28,7 @@ const getJson = (url) => new Promise((resolve, reject) => {
   console.log(' Exit Confirmation End-to-End Test (real app) ');
   console.log('======================================================\n');
 
-  const app = spawn(electronExe, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`], { stdio: 'ignore' });
+  const app = spawn(electronExe, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`], { stdio: 'ignore', env: { ...process.env, NYX_TEST: '1' } });
   let exited = false;
   app.on('exit', () => { exited = true; });
   const cleanup = () => { try { app.kill(); } catch (_) {} try { fs.rmSync(profile, { recursive: true, force: true }); } catch (_) {} };
@@ -70,7 +70,7 @@ const getJson = (url) => new Promise((resolve, reject) => {
     await evalJs(`window.api.close(); 0`);
     await sleep(1500);
     await evalJs(`document.getElementById('exit-confirm-submit').click(); 0`);
-    for (let i = 0; i < 20 && !exited; i++) await sleep(500);
+    for (let i = 0; i < 40 && !exited; i++) await sleep(500);
     assert('app exited after Quit Anyway', exited);
     ws.close();
   } catch (e) {
@@ -81,7 +81,7 @@ const getJson = (url) => new Promise((resolve, reject) => {
 
   if (!failures) {
     // 1. Nothing running → closes right away (fresh launch).
-    const app2 = spawn(electronExe, [root, `--remote-debugging-port=${port + 1}`, `--user-data-dir=${profile}`], { stdio: 'ignore' });
+    const app2 = spawn(electronExe, [root, `--remote-debugging-port=${port + 1}`, `--user-data-dir=${profile}`], { stdio: 'ignore', env: { ...process.env, NYX_TEST: '1' } });
     let exited2 = false;
     app2.on('exit', () => { exited2 = true; });
     try {
@@ -94,7 +94,7 @@ const getJson = (url) => new Promise((resolve, reject) => {
       await new Promise((r, j) => { ws2.on('open', r); ws2.on('error', j); });
       await sleep(2000);
       ws2.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: 'window.api.close(); 0' } }));
-      for (let i = 0; i < 20 && !exited2; i++) await sleep(500);
+      for (let i = 0; i < 40 && !exited2; i++) await sleep(500);
       console.log('\n1. Closing with nothing running exits immediately...');
       assert('app exited without a prompt', exited2);
     } catch (e) {

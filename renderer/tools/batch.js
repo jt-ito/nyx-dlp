@@ -12,6 +12,7 @@
   const progressBar  = document.getElementById('batch-progress-bar');
   const progressLbl  = document.getElementById('batch-progress-label');
   let currentPid = null;
+  let stopPending = false; // Stop pressed before the pid arrived: stop this tool's process once it does (never stopScript() with no pid — that kills every tool's jobs).
   let isPaused   = false;
   let isResting  = false;
   let skipNextRest = false;
@@ -283,7 +284,7 @@
     pauseBtn.classList.remove('paused');
     appendLog(log, '⏹ Stopping batch download...', 'warning');
     if (currentPid) window.api.stopScript(currentPid);
-    window.api.stopScript();
+    else stopPending = true;
   });
 
   pauseBtn.addEventListener('click', () => {
@@ -377,7 +378,7 @@
       batchUrlStatuses = urlsToRun.map(u => ({ url: u, status: 'pending' }));
       if (statusModal.style.display !== 'none') renderBatchStatusModal();
 
-      currentPid = null;
+      currentPid = null; stopPending = false;
       isPaused   = false;
       pauseBtn.innerHTML = pauseIconHTML;
       pauseBtn.classList.remove('paused');
@@ -399,6 +400,7 @@
         window.api.runBatch({ 
           urls: urlsToRun, outputDir, format, rest, skipLive, cookiesPath, 
           extraArgs, container, bgutilUrl, useDeno,
+          concurrent: window.concurrentPinned?.('batch-opt:') ? null : (parseConcurrent(document.getElementById('batch-concurrent')?.value) || null),
           dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoRepair, twitchSubOnly,
           resumeSaved: window._takeResumeFlag ? window._takeResumeFlag() : false
         });
@@ -440,6 +442,7 @@
       if (data.type === 'pid') {
         if (!currentPid) incRunning('Batch Downloader');
         currentPid = data.pid;
+        if (stopPending) { stopPending = false; window.api.stopScript(data.pid); }
         runBtn.classList.add('hidden');
         updateQueueButtonVisibility();
         pauseBtn.classList.remove('hidden');
@@ -589,7 +592,7 @@
         pauseBtn.classList.remove('paused');
         isPaused = false;
         isResting = false;
-        currentPid = null;
+        currentPid = null; stopPending = false;
         skipNextRest = false;
         decRunning('Batch Downloader');
       });

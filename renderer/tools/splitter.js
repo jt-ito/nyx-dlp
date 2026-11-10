@@ -741,8 +741,27 @@
     pauseBtn.classList.remove('hidden');
     stopBtn.classList.remove('hidden');
 
-    window.api.runSplitter({ file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '' });
+    lastRunOpts = { file, parts: actualParts, partsToSave: actualPartsToSaveStr, outputDir: outputDir || '' };
+    window.api.runSplitter(lastRunOpts);
   });
+
+  // The runner reports "low-space" before writing anything; Continue Anyway re-runs with the check off.
+  let lastRunOpts = null;
+  async function offerContinueLowSpace(needed, free) {
+    const ok = await nyxConfirm({
+      title: 'Not enough free space',
+      message: `This split needs about ${needed} but only ${free} is free on the output drive. The estimate is slightly generous, so it may still fit; if the drive fills up, the split stops and keeps the parts already written.`,
+      confirmText: 'Continue Anyway',
+      danger: true
+    });
+    if (!ok || !lastRunOpts) return;
+    appendLog(log, '▶ Continuing despite low free space...', 'info');
+    log._isExited = false;
+    runBtn.classList.add('hidden');
+    pauseBtn.classList.remove('hidden');
+    stopBtn.classList.remove('hidden');
+    window.api.runSplitter({ ...lastRunOpts, ignoreLowSpace: true });
+  }
 
   if (window.api && window.api.onSplitterOutput) {
     window.api.onSplitterOutput((data) => {
@@ -756,6 +775,10 @@
           pauseBtn.innerHTML = resumeIconHTML;
           pauseBtn.classList.add('paused');
         }
+        return;
+      }
+      if (data.type === 'low-space') {
+        offerContinueLowSpace(data.needed, data.free);
         return;
       }
       handleOutput(log, data, () => {

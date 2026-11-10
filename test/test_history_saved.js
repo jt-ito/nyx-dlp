@@ -28,7 +28,7 @@ const getJson = (url) => new Promise((resolve, reject) => {
   console.log(' Saved Paused History Test (real app, history OFF) ');
   console.log('======================================================\n');
 
-  const app = spawn(electronExe, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`], { stdio: 'ignore' });
+  const app = spawn(electronExe, [root, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`], { stdio: 'ignore', env: { ...process.env, NYX_TEST: '1' } });
   const cleanup = () => { try { app.kill(); } catch (_) {} try { fs.rmSync(profile, { recursive: true, force: true }); } catch (_) {} };
 
   try {
@@ -51,6 +51,9 @@ const getJson = (url) => new Promise((resolve, reject) => {
     // Turn "Save history" OFF through the real settings checkbox so main.js sees it.
     await evalJs(`(() => { const cb = document.querySelector('[data-setting="save-history"]'); cb.checked = false; cb.dispatchEvent(new Event('change', { bubbles: true })); return 0; })()`);
     await sleep(600);
+
+    const allSettings = await evalJs(`window.api.invoke('get-all-settings')`);
+    assert('the real app reports its saved settings (used by Backup & Restore)', allSettings && allSettings['save-history'] && allSettings['save-history'].checked === false, JSON.stringify(allSettings && allSettings['save-history']));
 
     const normal = { id: 'n1', date: new Date().toISOString(), tool: 'yt-dlp', name: 'normal', source: 'x', output: 'y', status: 'success' };
     const saved = { id: 'p1', date: new Date(Date.now() - 400 * 864e5).toISOString(), tool: 'yt-dlp', name: 'saved', source: 'x', output: 'y', status: 'paused-saved', savedPaused: true, resumeData: { tool: 'ytdlp', form: {} } };

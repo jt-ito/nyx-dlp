@@ -9,6 +9,7 @@ const { EventEmitter } = require('events');
 const childProcess = require('child_process');
 
 const spawned = [];
+let nextBehavior = null;
 childProcess.spawn = (exe, args, options) => {
   const child = new EventEmitter();
   child.stdout = new EventEmitter();
@@ -19,7 +20,11 @@ childProcess.spawn = (exe, args, options) => {
   let filesAtSpawn = [];
   try { filesAtSpawn = fs.readdirSync(options.cwd); } catch (_) {} // what was in the working dir when yt-dlp started
   spawned.push({ exe, args, filesAtSpawn });
-  setImmediate(() => child.emit('close', 0));
+  setImmediate(() => {
+    const b = nextBehavior; nextBehavior = null; // a one-off failure for the next spawn: { stderr, code }
+    if (b && b.stderr) child.stderr.emit('data', Buffer.from(b.stderr));
+    child.emit('close', b ? (b.code === undefined ? 1 : b.code) : 0);
+  });
   return child;
 };
 
@@ -29,8 +34,12 @@ const stub = (rel, exports) => {
 };
 stub('../lib/ensure-ytdlp', { getYtdlpPath: () => 'yt-dlp', ensureYtdlp: async () => {} });
 stub('../lib/ensure-treespend', { ensureTreespend: () => {} });
+// Count Twitch restricted-VOD handoffs without touching the network.
+const realTwitchMeta = require('../lib/twitch-meta');
+let restrictedVodHandoffs = 0;
+stub('../lib/twitch-meta', { ...realTwitchMeta, resolveTwitchSubOnlyVod: async () => { restrictedVodHandoffs++; return null; } });
 
-const { runBatch } = require('../lib/runners');
+const { runBatch, runYtdlp } = require('../lib/runners');
 
 let failures = 0;
 function assert(desc, ok, detail = '') {
@@ -48,7 +57,7 @@ async function runCase(name, extra) {
   const done = new Promise((resolve) => {
     const broadcast = (m) => { events.push(m); if (m.type === 'exit') resolve(m); };
     runBatch({
-      urls: ['https://www.youtube.com/watch?v=oqWDq8CMavQ'],
+      urls: ['https://www.youtube.com/watch?v=Xb7TgR2mKp4'],
       format: 'bv+ba/bestvideo+bestaudio/best',
       container: 'mp4',
       rest: 0,
@@ -85,9 +94,38 @@ async function runCase(name, extra) {
   assert('yt-dlp was spawned', spawned.length === 1);
   assert('no --cookies without a cookies file', !(spawned[0] && spawned[0].args.includes('--cookies')));
 
+  // yt-dlp 2026.08+ crashes with a NoneType error when Twitch withholds a VOD's playback token.
+  const noToken = "ERROR: 'NoneType' object is not subscriptable\n";
+  nextBehavior = { stderr: noToken, code: 1 };
+  restrictedVodHandoffs = 0;
+  const twitchEvents = await runCase('Twitch VOD with no playback token', () => ({ urls: ['https://www.twitch.tv/videos/123456789'], twitchSubOnly: true }));
+  assert('it is handed to the restricted-VOD handling', restrictedVodHandoffs === 1, `calls=${restrictedVodHandoffs}`);
+  assert('and the log explains it (too new, or restricted)', twitchEvents.some(e => e.type === 'stdout' && /did not give out a playback token.*too new.*restricted/.test(e.text)));
+  nextBehavior = { stderr: noToken, code: 1 };
+  restrictedVodHandoffs = 0;
+  const ytEvents = await runCase('Same crash text on another site', () => ({}));
+  assert('is not mistaken for a restricted Twitch VOD', restrictedVodHandoffs === 0 && !ytEvents.some(e => e.type === 'stdout' && /playback token/.test(e.text)));
+
+  // Same thing through the single-download runner (the one the yt-dlp tool uses).
+  {
+    nextBehavior = { stderr: noToken, code: 1 };
+    restrictedVodHandoffs = 0;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyx-single-'));
+    const singleEvents = [];
+    await new Promise((resolve) => {
+      const done = setTimeout(resolve, 5000);
+      runYtdlp({ url: 'https://www.twitch.tv/videos/123456789', outputDir: dir, format: 'bestvideo+bestaudio/best', container: 'mp4', twitchSubOnly: true },
+        (m) => { singleEvents.push(m); if (m.type === 'exit') { clearTimeout(done); resolve(); } }).catch(() => resolve());
+    });
+    fs.rmSync(dir, { recursive: true, force: true });
+    console.log('\nTwitch VOD with no playback token (single download)');
+    assert('it is handed to the restricted-VOD handling', restrictedVodHandoffs === 1, `calls=${restrictedVodHandoffs}`);
+    assert('and the log explains it (too new, or restricted)', singleEvents.some(e => e.type === 'stdout' && /did not give out a playback token.*too new.*restricted/.test(e.text)));
+  }
+
   // Saved-paused downloads: resuming must keep yt-dlp's partial files; a normal run starts clean.
   const seedPartial = (dir) => {
-    const tmp = path.join(dir, 'oqWDq8CMavQ'); // the batch temp folder for this URL
+    const tmp = path.join(dir, 'Xb7TgR2mKp4'); // the batch temp folder for this URL
     fs.mkdirSync(tmp, { recursive: true });
     fs.writeFileSync(path.join(tmp, 'video.f401.mp4'), 'partial');
   };
@@ -106,22 +144,22 @@ async function runCase(name, extra) {
   console.log('\nIA aria2c log formatting');
   const { createAria2Formatter } = require('../lib/runners');
   const lines = [];
-  const fmt = createAria2Formatter((m) => { if (m.type === 'stdout') lines.push(...m.text.split('\n').filter(Boolean)); }, 'FINAL FANTASY.pkg');
+  const fmt = createAria2Formatter((m) => { if (m.type === 'stdout') lines.push(...m.text.split('\n').filter(Boolean)); }, 'Example Game.pkg');
   const raw = [
     '[#a6f475 0B/0B CN:1 DL:0B]                                  \r',
-    '\n *** Download Progress Summary as of Fri Oct 09 17:55:45 2026 *** \n=====================\n[#a6f475 0B/0B CN:1 DL:0B]\nFILE: C:/Users/ito/Desktop/x/FINAL FANTASY - [EU] [EN] [1.02].pkg\n-------------------------------------------------------------------------------\n',
+    '\n *** Download Progress Summary as of Fri Oct 09 17:55:45 2026 *** \n=====================\n[#a6f475 0B/0B CN:1 DL:0B]\nFILE: C:/Users/you/Desktop/x/Example Game - [EU] [EN] [1.02].pkg\n-------------------------------------------------------------------------------\n',
     '10/09 17:55:53 [ERROR] CUID#8 - Download aborted. URI=https://archive.org/x\nException: [AbstractCommand.cc:351] errorCode=22 URI=https://dn.archive.org/x\n  -> [HttpSkipResponseCommand.cc:239] errorCode=22 The response status is not successful. status=500\n',
     '10/09 17:55:53 [ERROR] CUID#12 - Download aborted. URI=https://archive.org/x\nException: [AbstractCommand.cc:351] errorCode=22\n  -> [HttpSkipResponseCommand.cc:239] errorCode=22 The response status is not successful. status=500\n',
     '[#a6f475 365MiB/620MiB(58%) CN:14 DL:54MiB ETA:4s]\r',
-    '\nDownload Results:\ngid   |stat|avg speed  |path/URI\n======+====+===========+=====\na6f475|OK  |    23MiB/s|C:/Users/ito/Desktop/x/FINAL FANTASY - [EU] [EN] [1.02].pkg\nStatus Legend:\n(OK):download completed.\n',
+    '\nDownload Results:\ngid   |stat|avg speed  |path/URI\n======+====+===========+=====\na6f475|OK  |    23MiB/s|C:/Users/you/Desktop/x/Example Game - [EU] [EN] [1.02].pkg\nStatus Legend:\n(OK):download completed.\n',
   ];
   raw.forEach((text) => fmt({ type: 'stdout', text }));
   fmt({ type: 'exit', code: 0 });
-  assert('progress becomes one IA-style "Downloading" line', lines.some(l => /^Downloading FINAL FANTASY.*: 58%\|.*\| 365MiB\/620MiB \[54MiB\/s, ETA 4s\]$/.test(l)), JSON.stringify(lines));
-  assert('file name is learned from the FILE: summary line', lines.filter(l => l.startsWith('Downloading FINAL FANTASY - [EU]')).length >= 1);
+  assert('progress becomes one IA-style "Downloading" line', lines.some(l => /^Downloading Example Game.*: 58%\|.*\| 365MiB\/620MiB \[54MiB\/s, ETA 4s\]$/.test(l)), JSON.stringify(lines));
+  assert('file name is learned from the FILE: summary line', lines.filter(l => l.startsWith('Downloading Example Game - [EU]')).length >= 1);
   assert('summary banners and results table are dropped', !lines.some(l => /Download Progress Summary|^={5,}|gid\s+\||Status Legend|^-{10,}|^FILE:/.test(l)), JSON.stringify(lines));
   assert('repeated HTTP 500 errors collapse into a single warning', lines.filter(l => l.startsWith('⚠ Server returned HTTP 500')).length === 1 && !lines.some(l => /CUID|Exception|AbstractCommand/.test(l)), JSON.stringify(lines));
-  assert('result row becomes a Completed line', lines.some(l => /^✔ Completed FINAL FANTASY - \[EU\] \[EN\] \[1\.02\]\.pkg — 100% \(avg 23MiB\/s\)$/.test(l)), JSON.stringify(lines));
+  assert('result row becomes a Completed line', lines.some(l => /^✔ Completed Example Game - \[EU\] \[EN\] \[1\.02\]\.pkg — 100% \(avg 23MiB\/s\)$/.test(l)), JSON.stringify(lines));
 
   fs.rmSync(cookieFile, { force: true });
   if (failures) { console.error(`\n ${failures} BATCH RUNTIME TEST(S) FAILED`); process.exit(1); }

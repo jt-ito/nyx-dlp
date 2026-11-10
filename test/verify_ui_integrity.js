@@ -84,13 +84,13 @@ console.log('\n2. Verifying Essential Action Buttons & Tab Panels...');
 const requiredElements = [
   // Primary tool run buttons
   'yd-run', 'ls-run', 'batch-run', 'm3-run', 'gdl-run',
-  'sp-run', 'concat-run', 'enc-run', 'ia-upload-run', 'ia-edit-run', 'ia-download-run',
+  'sp-run', 'concat-run', 'mg-run', 'enc-run', 'ia-upload-run', 'ia-edit-run', 'ia-download-run',
   // Stop controls
   'yd-stop', 'ls-stop', 'batch-stop', 'm3-stop', 'gdl-stop',
-  'sp-stop', 'concat-stop', 'enc-stop', 'ia-upload-stop', 'ia-edit-stop', 'ia-download-stop',
+  'sp-stop', 'concat-stop', 'mg-stop', 'enc-stop', 'ia-upload-stop', 'ia-edit-stop', 'ia-download-stop',
   // Tab panels
   'tab-ytdlp', 'tab-livestream', 'tab-batch', 'tab-m3u8', 'tab-gallery',
-  'tab-splitter', 'tab-concatenator', 'tab-encoder', 'tab-ia', 'tab-history', 'tab-settings',
+  'tab-splitter', 'tab-concatenator', 'tab-merger', 'tab-encoder', 'tab-ia', 'tab-history', 'tab-settings',
   'tab-tool-hub'
 ];
 

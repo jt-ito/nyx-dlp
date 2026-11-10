@@ -5,6 +5,7 @@
   const pauseBtn = document.getElementById('yd-pause');
   const stopBtn  = document.getElementById('yd-stop');
   let currentPid = null;
+  let stopPending = false; // Stop pressed before the pid arrived: stop this tool's process once it does (never stopScript() with no pid — that kills every tool's jobs).
   let isPaused   = false;
 
   const pauseIconHTML = pauseBtn.innerHTML;
@@ -21,7 +22,7 @@
     pauseBtn.classList.remove('paused');
     appendLog(log, '⏹ Stopping yt-dlp download...', 'warning');
     if (currentPid) window.api.stopScript(currentPid);
-    else window.api.stopScript();
+    else stopPending = true;
   });
 
   pauseBtn.addEventListener('click', () => {
@@ -196,7 +197,7 @@
       appendLog(log, '', 'stdout');
       markBodyStart(log);
 
-      currentPid = null;
+      currentPid = null; stopPending = false;
       isPaused   = false;
       pauseBtn.innerHTML = pauseIconHTML;
       pauseBtn.classList.remove('paused');
@@ -216,7 +217,7 @@
       window.api.runYtdlp({ 
         url: urlToUse, outputDir, format, cookiesPath, extraArgs, 
         container, startTime, endTime, bgutilUrl, useDeno,
-        concurrent: activePresetConcurrent,
+        concurrent: (window.concurrentPinned?.('ytdlp-opt:') ? null : parseConcurrent(document.getElementById('yd-concurrent')?.value)) || activePresetConcurrent,
         dlSubs, embedSubs, dlChat, dlComments, dlDesc, dlTitle, dlThumb, embedThumb, skipDownload, autoYpdl, getUrl, autoRepair, twitchSubOnly,
         resumeSaved: window._takeResumeFlag ? window._takeResumeFlag() : false
       });
@@ -246,6 +247,7 @@
       if (data.type === 'pid') {
         if (!currentPid) incRunning('yt-dlp');
         currentPid = data.pid;
+        if (stopPending) { stopPending = false; window.api.stopScript(data.pid); }
         runBtn.classList.add('hidden');
         pauseBtn.classList.remove('hidden');
         stopBtn.classList.remove('hidden');
@@ -267,7 +269,7 @@
         pauseBtn.innerHTML = pauseIconHTML;
         pauseBtn.classList.remove('paused');
         isPaused = false;
-        currentPid = null;
+        currentPid = null; stopPending = false;
         document.getElementById('yd-start').value = '';
         document.getElementById('yd-end').value   = '';
         decRunning('yt-dlp');

@@ -23,6 +23,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('add-history', (_e, entry) => { history.unshift(entry); return true; });
   ipcMain.handle('delete-history-item', (_e, id) => { history = history.filter(h => h.id !== id); return true; });
   ipcMain.on('run-ytdlp', (_e, opts) => ytRuns.push(opts));
+  const batchRuns = [];
+  const iaDlRuns = [];
+  ipcMain.on('run-ia-download', (_e, opts) => iaDlRuns.push(opts));
+  const taskbar = [];
+  ipcMain.on('set-taskbar-progress', (_e, d) => taskbar.push(d));
+  ipcMain.on('run-batch', (_e, opts) => batchRuns.push(opts));
   ipcMain.on('stop-script', (_e, d) => stops.push(d));
   ipcMain.on('pause-script', (_e, d) => pauses.push(d));
 
@@ -85,6 +91,78 @@ app.whenReady().then(async () => {
   assert('flagged so partial files are kept', ytRuns[1] && ytRuns[1].resumeSaved === true);
   assert('the saved entry was removed once started', !history.some(h => h.savedPaused));
   assert('a normal run afterwards is not flagged', await run(`window._takeResumeFlag() === false`));
+
+  console.log('\n5. Stopping a Batch only stops the Batch (never "stop everything")...');
+  const startBatch = async () => {
+    await run(`document.querySelector('.nav-item[data-tab="batch"]').click(); 0`);
+    await run(`(() => { const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }; set('batch-urls', 'https://example.com/video-one'); set('batch-output', 'D:\Downloads'); document.getElementById('batch-run').click(); return 0; })()`);
+    await sleep(500);
+  };
+  stops.length = 0;
+  await startBatch();
+  assert('batch started', batchRuns.length === 1);
+  fromMain('batch-output', { type: 'pid', pid: 777 });
+  await sleep(200);
+  await run(`document.getElementById('batch-stop').click(); 0`);
+  await sleep(300);
+  assert('Stop targets the batch process only', stops.length === 1 && stops[0].pid === 777, JSON.stringify(stops));
+  fromMain('batch-output', { type: 'exit', code: null });
+  await sleep(300);
+
+  stops.length = 0;
+  await startBatch();
+  await run(`document.getElementById('batch-stop').click(); 0`); // before any pid exists
+  await sleep(300);
+  assert('Stop before the pid arrives sends nothing (no stop-everything)', stops.length === 0, JSON.stringify(stops));
+  fromMain('batch-output', { type: 'pid', pid: 778 });
+  await sleep(300);
+  assert('then stops that process as soon as its pid shows up', stops.length === 1 && stops[0].pid === 778, JSON.stringify(stops));
+  fromMain('batch-output', { type: 'exit', code: null });
+  await sleep(200);
+
+  console.log('\n6. Taskbar progress follows what is running...');
+  fromMain('ytdlp-output', { type: 'exit', code: null });
+  await sleep(500);
+  taskbar.length = 0;
+  await run(`document.querySelector('.nav-item[data-tab="ytdlp"]').click(); document.getElementById('yd-run').click(); 0`);
+  await sleep(300);
+  fromMain('ytdlp-output', { type: 'pid', pid: 901 });
+  await sleep(700);
+  assert('a running job with no percentage shows the working animation', taskbar.some(d => d.value === 2 && d.mode === 'indeterminate'), JSON.stringify(taskbar));
+  fromMain('ytdlp-output', { type: 'stdout', text: '[download]  42.0% of    9.62MiB at    2.40MiB/s ETA 00:04\n' });
+  await sleep(700);
+  assert('then the reported percentage', taskbar.some(d => d.mode === 'normal' && Math.abs(d.value - 0.42) < 0.011), JSON.stringify(taskbar));
+  fromMain('ytdlp-output', { type: 'exit', code: 0 });
+  await sleep(700);
+  assert('and it clears when nothing is running', taskbar.length > 0 && taskbar[taskbar.length - 1].value === -1, JSON.stringify(taskbar[taskbar.length - 1]));
+
+  console.log('\n7. Internet Archive downloads can be paused, saved and resumed...');
+  await run(`document.querySelector('.nav-item[data-tab="ia"]').click(); document.querySelector('#ia-mode-toggle [data-mode="download"]').click(); 0`);
+  await run(`(() => { const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }; set('ia-identifier-down', 'https://archive.org/details/example-item-id'); set('ia-output', 'D:\\\\Downloads'); document.getElementById('ia-download-run').click(); return 0; })()`);
+  await sleep(400);
+  assert('the download started', iaDlRuns.length === 1 && iaDlRuns[0].identifier === 'example-item-id', JSON.stringify(iaDlRuns.map(r => r.identifier)));
+  assert('Pause shows while it runs, Save Paused does not yet', !(await run(`document.getElementById('ia-download-pause').classList.contains('hidden')`)) && (await run(`document.getElementById('ia-download-save-paused').classList.contains('hidden')`)));
+  fromMain('ia-output', { type: 'pid', pid: 4242 });
+  await sleep(200);
+  pauses.length = 0; stops.length = 0;
+  await run(`document.getElementById('ia-download-pause').click(); 0`);
+  await sleep(300);
+  assert('Pause suspends that process only', pauses.length === 1 && pauses[0].pid === 4242);
+  assert('Save Paused appears', !(await run(`document.getElementById('ia-download-save-paused').classList.contains('hidden')`)));
+  await run(`document.getElementById('ia-download-save-paused').click(); 0`);
+  await sleep(500);
+  const iaSaved = history.find(h => h.savedPaused && h.resumeData && h.resumeData.tool === 'iadl');
+  assert('it is saved to History with the form', !!iaSaved && iaSaved.resumeData.form['ia-identifier-down'] === 'https://archive.org/details/example-item-id' && iaSaved.resumeData.form['ia-output'] === 'D:\\Downloads');
+  assert('and the process was stopped', stops.some(s => s.pid === 4242));
+  fromMain('ia-output', { type: 'exit', code: null });
+  await sleep(300);
+  assert('the buttons reset', (await run(`document.getElementById('ia-download-pause').classList.contains('hidden')`)) && !(await run(`document.getElementById('ia-download-run').classList.contains('hidden')`)));
+  await run(`document.querySelector('#ia-mode-toggle [data-mode="upload"]').click(); document.getElementById('ia-identifier-down').value = ''; 0`);
+  await run(`window.resumeSavedDownload(${JSON.stringify(iaSaved)}); 0`);
+  await sleep(500);
+  assert('Resume goes back to the Download screen and starts it again', iaDlRuns.length === 2 && iaDlRuns[1].identifier === 'example-item-id' && iaDlRuns[1].outputDir === 'D:\\Downloads', JSON.stringify(iaDlRuns[1]));
+  fromMain('ia-output', { type: 'exit', code: 0 });
+  await sleep(200);
 
   assert('no renderer errors', errors.length === 0, errors.join(' | '));
   console.log(failures ? `\n ${failures} PAUSED-SAVE TEST(S) FAILED` : '\n ✔ ALL PAUSED-SAVE TESTS PASSED');

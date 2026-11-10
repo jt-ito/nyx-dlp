@@ -49,6 +49,21 @@
   } catch (_) {}
 
 
+  // navigator.clipboard needs a secure context; the browser UI served over http://<server-ip> isn't one.
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(() => {});
+      return;
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed; opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (_) {}
+    ta.remove();
+  }
+
   function showToast(msg, type = 'info', title = null) {
     if (typeof window.showNotificationToast === 'function') {
       window.showNotificationToast(msg, type, title);
@@ -218,6 +233,7 @@
 
       for (let i = 0; i < keys.length; i++) {
         const k = keys[i];
+        if (toolsData[k]?.manualInstall) continue; // e.g. aria2c on Linux: use the package manager
         const toolName = toolsData[k]?.name || k;
         updateAllBtn.innerHTML = `<span>Updating [${i + 1}/${keys.length}] ${toolName}...</span>`;
 
@@ -243,6 +259,16 @@
   }
 
   // Progress listener
+  // A tool was updated in the background: show it and refresh the cards so versions aren't stale.
+  if (window.api && window.api.onToolAutoUpdated) {
+    window.api.onToolAutoUpdated((data) => {
+      if (!data || !data.tool) return;
+      showToast(`${toolsData[data.tool]?.name || data.tool} was auto-updated to ${data.version}`, 'success');
+      toolsData = {};
+      loadAllTools();
+    });
+  }
+
   if (window.api && window.api.onToolHubProgress) {
     window.api.onToolHubProgress((data) => {
       if (!data || !data.tool) return;
@@ -478,6 +504,7 @@
     versionOptions += `<option value="__custom__">Custom version...</option>`;
 
     let updateBtnText = t.installed ? 'Update to Latest' : 'Install Latest';
+    if (t.manualInstall) updateBtnText = t.installed ? 'Copy Update Command' : 'Copy Install Command';
     if (t.key === 'ffmpeg' && t.recommendedPreset === '5.1') {
       const is51 = (t.version || '').toLowerCase().startsWith('5.1');
       updateBtnText = is51 ? 'Reinstall 5.1.2' : 'Install 5.1.2';
@@ -563,6 +590,23 @@
       </div>
     `;
 
+    // No official Linux/macOS build (aria2c): we can't install it, so explain and offer the command to copy.
+    if (t.manualInstall) {
+      card.querySelector('.tool-version-switch-row')?.remove();
+      card.querySelector(`#custom-row-${t.key}`)?.remove();
+      const cmds = t.manualCommands;
+      const cmd = cmds ? (t.installed ? cmds.update : cmds.install) : '';
+      const note = document.createElement('div');
+      note.className = 'tool-meta-label';
+      note.style.cssText = 'margin-top:8px; line-height:1.5;';
+      note.innerHTML = `nyx-dlp can't install aria2c on this system: the aria2 project only publishes Windows binaries. `
+        + (cmd ? `Click the button to copy the command, then run it in a terminal on this machine (it needs admin rights): <code></code>` : `Install the "aria2" package with your system's package manager.`)
+        + ` nyx-dlp detects it automatically afterwards (restart is not needed).`;
+      const codeEl = note.querySelector('code');
+      if (codeEl) codeEl.textContent = cmd;
+      card.querySelector('.tool-card-actions')?.appendChild(note);
+    }
+
     // Event listeners
     if (initialClickHandler) {
       const b = card.querySelector(`#tool-status-badge-${t.key}`);
@@ -578,7 +622,14 @@
     }
 
     const updateBtn = card.querySelector(`#btn-update-${t.key}`);
-    if (updateBtn) {
+    if (updateBtn && t.manualInstall) {
+      updateBtn.addEventListener('click', () => {
+        const cmd = t.manualCommands ? (t.installed ? t.manualCommands.update : t.manualCommands.install) : '';
+        if (!cmd) { showToast('Install the "aria2" package with your system package manager.', 'info'); return; }
+        copyText(cmd);
+        showToast(`Copied: ${cmd}`, 'success');
+      });
+    } else if (updateBtn) {
       updateBtn.addEventListener('click', () => {
         const target = (t.key === 'ffmpeg' && t.recommendedPreset) ? t.recommendedPreset : 'latest';
         installTool(t.key, target);
@@ -757,6 +808,14 @@
 
   // ── Install / Switch Tool Version ─────────────────────────────────────
   async function installTool(toolKey, targetVersion) {
+    if (toolsData[toolKey]?.manualInstall) {
+      showToast(`${toolsData[toolKey].name} can't be installed by nyx-dlp on this system. Use the copied command or your package manager.`, 'info');
+      return;
+    }
+    if (toolsData[toolKey]?.manualInstall) {
+      showToast(`${toolsData[toolKey].name} can't be installed by nyx-dlp on this OS. Use your package manager.`, 'info');
+      return;
+    }
     const card = document.getElementById(`tool-card-${toolKey}`);
     const progressWrap = document.getElementById(`progress-wrap-${toolKey}`);
     const progressBar = document.getElementById(`progress-bar-${toolKey}`);
@@ -809,6 +868,9 @@
 
     if (data.percent !== undefined && progressBar) {
       progressBar.style.width = `${Math.min(100, Math.max(0, data.percent))}%`;
+    } else if (progressBar && data.message) {
+      const m = /Downloading: (\d+(?:\.\d+)?)%/.exec(data.message);
+      if (m) progressBar.style.width = `${Math.min(100, parseFloat(m[1]))}%`;
     }
     if (data.message && progressMsg) {
       progressMsg.textContent = data.message;

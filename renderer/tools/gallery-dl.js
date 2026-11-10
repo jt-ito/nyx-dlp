@@ -129,6 +129,11 @@
   }
 
   document.getElementById('gdl-clear').addEventListener('click', () => clearLog(log));
+  document.getElementById('gdl-clear-cache').addEventListener('click', async () => {
+    if (!(await nyxConfirm({ title: 'Clear gallery-dl cache?', message: 'This removes saved logins and tokens for sites. Cookie files you pass in are not affected.', confirmText: 'Clear Cache', danger: true }))) return;
+    const r = await window.api.clearGalleryDlCache();
+    appendLog(log, r.ok ? '✔ gallery-dl cache cleared.' : '⚠ Could not clear the cache: ' + r.message, r.ok ? 'success' : 'error');
+  });
   stopBtn.addEventListener('click', () => {
     if (currentPid) window.api.stopScript(currentPid);
     isPaused = false;

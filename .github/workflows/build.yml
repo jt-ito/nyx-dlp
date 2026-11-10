@@ -12,8 +12,31 @@ on:
   workflow_dispatch:
 
 jobs:
+  # ── Tests (must pass before anything is built) ────────────────────────
+  test:
+    runs-on: windows-latest
+    env:
+      NYX_TEST: '1'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm test
+
   # ── Windows (installer + portable) ────────────────────────────────────
   build-windows:
+    needs: test
     runs-on: windows-latest
     permissions:
       contents: write
@@ -53,6 +76,7 @@ jobs:
 
   # ── macOS (DMG) ──────────────────────────────────────────────────────
   build-macos:
+    needs: test
     runs-on: macos-latest
     permissions:
       contents: write
@@ -82,6 +106,7 @@ jobs:
 
   # ── Linux (AppImage + CLI tarball) ───────────────────────────────────
   build-linux:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write

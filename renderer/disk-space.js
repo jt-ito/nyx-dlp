@@ -9,6 +9,7 @@ const diskSpace = (() => {
     gallery:      'gdl-output',
     splitter:     'sp-output',
     concatenator: 'concat-output-dir',
+    merger:       'mg-output-dir',
   };
 
   const pill        = document.getElementById('diskSpacePill');

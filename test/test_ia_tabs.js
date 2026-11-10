@@ -18,6 +18,8 @@ app.whenReady().then(async () => {
 
   const uploads = [];
   ipcMain.on('run-ia-upload', (_e, opts) => uploads.push(opts));
+  const savedFiles = [];
+  ipcMain.handle('save-text-file', (_e, d) => { savedFiles.push(d); return 'C:/fake/' + d.defaultName; });
   const stops = [];
   ipcMain.on('stop-script', (_e, d) => stops.push(d));
   ipcMain.handle('get-history', () => []);
@@ -112,17 +114,17 @@ app.whenReady().then(async () => {
 
   console.log('\n8. IA download link parsing...');
   const parsed = await run(`[
-    'https://archive.org/download/ps4-fpkg-collection-english-f/FINAL%20FANTASY%20-%20%5BEU%5D%20%5BEN%5D%20%5B1.02%5D.pkg',
-    'https://archive.org/details/ps4-fpkg-collection-english-f',
-    'https://archive.org/download/ps4-fpkg-collection-english-f',
+    'https://archive.org/download/example-game-collection/Example%20Game%20-%20%5BEU%5D%20%5BEN%5D%20%5B1.02%5D.pkg',
+    'https://archive.org/details/example-game-collection',
+    'https://archive.org/download/example-game-collection',
     'archive.org/download/some-item-id/folder/sub/',
     'my-plain-item-id',
     'https://evil.example.com/download/some-item-id',
     'https://archive.org/about',
   ].map(parseIaLink)`);
-  assert('download link to one file', parsed[0] && parsed[0].identifier === 'ps4-fpkg-collection-english-f' && parsed[0].files[0] === 'FINAL FANTASY - [EU] [EN] [1.02].pkg', JSON.stringify(parsed[0]));
-  assert('details link = whole item', parsed[1] && parsed[1].identifier === 'ps4-fpkg-collection-english-f' && !parsed[1].files.length && !parsed[1].glob);
-  assert('download link without file = whole item', parsed[2] && parsed[2].identifier === 'ps4-fpkg-collection-english-f' && !parsed[2].files.length);
+  assert('download link to one file', parsed[0] && parsed[0].identifier === 'example-game-collection' && parsed[0].files[0] === 'Example Game - [EU] [EN] [1.02].pkg', JSON.stringify(parsed[0]));
+  assert('details link = whole item', parsed[1] && parsed[1].identifier === 'example-game-collection' && !parsed[1].files.length && !parsed[1].glob);
+  assert('download link without file = whole item', parsed[2] && parsed[2].identifier === 'example-game-collection' && !parsed[2].files.length);
   assert('folder link becomes a glob', parsed[3] && parsed[3].identifier === 'some-item-id' && parsed[3].glob === 'folder/sub/*', JSON.stringify(parsed[3]));
   assert('plain identifier still works', parsed[4] && parsed[4].identifier === 'my-plain-item-id');
   assert('non-archive.org and non-item links are rejected', parsed[5] === null && parsed[6] === null);
@@ -226,13 +228,13 @@ app.whenReady().then(async () => {
   assert('so Ctrl+Shift+T has nothing to reopen', (await tabCount()) === before - 1);
 
   console.log('\n9d. Autofill saves and restores whole fields, spacing included...');
-  const descExact = "Stream VOD\n\n\nyawning's links:\nhttps://www.youtube.com/channel/UCK-RAnreajOXWzBCOaeOWiQ\nhttps://www.twitch.tv/yawn\nhttps://x.com/yawninguh\n";
+  const descExact = "Stream VOD\n\n\nCaseOh's links:\nhttps://www.youtube.com/@CaseOh\nhttps://www.twitch.tv/caseoh_\nhttps://x.com/caseoh_\n";
   await run(`localStorage.removeItem('nyx-ia-autofill'); document.querySelector('.nav-item[data-tab="ia"]').click(); document.getElementById('ia-add-concurrent-upload').click(); 0`);
   await run(`(() => {
     const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
-    set('ia-identifier-up', 'yawn-vod-0001'); set('ia-title', 'Yawn VOD 1');
+    set('ia-identifier-up', 'caseoh-vod-0001'); set('ia-title', 'CaseOh VOD 1');
     set('ia-description', ${JSON.stringify(descExact)});
-    set('ia-subject', 'yawning; twitch; vod'); set('ia-creator', 'yawning');
+    set('ia-subject', 'caseoh; twitch; vod'); set('ia-creator', 'caseoh');
     return 0; })()`);
   await run(`document.getElementById('ia-autofill-btn').click(); 0`);
   assert('Autofill popup opens (empty at first)', (await run(`getComputedStyle(document.getElementById('ia-autofill-modal')).display`)) === 'flex' && /Nothing saved yet/.test(await run(`document.getElementById('ia-autofill-list').textContent`)));
@@ -240,9 +242,9 @@ app.whenReady().then(async () => {
   const checks = await run(`Object.fromEntries([...document.querySelectorAll('#ia-autofill-fields input[type="checkbox"]')].map(c => [c.dataset.key, c.checked]))`);
   assert('per-upload fields (identifier, title) start unticked, the rest ticked', checks.identifier === false && checks.title === false && checks.description === true && checks.subject === true && checks.creator === true, JSON.stringify(checks));
   assert('Save is disabled until it has a name', await run(`document.getElementById('ia-autofill-save-confirm').disabled`));
-  await run(`(() => { const n = document.getElementById('ia-autofill-name'); n.value = 'Yawning'; n.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('ia-autofill-save-confirm').click(); return 0; })()`);
+  await run(`(() => { const n = document.getElementById('ia-autofill-name'); n.value = 'CaseOh'; n.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('ia-autofill-save-confirm').click(); return 0; })()`);
   await sleep(200);
-  assert('it is listed after saving', /Yawning/.test(await run(`document.getElementById('ia-autofill-list').textContent`)));
+  assert('it is listed after saving', /CaseOh/.test(await run(`document.getElementById('ia-autofill-list').textContent`)));
   const stored = JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`));
   assert('the description is stored exactly (blank lines kept)', stored[0] && stored[0].fields.description === descExact, JSON.stringify(stored[0] && stored[0].fields.description));
   assert('identifier and title were not stored', stored[0] && !('identifier' in stored[0].fields) && !('title' in stored[0].fields));
@@ -251,11 +253,11 @@ app.whenReady().then(async () => {
   await run(`document.getElementById('ia-autofill-btn').click(); document.querySelector('#ia-autofill-list .ia-af-item').click(); 0`);
   await sleep(200);
   assert('choosing it fills the description with the exact spacing', (await run(`__t.val('ia-description')`)) === descExact);
-  assert('and the tags and creator', (await run(`__t.val('ia-subject')`)) === 'yawning; twitch; vod' && (await run(`__t.val('ia-creator')`)) === 'yawning');
+  assert('and the tags and creator', (await run(`__t.val('ia-subject')`)) === 'caseoh; twitch; vod' && (await run(`__t.val('ia-creator')`)) === 'caseoh');
   assert('but leaves identifier/title alone', (await run(`__t.val('ia-identifier-up')`)) === '' && (await run(`__t.val('ia-title')`)) === '');
   assert('and the popup closed', (await run(`getComputedStyle(document.getElementById('ia-autofill-modal')).display`)) === 'none');
   // Saving under the same name replaces it, and Delete asks twice.
-  await run(`document.getElementById('ia-autofill-btn').click(); document.getElementById('ia-autofill-save-new').click(); (() => { const n = document.getElementById('ia-autofill-name'); n.value = 'yawning'; n.dispatchEvent(new Event('input', { bubbles: true })); })(); 0`);
+  await run(`document.getElementById('ia-autofill-btn').click(); document.getElementById('ia-autofill-save-new').click(); (() => { const n = document.getElementById('ia-autofill-name'); n.value = 'caseoh'; n.dispatchEvent(new Event('input', { bubbles: true })); })(); 0`);
   assert('reusing a name warns that it will replace', /already exists/.test(await run(`document.getElementById('ia-autofill-name-note').textContent`)));
   await run(`document.getElementById('ia-autofill-save-confirm').click(); 0`);
   assert('still just one saved set', JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`)).length === 1);
@@ -264,6 +266,117 @@ app.whenReady().then(async () => {
   await run(`document.querySelector('#ia-autofill-list .ia-af-del').click(); 0`);
   assert('the second one deletes it', JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`)).length === 0);
   await run(`document.getElementById('ia-autofill-close').click(); 0`);
+
+  console.log('\n9d2. Autofill placeholders, export and import...');
+  const tokenDesc = "Stream {date}\n\nVOD: https://www.twitch.tv/videos/{vod}\nTitle: {title}\n";
+  await run(`localStorage.removeItem('nyx-ia-autofill'); document.querySelector('.nav-item[data-tab="ia"]').click(); document.getElementById('ia-add-concurrent-upload').click(); 0`);
+  await run(`(() => {
+    const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    set('ia-description', ${JSON.stringify(tokenDesc)}); set('ia-subject', 'tag-one; tag-two');
+    document.getElementById('ia-autofill-btn').click(); document.getElementById('ia-autofill-save-new').click();
+    const n = document.getElementById('ia-autofill-name'); n.value = 'Tokens'; n.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('ia-autofill-save-confirm').click(); document.getElementById('ia-autofill-close').click(); return 0; })()`);
+  await run(`document.getElementById('ia-add-concurrent-upload').click(); document.getElementById('ia-autofill-btn').click(); document.querySelector('#ia-autofill-list .ia-af-item').click(); 0`);
+  await sleep(200);
+  const asked = await run(`[...document.querySelectorAll('#ia-autofill-token-inputs input')].map(i => i.dataset.token)`);
+  assert('only the custom placeholder is asked for ({date} and {title} are filled at upload)', asked.length === 1 && asked[0] === 'vod', JSON.stringify(asked));
+  await run(`document.querySelector('#ia-autofill-token-inputs input').value = '123456'; document.getElementById('ia-autofill-tokens-apply').click(); 0`);
+  await sleep(200);
+  const filledDesc = await run(`__t.val('ia-description')`);
+  assert('it is substituted, the other placeholders and spacing stay', filledDesc === "Stream {date}\n\nVOD: https://www.twitch.tv/videos/123456\nTitle: {title}\n", JSON.stringify(filledDesc));
+
+  const upBefore = uploads.length;
+  await run(`(() => {
+    const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    window.addSortableItem(document.getElementById('ia-files'), 'D:/Videos/token-test.mp4');
+    set('ia-identifier-up', 'token-test-0001'); set('ia-title', 'Token Title');
+    set('ia-date-y', '2026'); set('ia-date-m', '10'); set('ia-date-d', '14');
+    document.getElementById('ia-upload-run').click(); return 0; })()`);
+  await sleep(400);
+  const sent = uploads[upBefore];
+  assert('on upload, {date} and {title} are filled from the form', sent && sent.description === "Stream 2026-10-14\n\nVOD: https://www.twitch.tv/videos/123456\nTitle: Token Title", JSON.stringify(sent && sent.description));
+
+  await run(`document.getElementById('ia-add-concurrent-upload').click(); document.getElementById('ia-autofill-btn').click(); document.getElementById('ia-autofill-export').click(); 0`);
+  await sleep(300);
+  const exported = savedFiles[savedFiles.length - 1];
+  const exportedJson = exported ? JSON.parse(exported.content) : null;
+  assert('Export writes a JSON file with every set', exportedJson && exportedJson.nyxAutofill === 1 && exportedJson.presets.length === 1 && exportedJson.presets[0].name === 'Tokens' && exported.filters && exported.filters[0].extensions[0] === 'json');
+
+  const importFile = (text) => run(`(() => {
+    const input = document.getElementById('ia-autofill-import-file');
+    const dt = new DataTransfer(); dt.items.add(new File([${JSON.stringify(text)}], 'sets.json', { type: 'application/json' }));
+    input.files = dt.files; input.dispatchEvent(new Event('change', { bubbles: true })); return 0; })()`);
+  await importFile(JSON.stringify({ nyxAutofill: 1, presets: [
+    { name: 'tokens', fields: { description: 'replaced description' } },
+    { name: 'Another', fields: { creator: 'someone', subject: 'x; y', bogus: 'ignored' } },
+    { name: '', fields: { creator: 'no name' } },
+  ] }));
+  await sleep(500);
+  const afterImport = JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`));
+  assert('Import adds new sets and replaces same-named ones', afterImport.length === 2 && afterImport.find(p => p.name === 'tokens').fields.description === 'replaced description' && afterImport.some(p => p.name === 'Another'), JSON.stringify(afterImport.map(p => p.name)));
+  assert('unknown fields and nameless sets are dropped', !('bogus' in afterImport.find(p => p.name === 'Another').fields));
+  assert('it reports what happened', /Imported 2 sets \(1 replaced\)/.test(await run(`document.getElementById('ia-autofill-status').textContent`)), await run(`document.getElementById('ia-autofill-status').textContent`));
+  await importFile('this is not json');
+  await sleep(300);
+  assert('a bad file is rejected without touching the saved sets', /not valid JSON/.test(await run(`document.getElementById('ia-autofill-status').textContent`)) && JSON.parse(await run(`localStorage.getItem('nyx-ia-autofill')`)).length === 2);
+  await run(`document.getElementById('ia-autofill-close').click(); 0`);
+
+  console.log('\n9e. Drag and drop onto tools...');
+  await run(`window.__drop = (sel, o) => {
+    const target = document.querySelector(sel);
+    const dt = new DataTransfer();
+    (o.files || []).forEach((p) => { const f = new File(['x'], p.split('/').pop()); Object.defineProperty(f, 'path', { value: p }); dt.items.add(f); });
+    if (o.text) { dt.setData('text/plain', o.text); dt.setData('text/uri-list', o.text); }
+    const over = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
+    target.dispatchEvent(over);
+    const panel = target.closest('.tab-panel');
+    const highlighted = !!panel && panel.classList.contains('nyx-drop-active');
+    const drop = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt });
+    target.dispatchEvent(drop);
+    return { overPrevented: over.defaultPrevented, dropPrevented: drop.defaultPrevented, highlighted, clearedAfter: !(panel && panel.classList.contains('nyx-drop-active')) };
+  }; 0`);
+  const nav = async (tab) => { await run(`document.querySelector('.nav-item[data-tab="${tab}"]').click(); 0`); await sleep(250); };
+  const count = (sel) => run(`document.querySelectorAll('${sel}').length`);
+
+  await nav('splitter');
+  let r = await run(`__drop('#tab-splitter .panel-header', { files: ['D:/Videos/clip-one.mp4', 'D:/Videos/clip-two.mp4'] })`);
+  assert('Splitter: the panel lights up while dragging over it', r.highlighted && r.overPrevented);
+  assert('Splitter: the first dropped file becomes the input', (await run(`document.getElementById('sp-file').value`)) === 'D:/Videos/clip-one.mp4');
+  assert('Splitter: highlight clears after the drop', r.clearedAfter);
+
+  await nav('concatenator');
+  await run(`__drop('#tab-concatenator .panel-header', { files: ['D:/Videos/a.mp4', 'D:/Videos/b.mp4'] })`);
+  assert('Concatenator: dropped files are added', (await count('#concat-file-list .sortable-item')) === 2);
+  await run(`__drop('#concat-file-list', { files: ['D:/Videos/c.mp4'] })`);
+  assert('Concatenator: dropping on the list itself adds each file once (no doubles)', (await count('#concat-file-list .sortable-item')) === 3);
+
+  await nav('encoder');
+  await run(`__drop('#tab-encoder .panel-header', { files: ['D:/Videos/e1.mp4', 'D:/Videos/e2.mp4'] })`);
+  assert('Encoder: dropped files are added', (await count('#enc-file-list .sortable-item')) === 2);
+
+  await nav('ytdlp');
+  r = await run(`__drop('#tab-ytdlp .panel-header', { text: 'https://www.youtube.com/watch?v=dropTest001' })`);
+  assert('yt-dlp: a dropped link fills the URL field', (await run(`document.getElementById('yd-url').value`)) === 'https://www.youtube.com/watch?v=dropTest001' && r.highlighted);
+
+  await nav('batch');
+  await run(`document.getElementById('batch-urls').value = ''; __drop('#tab-batch .panel-header', { text: 'https://example.com/one https://example.com/two' })`);
+  await run(`__drop('#tab-batch .panel-header', { text: 'https://example.com/two' })`);
+  assert('Batch: links are appended once each', (await run(`document.getElementById('batch-urls').value`)) === 'https://example.com/one\nhttps://example.com/two');
+
+  await nav('ia');
+  await run(`document.querySelector('#ia-mode-toggle [data-mode="upload"]').click(); document.getElementById('ia-add-concurrent-upload').click(); 0`);
+  await sleep(200);
+  await run(`__drop('#tab-ia .panel-header', { files: ['D:/Videos/upload-me.mp4'] })`);
+  assert('Internet Archive: dropped files go into the upload list', (await count('#ia-files .sortable-item')) === 1);
+  await run(`document.querySelector('#ia-mode-toggle [data-mode="download"]').click(); 0`);
+  await sleep(200);
+  await run(`__drop('#tab-ia .panel-header', { text: 'https://archive.org/details/some-item-id' })`);
+  assert('Internet Archive (Download): a dropped link fills the field', (await run(`document.getElementById('ia-identifier-down').value`)) === 'https://archive.org/details/some-item-id');
+  await run(`document.querySelector('#ia-mode-toggle [data-mode="upload"]').click(); 0`);
+
+  await nav('history');
+  r = await run(`__drop('#tab-history .tab-header', { files: ['D:/Videos/stray.mp4'] })`);
+  assert('Dropping a file where nothing accepts it is swallowed (no window navigation)', r.dropPrevented && r.overPrevented && !r.highlighted);
 
   console.log('\n10. Progress of a second stream shows after the first hits 100%...');
   const shown = await run(`(() => {

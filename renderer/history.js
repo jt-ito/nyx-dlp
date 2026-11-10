@@ -52,6 +52,7 @@
       if (tool.includes('gallery') && getSetting('history-exclude-gallery')) return false;
       if (tool.includes('splitter') && getSetting('history-exclude-splitter')) return false;
       if (tool.includes('concat') && getSetting('history-exclude-concatenator')) return false;
+      if (tool.includes('merger') && getSetting('history-exclude-merger')) return false;
       if (tool.includes('encoder') && getSetting('history-exclude-encoder')) return false;
       if ((tool.includes('internet archive') || tool.includes('ia')) && getSetting('history-exclude-ia')) return false;
     }
@@ -351,7 +352,7 @@
 
   if (clearBtn) {
     clearBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to clear your download history? This cannot be undone.')) {
+      if (await nyxConfirm({ title: 'Clear history?', message: 'Are you sure you want to clear your download history? This cannot be undone.', confirmText: 'Clear History', danger: true })) {
         await window.api.clearHistory();
         loadHistory(true);
       }

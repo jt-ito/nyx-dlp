@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   appVersion: require('./package.json').version,
@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld('api', {
   respondExitConfirm: (ok) => ipcRenderer.send('exit-confirm-response', !!ok),
   onAppUpdateProgress: (cb) => ipcRenderer.on('app-update-progress', (_e, d) => cb(d)),
   onAppUpdateDownloaded: (cb) => ipcRenderer.on('app-update-downloaded', (_e, d) => cb(d)),
+
+  // Dropped files: File.path is gone on newer Electron, webUtils replaces it (undefined on older ones).
+  getPathForFile: (file) => (webUtils && webUtils.getPathForFile ? webUtils.getPathForFile(file) : ''),
+
+  // Taskbar / dock progress (value 0..1, 2 = unknown/indeterminate, -1 = none)
+  setTaskbarProgress: (value, mode) => ipcRenderer.send('set-taskbar-progress', { value, mode }),
 
   // Folder picker
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
@@ -55,11 +61,13 @@ contextBridge.exposeInMainWorld('api', {
   runGalleryDl:  (opts) => ipcRenderer.send('run-gallery-dl', opts),
   runSplitter:   (opts) => ipcRenderer.send('run-splitter', opts),
   runConcatenator: (opts) => ipcRenderer.send('run-concatenator', opts),
+  runMerger: (opts) => ipcRenderer.send('run-merger', opts),
   checkConcatFiles: (opts) => ipcRenderer.invoke('check-concat-files', opts),
   runEncoder:    (opts) => ipcRenderer.send('run-encoder', opts),
   runIaUpload:   (opts) => ipcRenderer.send('run-ia-upload', opts),
   runIaEdit:     (opts) => ipcRenderer.send('run-ia-edit', opts),
   runIaDownload: (opts) => ipcRenderer.send('run-ia-download', opts),
+  clearGalleryDlCache: () => ipcRenderer.invoke('clear-gallerydl-cache'),
   checkIaAuth: (autoIa) => ipcRenderer.invoke('check-ia-auth', { autoIa }),
   runIaConfigure: (email, password, autoIa) => ipcRenderer.invoke('run-ia-configure', { email, password, autoIa }),
   runIaUnlink: () => ipcRenderer.invoke('run-ia-unlink'),
@@ -72,6 +80,7 @@ contextBridge.exposeInMainWorld('api', {
   onGalleryDlOutput:  (cb) => ipcRenderer.on('gallery-dl-output',  (_e, d) => cb(d)),
   onSplitterOutput:   (cb) => ipcRenderer.on('splitter-output',    (_e, d) => cb(d)),
   onConcatenatorOutput: (cb) => ipcRenderer.on('concatenator-output', (_e, d) => cb(d)),
+  onMergerOutput: (cb) => ipcRenderer.on('merger-output', (_e, d) => cb(d)),
   onEncoderOutput:    (cb) => ipcRenderer.on('encoder-output',    (_e, d) => cb(d)),
   onIaOutput:         (cb) => ipcRenderer.on('ia-output',         (_e, d) => cb(d)),
 
@@ -108,6 +117,7 @@ contextBridge.exposeInMainWorld('api', {
   checkToolUpdates: (tool) => ipcRenderer.invoke('check-tool-updates', { tool }),
   installToolVersion: (tool, version) => ipcRenderer.invoke('install-tool-version', { tool, version }),
   openVendorFolder: (tool) => ipcRenderer.invoke('open-vendor-folder', { tool }),
+  onToolAutoUpdated: (cb) => ipcRenderer.on('tool-auto-updated', (_e, d) => cb(d)),
   onToolHubProgress: (cb) => ipcRenderer.on('tool-hub-progress', (_e, d) => cb(d)),
 
   // Remove listeners

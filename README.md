@@ -4,12 +4,12 @@
 
 **One cockpit for every download, archive and encode job you've got.**
 
-yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive · aria2c · Deno — nine tools, one native app, zero Python.
+yt-dlp · streamlink · ffmpeg · gallery-dl · Internet Archive · aria2c · Deno — ten tools, one native app, zero Python.
 
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-5.0.2-orange)
+![Version](https://img.shields.io/badge/version-5.0.3-orange)
 
 <img src="docs/screenshots/01b-yt-dlp-dark.png" alt="nyx-dlp yt-dlp downloader in the OLED Obsidian theme" width="100%" />
 
@@ -105,7 +105,7 @@ Light and dark themes are both built in — there are 20+ presets in **Appearanc
 
 ### The tools
 
-- 🧰 **9 built-in tools** behind one interface: yt-dlp, Batch Downloader, Live Archiver, M3U8 Downloader, gallery-dl, Video Splitter, Video Concatenator, Video Encoder and Internet Archive.
+- 🧰 **10 built-in tools** behind one interface: yt-dlp, Batch Downloader, Live Archiver, M3U8 Downloader, gallery-dl, Video Splitter, Video Concatenator, Video Merger, Video Encoder and Internet Archive.
 - ⏯️ **Real pause / resume / stop** on every job — OS-level process-tree suspension on Windows, `SIGSTOP`/`SIGCONT` on macOS and Linux, with instant, non-blocking tree termination.
 - 🎛️ **70+ yt-dlp flags** across 9 categories (Network, Subtitles, Post-Processing, SponsorBlock and more) with live search.
 - 🎯 **Per-site presets** — domain-specific rules (concurrent fragments, cookies, quality ceiling, subtitles) that apply automatically when you paste a URL, and sync with the Discord bot.
@@ -130,15 +130,20 @@ Light and dark themes are both built in — there are 20+ presets in **Appearanc
 - 📑 **Browser-style upload tabs** — open several uploads at once. **Concurrent** tabs (`+`, marked **C**) start immediately and run in parallel; **queued** tabs (**New Queue Item**, marked **Q**) run one at a time in the order you pressed *Upload to IA*, each starting 30 seconds after the previous one finishes.
 - 🗂️ **Queue & concurrent manager** — the ☰ menu beside the tabs lists everything: reorder waiting items, remove them, stop running uploads, and watch the countdown to the next one.
 - ⚠️ **Edit-after-upload warning** — change a form after its upload started or was queued and you'll be told the change won't apply.
+- ⚡ **Autofill** — save named sets of upload fields (creator, tags, description with its exact spacing…) and fill them in with one click. `{date}`, `{title}` and `{identifier}` in a saved description are filled in when you upload; any other `{placeholder}` asks you for a value. Export and import your sets as a file.
 - 🔗 **Paste any archive.org link** into the downloader — an identifier, a `/details/…` page, a `/download/…` item, a single file, or a folder URL all work.
 - 🚀 **Fast downloads with aria2c** — 16 connections per file, 4 files at once, resumable. aria2c is fetched automatically on Windows (or uses your own); switch it off in Settings to fall back to the standard `ia download`.
+- ⏸️ **Pause, Save Paused and Resume** on downloads too, since aria2c picks up its partial files.
+- 🔁 **Resumable uploads for big files** — files over 1 GB go up in 64 MiB parts, so a dropped connection only repeats the current part, and stopping the app lets you continue later where it left off. Shows `part N/M` in the progress line; switch it off with *Resumable uploads for big files* (CLI: `--no-resumable`).
+- 📋 **Copy Info / Paste Info** — copy every upload field and the file list to the clipboard and paste it back into any tab later, so a draft survives a restart or an archive.org outage.
 - 🔐 Authenticate once, upload with full metadata (title, collection, subjects, license, mediatype, "no derive"), automatic retries on failed uploads.
 
 ### Video processing
 
 - ✂️ **Splitter** — equal parts or exact timestamp intervals, with lossless stream copy or GPU transcoding.
 - 🔍 **Concatenator** — drag-and-drop ordering with sequence badges, plus a pre-flight **Check Files** analysis (codecs, resolutions, timebases, audio channels) and automatic cover-art exclusion so merges don't break.
-- 🎞️ **Encoder** — batch re-encode with hardware acceleration: NVIDIA NVENC, AMD AMF, Intel QSV, Apple VideoToolbox and Linux VA-API, falling back to software only when no GPU encoder exists.
+- 🧩 **Merger** — rejoin a video that was split into parts. It finds the few repeated seconds some splits leave at the seams and removes them frame-exactly (video stays untouched when the cuts allow), and joins parts with no overlap seamlessly. Re-encodes only when it has to.
+- 🎞️ **Encoder** — live progress with ETA, and batch re-encode with hardware acceleration: NVIDIA NVENC, AMD AMF, Intel QSV, Apple VideoToolbox and Linux VA-API, falling back to software only when no GPU encoder exists.
 
 ### Engines & dependencies
 
@@ -153,6 +158,9 @@ Light and dark themes are both built in — there are 20+ presets in **Appearanc
 
 ### Everyday polish
 
+- 🖱️ **Drag and drop** — drop links onto yt-dlp and Batch, and files onto Internet Archive, the Splitter, Concatenator and Encoder.
+- 📊 **Taskbar progress** — the app's taskbar icon shows overall progress while jobs run.
+- 🗄️ **Settings backup** — export all settings to a file (credentials are never included) and restore them on another machine.
 - 💾 **Everything is remembered** — form persistence and a unified history covering desktop, web-remote and Discord jobs.
 - 🛑 **Exit confirmation** — closing the app while jobs (or queued IA uploads) are running asks first, in a themed popup.
 - 🎨 **Themes** — 20+ dark and light presets (including OLED Obsidian), custom accent colors and color-coded logs.
@@ -174,6 +182,7 @@ Light and dark themes are both built in — there are 20+ presets in **Appearanc
 | **gallery-dl** | `gallery-dl` | Image galleries and albums from 300+ platforms. |
 | **Video Splitter** | `ffmpeg` | Equal parts or exact intervals, stream copy or GPU transcode. |
 | **Video Concatenator** | `ffmpeg` | Merge clips with drag-and-drop ordering and pre-flight compatibility checks. |
+| **Video Merger** | `ffmpeg` | Rejoin split parts, removing repeated overlap and keeping the seam seamless. |
 | **Video Encoder** | `ffmpeg` | Batch re-encode with automatic GPU acceleration. |
 | **Internet Archive** | `ia` · `aria2c` | Upload (concurrent + queued), edit metadata and download from archive.org. |
 
@@ -217,6 +226,9 @@ The suite covers more than syntax. In order, it runs:
 | Manifest rescue | Fragment detection and cookie-authenticated manifest recovery. |
 | IA tabs | Headless-renderer run of the upload tabs, queue order, queue menu, link parsing and exit-confirm popup. |
 | Save paused | Pause → Save Paused → History filter → Resume, end to end in the headless renderer, plus the real app's history rules (saved even with history off, kept through retention and Clear History). |
+| Video Merger | Real ffmpeg splits with and without overlap, mid-GOP parts and contiguous parts, checked frame by frame. |
+| IA multipart | A local mock of archive.org's S3 API: retries, Stop/resume, expired uploads and fallback. |
+| Settings backup | Export (credentials left out), the confirmation, restore through the normal save path, and rejecting bad files. |
 | Exit confirmation | Launches the real app, fakes a running job and exercises the close flow end to end. |
 
 ---

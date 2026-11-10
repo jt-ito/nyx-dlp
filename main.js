@@ -39,7 +39,11 @@ const bgutilServer = require('./lib/ensure-bgutil-server.js');
 //  - "dep-use-bgutil-external": point at a PO-token server the user already runs
 //    themselves — nyx-dlp never starts anything in that case. The two are mutually
 //    exclusive in the UI (see settings.js), but guard defensively here too.
+// Set by the end-to-end tests (and CI): no background downloads or update checks while testing.
+const NYX_TEST = process.env.NYX_TEST === '1';
+
 function shouldRunBundledBgutilServer() {
+  if (NYX_TEST) return false;
   if (settingsStore.getSettingValue('dep-use-bgutil-external', false)) return false;
   return !!settingsStore.getSettingValue('dep-use-bgutil', true);
 }
@@ -106,20 +110,8 @@ function saveAppSettings(newSettings) {
 }
 
 // ── GitHub Releases / Auto-Update Checker ────────────────────
-function isNewerVersion(latest, current) {
-  const clean = (v) => (v || '').replace(/^v/i, '').trim();
-  const lParts = clean(latest).split('.').map(n => parseInt(n) || 0);
-  const cParts = clean(current).split('.').map(n => parseInt(n) || 0);
-  for (let i = 0; i < Math.max(lParts.length, cParts.length); i++) {
-    const l = lParts[i] || 0;
-    const c = cParts[i] || 0;
-    if (l > c) return true;
-    if (l < c) return false;
-  }
-  return false;
-}
-
 function checkGitHubRelease() {
+  if (process.env.NYX_TEST === '1') return Promise.resolve(null);
   return new Promise((resolve, reject) => {
     const currentVersion = app.getVersion() || require('./package.json').version;
     const options = {
@@ -632,6 +624,7 @@ async function getRunningWork() {
   return work;
 }
 
+
 // Resolves true if it's OK to exit (nothing running, or the user confirmed in the in-app modal).
 async function confirmExitIfBusy() {
   const work = await getRunningWork();
@@ -683,14 +676,18 @@ app.whenReady().then(() => {
     }
   }, 3000);
 
+  // Keep the vendored tools fresh while the app is open: first pass 30s after launch, then every 6h.
+  // Never touches a tool while any run is active (a running .exe can't be replaced on Windows).
+  if (!NYX_TEST) startAutoUpdateTools(broadcastIPC, (tool, version) => broadcastIPC('tool-auto-updated', { tool, version }));
+
   // Auto-connect Discord bot on startup if configured (delayed 4s)
   if (appSettings.discordEnabled && appSettings.discordToken) {
     setTimeout(async () => {
       try {
-        await discordBot.start({
+        await discordBot.startWithRetry({
           token: appSettings.discordToken,
           clientId: appSettings.discordClientId,
-          downloadDir: appSettings.discordDownloadDir
+          downloadDir: settingsStore.getDiscordDownloadDir(appSettings.discordDownloadDir)
         });
       } catch (err) {
         console.error('[Discord Bot] Startup auto-connect failed:', err.message);
@@ -705,6 +702,7 @@ app.whenReady().then(() => {
   // instance for people who already have their own.
   bgutilServer.onStatusChange((status) => broadcastIPC('bgutil-status', status));
   if (shouldRunBundledBgutilServer()) {
+    bgutilServer.expectStart();
     setTimeout(() => {
       bgutilServer.startBgutilServer((msg) => broadcastIPC('bgutil-status-log', msg), getBundledBgutilPort()).catch(() => {});
     }, 2000);
@@ -738,6 +736,16 @@ app.on('will-quit', () => {
   try {
     bgutilServer.stopBgutilServer();
   } catch (e) {}
+});
+
+// Taskbar / dock progress, driven by the renderer (renderer/status.js)
+ipcMain.on('set-taskbar-progress', (_e, { value, mode } = {}) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    const v = typeof value === 'number' ? value : -1;
+    if (v < 0) mainWindow.setProgressBar(-1);
+    else mainWindow.setProgressBar(v > 1 ? 2 : v, { mode: mode || (v > 1 ? 'indeterminate' : 'normal') });
+  } catch (_) {}
 });
 
 // Window controls
@@ -874,11 +882,11 @@ ipcMain.handle('get-disk-space', async (_e, drivePath) => {
 });
 
 // Save text file
-ipcMain.handle('save-text-file', async (_e, { defaultName, content }) => {
+ipcMain.handle('save-text-file', async (_e, { defaultName, content, filters }) => {
   mainWindow.focus();
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: path.join(lastUsedPath || app.getPath('downloads'), defaultName || 'durations.txt'),
-    filters: [{ name: 'Text Files', extensions: ['txt'] }, { name: 'All Files', extensions: ['*'] }]
+    filters: Array.isArray(filters) && filters.length ? filters : [{ name: 'Text Files', extensions: ['txt'] }, { name: 'All Files', extensions: ['*'] }]
   });
   if (!result.canceled && result.filePath) {
     saveLastPath(path.dirname(result.filePath));
@@ -1166,6 +1174,14 @@ ipcMain.on('run-ytdlp', (event, opts) => prepareRunner(opts, 'ytdlp-output', run
 ipcMain.on('run-ia-upload', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaUpload));
 ipcMain.on('run-ia-edit', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaEdit));
 ipcMain.on('run-ia-download', (event, opts) => prepareRunner(opts, 'ia-output', runners.runIaDownload));
+ipcMain.handle('clear-gallerydl-cache', async () => {
+  const { getGallerydlPath } = require('./lib/ensure-gallerydl');
+  return await new Promise((resolve) => {
+    require('child_process').execFile(getGallerydlPath(), ['--cache-clear', 'ALL'], { windowsHide: true, timeout: 30000 }, (err, stdout, stderr) => {
+      resolve({ ok: !err, message: (stderr || stdout || (err && err.message) || '').toString().trim() });
+    });
+  });
+});
 ipcMain.handle('check-ia-auth', async (event, { autoIa } = {}) => await runners.checkIaAuth(autoIa));
 ipcMain.handle('run-ia-configure', async (event, { email, password, autoIa }) => await runners.runIaConfigure(email, password, autoIa));
 
@@ -1250,6 +1266,7 @@ ipcMain.on('run-splitter', (event, opts) => prepareRunner(opts, 'splitter-output
 
 // ── Tool 7: Video Concatenator ──────────────────────────────────────────────────────
 ipcMain.on('run-concatenator', (event, opts) => prepareRunner(opts, 'concatenator-output', runners.runConcatenator));
+ipcMain.on('run-merger', (event, opts) => prepareRunner(opts, 'merger-output', runners.runMerger));
 ipcMain.handle('check-concat-files', async (_event, opts) => {
   try {
     const ffmpegSettings = getFfmpegSettings();
@@ -1294,12 +1311,10 @@ ipcMain.handle('start-discord-bot', async (event, opts) => {
     saveAppSettings({
       discordEnabled: true,
       discordToken: optsObj.token ? String(optsObj.token).trim() : '',
-      discordClientId: optsObj.clientId ? String(optsObj.clientId).trim() : '',
-      discordDownloadDir: dlDir
+      discordClientId: optsObj.clientId ? String(optsObj.clientId).trim() : ''
     });
-    settingsStore.updateSetting('discordDownloadDir', dlDir);
-    settingsStore.updateSetting('discord-download-dir', { id: 'discord-download-dir', type: 'text', value: dlDir });
-    await discordBot.start({ ...optsObj, downloadDir: dlDir });
+    settingsStore.rememberDiscordDownloadDir(dlDir);
+    await discordBot.start({ ...optsObj, downloadDir: settingsStore.getDiscordDownloadDir() });
     return discordBot.getStatus();
   } catch (err) {
     return { status: 'error', error: err.message };
@@ -1315,7 +1330,7 @@ ipcMain.handle('stop-discord-bot', async () => {
 ipcMain.handle('get-discord-bot-status', async () => {
   const current = loadAppSettings();
   const status = discordBot.getStatus();
-  let savedDir = current.discordDownloadDir || settingsStore.getSettingValue('discord-download-dir') || '';
+  let savedDir = settingsStore.getDiscordDownloadDir(current.discordDownloadDir);
   if (savedDir === 'undefined' || savedDir === 'null') savedDir = '';
   return {
     ...status,
@@ -1357,12 +1372,16 @@ ipcMain.on('sync-ui-state', (event, data) => {
 
 ipcMain.handle('get-bgutil-status', () => bgutilServer.getStatus());
 
+// Everything the renderer has synced to disk (used by Settings -> Backup & Restore).
+ipcMain.handle('get-all-settings', () => settingsStore.loadAllSettings());
+
 ipcMain.on('request-full-state', (event) => {
   event.sender.send('full-state', settingsStore.loadAllSettings());
 });
 
 // ── Downloader Tools & Engines Hub ───────────────────────────────────────────
 const toolHub = require('./lib/tool-hub.js');
+const { startAutoUpdateTools, isNewerVersion } = require('./lib/auto-update-tools.js');
 
 ipcMain.handle('get-all-tools-info', async () => {
   return await toolHub.getAllToolsInfo();
@@ -1384,4 +1403,4 @@ ipcMain.handle('install-tool-version', async (_event, { tool, version }) => {
 
 ipcMain.handle('open-vendor-folder', async (_e, { tool }) => {
   return toolHub.openVendorFolder(tool);
-});
+});

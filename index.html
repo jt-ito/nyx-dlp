@@ -118,6 +118,17 @@
           <span>Video Concatenator</span>
           <div class="nav-indicator"></div>
         </button>
+        <button class="nav-item" data-tab="merger">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="6" cy="18" r="3"></circle>
+            <path d="M6 9v6"></path>
+            <path d="M9 6h4a4 4 0 0 1 4 4v1"></path>
+            <polyline points="14 14 17 11 20 14"></polyline>
+          </svg>
+          <span>Video Merger</span>
+          <div class="nav-indicator"></div>
+        </button>
         <button class="nav-item" data-tab="encoder">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
@@ -251,6 +262,11 @@
             </select>
           </div>
 
+          <div class="form-group" id="ls-concurrent-group">
+            <label class="form-label">Concurrent Fragments <span class="label-optional">(optional)</span></label>
+            <input type="number" id="ls-concurrent" class="form-input" placeholder="5" min="1" max="20" />
+          </div>
+
           <div class="adv-wrapper" style="grid-column: 1 / -1;">
           <div class="adv-toggle-wrap">
             <button class="form-adv-toggle" aria-expanded="false" data-adv="ls-adv">
@@ -290,10 +306,6 @@
                   <option value="streamlink">Streamlink</option>
                   <option value="ytdlp">yt-dlp</option>
                 </select>
-              </div>
-              <div class="form-group" id="ls-concurrent-group">
-                <label class="form-label">Concurrent Fragments <span class="label-optional">(optional)</span></label>
-                <input type="number" id="ls-concurrent" class="form-input" placeholder="5" min="1" max="20" />
               </div>
               <div class="form-group" id="ls-duration-group">
                 <label class="form-label">Duration Limit <span class="label-optional">(optional)</span></label>
@@ -453,7 +465,6 @@
             </select>
           </div>
 
-
           <div class="adv-wrapper" style="grid-column: 1 / -1;">
           <div class="adv-toggle-wrap">
               <button class="form-adv-toggle" aria-expanded="false" data-adv="yd-adv">
@@ -572,6 +583,10 @@
                   <label class="toggle-switch"><input type="checkbox" id="yd-get-url" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
                 </div>
               </div>
+              <div class="form-group" id="yd-concurrent-group">
+                <label class="form-label">Concurrent Fragments <span class="label-optional">(optional)</span></label>
+                <input type="number" id="yd-concurrent" class="form-input" placeholder="Auto" min="1" max="32" />
+              </div>
               <div id="yd-modified-opts" style="display: contents;"></div>
         </div>
         </div>
@@ -689,7 +704,6 @@
               </label>
             </div>
           </div>
-
           <div class="adv-wrapper" style="grid-column: 1 / -1;">
           <div class="adv-toggle-wrap">
               <button class="form-adv-toggle" aria-expanded="false" data-adv="batch-adv">
@@ -797,7 +811,11 @@
                   <label class="toggle-switch"><input type="checkbox" id="batch-skip-download" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
                 </div>
               </div>
-                <div id="batch-modified-opts" style="display: contents;"></div>
+                <div class="form-group" id="batch-concurrent-group">
+                <label class="form-label">Concurrent Fragments <span class="label-optional">(optional)</span></label>
+                <input type="number" id="batch-concurrent" class="form-input" placeholder="Auto" min="1" max="32" />
+              </div>
+              <div id="batch-modified-opts" style="display: contents;"></div>
               </div>
             </div>
           </div>
@@ -1369,6 +1387,7 @@
             Stop
           </button>
           <button class="btn btn-ghost" id="gdl-clear">Clear Log</button>
+          <button class="btn btn-ghost" id="gdl-clear-cache" title="Delete gallery-dl's cached logins and site tokens (fixes stale-session errors)">Clear Cache</button>
         </div>
 
         <div class="terminal-wrap">
@@ -1701,6 +1720,119 @@
         </div>
       </section>
 
+      <!-- ── Tab: Video Merger ───────────────────────────────────── -->
+      <section class="tab-panel" id="tab-merger">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h1 class="panel-title">Video Merger</h1>
+            <p class="panel-subtitle">Rejoin split video parts seamlessly, removing any repeated overlap</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full-width" style="margin-bottom: -6px;">
+            <label class="form-label">Video Parts</label>
+            <div class="input-folder-group" style="align-items: flex-start;">
+              <div class="sortable-list-container">
+                <div id="mg-file-list" class="sortable-list">
+                  <div class="sortable-empty-state">No files selected. Use the browse button to add the parts.</div>
+                </div>
+              </div>
+              <button class="btn-folder" data-target="mg-file-list" data-pick-type="multi-file" style="margin-top: 0;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <div id="mg-file-list-summary" class="sortable-list-summary" style="display: none;"></div>
+            <p class="form-help" style="margin: 4px 0 -2px 0; font-size: 11px; color: var(--text-muted);">Parts are joined in the numbered order shown (1 → end). Drag and drop items to reorder them.</p>
+          </div>
+
+          <div class="form-group full-width">
+            <label class="form-label">Output Filename</label>
+            <input type="text" id="mg-output-name" class="form-input" placeholder="full_video.mp4" />
+          </div>
+
+          <div class="form-group full-width">
+            <label class="form-label">Output Directory</label>
+            <div class="input-folder-group">
+              <input type="text" id="mg-output-dir" class="form-input" placeholder="C:\Downloads" />
+              <button class="btn-folder" data-target="mg-output-dir">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Overlap Between Parts</label>
+            <select id="mg-overlap-mode" class="form-select">
+              <option value="auto" selected>Auto-detect and remove</option>
+              <option value="none">None (join exactly as they are)</option>
+              <option value="manual">Fixed number of seconds</option>
+            </select>
+            <p class="form-help" style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-muted);">Some splits repeat a few seconds at each boundary. Auto compares the picture at the end of each part with the start of the next.</p>
+          </div>
+
+          <div class="form-group hidden" id="mg-overlap-sec-group">
+            <label class="form-label">Seconds Repeated at Each Boundary</label>
+            <input type="number" id="mg-overlap-sec" class="form-input" min="0" step="0.01" placeholder="3" />
+          </div>
+
+          <div class="form-group" style="display: flex;">
+            <div class="toggle-card" style="width: 100%; margin: 0; padding: 12px 14px; height: 100%; display: flex; align-items: center;">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Always re-encode</div>
+                <div class="toggle-desc">Slower and lossy. Normally the video is left untouched and only re-encoded when a cut cannot be made exactly.</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="mg-force" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary btn-run" id="mg-run">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            Merge Parts
+          </button>
+          <button class="btn btn-pause hidden" id="mg-pause">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+              <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+            </svg>
+            Pause
+          </button>
+          <button class="btn btn-ghost btn-stop hidden" id="mg-stop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/>
+            </svg>
+            Stop
+          </button>
+          <button class="btn btn-ghost" id="mg-clear">Clear Log</button>
+        </div>
+
+        <div class="terminal-wrap">
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <span class="terminal-title">Output</span>
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="terminal-body" id="mg-log"></div>
+        </div>
+        </div>
+      </section>
+
       <!-- ── Tab: Video Encoder ──────────────────────────────────── -->
       <section class="tab-panel" id="tab-encoder">
         <div class="panel-header">
@@ -1976,6 +2108,20 @@
                 <div class="form-group" style="display: flex;">
                   <div class="toggle-card" style="width: 100%; margin: 0; padding: 10px 14px; height: 100%; display: flex; align-items: center;">
                     <div class="toggle-card-left">
+                      <div class="toggle-label">Resumable uploads for big files</div>
+                      <div class="toggle-desc">Files over 1 GB go up in parts: a dropped connection only repeats the current part, and stopping the app lets you continue later.</div>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="ia-resumable" checked />
+                      <span class="toggle-track">
+                        <span class="toggle-thumb"></span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-group" style="display: flex;">
+                  <div class="toggle-card" style="width: 100%; margin: 0; padding: 10px 14px; height: 100%; display: flex; align-items: center;">
+                    <div class="toggle-card-left">
                       <div class="toggle-label">Disable Automatic Derivation</div>
                       <div class="toggle-desc">Adds the --no-derive flag to prevent IA from automatically generating additional formats.</div>
                     </div>
@@ -2021,6 +2167,8 @@
                 </svg>
                 <span class="ia-btn-label">Autofill</span>
               </button>
+              <button class="btn btn-ghost" id="ia-copy-info" aria-label="Copy Info" title="Copy Info: copy every field (and the file list) to the clipboard so you can paste it back later"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></button>
+              <button class="btn btn-ghost" id="ia-paste-info" aria-label="Paste Info" title="Paste Info: fill every field from info you copied with Copy Info"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M12 11v6"/><path d="M9 14l3 3 3-3"/></svg></button>
               <button class="btn btn-ghost" id="ia-upload-reset">Reset Info</button>
               <button class="btn btn-ghost" id="ia-upload-clear">Clear Log</button>
               <button class="btn btn-ghost" id="ia-config-btn" title="Run 'ia configure' in terminal to login">Login to IA</button>
@@ -2147,6 +2295,17 @@
                   <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
                 </svg>
                 Download
+              </button>
+              <button class="btn btn-pause hidden" id="ia-download-pause">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                  <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                </svg>
+                Pause
+              </button>
+              <button class="btn btn-ghost hidden" id="ia-download-save-paused" title="Save this paused download to History and stop it, so you can close nyx-dlp and resume it later">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Paused
               </button>
               <button class="btn btn-ghost btn-stop hidden" id="ia-download-stop">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -2420,6 +2579,16 @@
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
+                <div class="toggle-label">Video Merger</div>
+                <div class="toggle-desc">Show the Video Merger tab</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-tool-merger" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
                 <div class="toggle-label">Video Encoder</div>
                 <div class="toggle-desc">Show the Video Encoder tab</div>
               </div>
@@ -2568,6 +2737,16 @@
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
+                <div class="toggle-label">Concurrent fragments</div>
+                <div class="toggle-desc">Show the concurrent fragments field (Batch)</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-batch-concurrent" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
                 <div class="toggle-label">Rest between downloads</div>
                 <div class="toggle-desc">Show the rest-between-downloads toggle</div>
               </div>
@@ -2695,6 +2874,16 @@
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" data-setting="show-yd-client" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
+                <div class="toggle-label">Concurrent fragments</div>
+                <div class="toggle-desc">Show the concurrent fragments field (yt-dlp)</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="show-yd-concurrent" checked />
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
@@ -3026,6 +3215,10 @@
                     <span>Video Concatenator</span>
                   </label>
                   <label class="checkbox-label">
+                    <input type="checkbox" data-setting="history-exclude-merger" />
+                    <span>Video Merger</span>
+                  </label>
+                  <label class="checkbox-label">
                     <input type="checkbox" data-setting="history-exclude-encoder" />
                     <span>Video Encoder</span>
                   </label>
@@ -3169,6 +3362,16 @@
             </div>
             <div class="toggle-card">
               <div class="toggle-card-left">
+                <div class="toggle-label">Auto-update tools</div>
+                <div class="toggle-desc">While nyx-dlp is open, keep the yt-dlp, gallery-dl, Streamlink, aria2c and Deno that nyx-dlp installed on their latest stable release (checked every few hours, never during a download). Your own system installs are left alone</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" data-setting="dep-auto-update-tools" checked />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="toggle-card">
+              <div class="toggle-card-left">
                 <div class="toggle-label">Auto-install gallery-dl</div>
                 <div class="toggle-desc">Automatically install the gallery-dl Python package when the gallery-dl tab is used</div>
               </div>
@@ -3260,6 +3463,19 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div class="settings-section" data-cat="general">
+            <div class="settings-section-title">Backup &amp; Restore</div>
+            <div style="padding: 4px 16px 12px;">
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Save all your settings and Internet Archive Autofill sets to a file, or restore them on another machine. Tokens and passwords are never included.</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-ghost" id="settings-export-btn">Export settings&hellip;</button>
+                <button class="btn btn-ghost" id="settings-import-btn">Import settings&hellip;</button>
+                <input type="file" id="settings-import-file" accept=".json,application/json" style="display: none;" />
+              </div>
+              <div id="settings-backup-status" style="font-size: 12px; color: var(--text-muted); margin-top: 8px; min-height: 18px;"></div>
             </div>
           </div>
 
@@ -3383,6 +3599,20 @@
     </div>
   </div>
 
+  <!-- IA Paste Info Modal -->
+  <div id="ia-paste-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 520px; max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column;">
+      <h3 style="margin-bottom: 8px; font-size: 16px; font-weight: 600;">Paste Upload Info</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px;">Paste what you copied with the Copy Info button (Ctrl+V), then press Fill Fields. Every field on this tab will be replaced.</p>
+      <textarea id="ia-paste-text" class="form-input" spellcheck="false" placeholder="Paste here..." style="width: 100%; height: 220px; min-height: 120px; resize: vertical; font-family: monospace; font-size: 12px; user-select: text;"></textarea>
+      <div id="ia-paste-error" style="display: none; color: #ff5f57; font-size: 12px; margin-top: 10px;"></div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+        <button class="btn btn-ghost" id="ia-paste-cancel">Cancel</button>
+        <button class="btn btn-primary" id="ia-paste-submit">Fill Fields</button>
+      </div>
+    </div>
+  </div>
+
   <!-- IA Login Modal -->
   <div id="ia-login-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
     <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 400px; max-width: 90vw;">
@@ -3403,7 +3633,7 @@
         <input type="password" id="ia-auth-password" class="form-input" style="width: 100%;" placeholder="••••••••" />
       </div>
 
-      <div id="ia-auth-error" style="display: none; color: #ff5f57; font-size: 12px; margin-bottom: 16px;"></div>
+      <div id="ia-auth-error" style="display: none; color: #ff5f57; font-size: 12px; margin-bottom: 16px; max-height: 120px; overflow: auto; white-space: pre-wrap; word-break: break-word; user-select: text;"></div>
 
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn btn-ghost" id="ia-auth-cancel">Cancel</button>
@@ -3439,6 +3669,19 @@
     </div>
   </div>
 
+  <!-- Settings backup: confirm restoring from a file -->
+  <div id="settings-import-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 400px; max-width: 90vw;">
+      <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">Restore settings?</h3>
+      <p style="font-size: 14px; color: var(--text); margin-bottom: 8px;">This replaces your current settings with <strong id="settings-import-count"></strong> from the file.</p>
+      <p style="font-size: 14px; color: var(--text); margin-bottom: 24px;">Tokens and passwords are not part of a backup and stay as they are. nyx-dlp reloads when it is done.</p>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-ghost" id="settings-import-cancel">Cancel</button>
+        <button class="btn btn-primary" id="settings-import-confirm">Restore</button>
+      </div>
+    </div>
+  </div>
+
   <!-- IA Autofill: saved sets of upload fields -->
   <div id="ia-autofill-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
     <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow); width: 580px; max-width: 92vw; max-height: 84vh; display: flex; flex-direction: column;">
@@ -3446,16 +3689,32 @@
         <h3 style="margin-bottom: 6px; font-size: 16px; font-weight: 600;">Autofill</h3>
         <p class="ia-af-hint">Pick a saved set to fill into this upload. Only the fields it contains are changed.</p>
         <div id="ia-autofill-list" class="ia-af-list"></div>
-        <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 16px;">
-          <button class="btn btn-ghost" id="ia-autofill-close">Close</button>
+        <div id="ia-autofill-status" class="ia-af-hint" style="min-height: 18px; margin: 8px 0 0;"></div>
+        <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 8px;">
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-ghost" id="ia-autofill-close">Close</button>
+            <button class="btn btn-ghost" id="ia-autofill-export" title="Save all your autofill sets to a file">Export</button>
+            <button class="btn btn-ghost" id="ia-autofill-import" title="Load autofill sets from an exported file">Import</button>
+            <input type="file" id="ia-autofill-import-file" accept=".json,application/json" style="display: none;" />
+          </div>
           <button class="btn btn-primary" id="ia-autofill-save-new">Save current form&hellip;</button>
+        </div>
+      </div>
+      <div id="ia-autofill-tokens-view" style="display: none; flex-direction: column; min-height: 0;">
+        <h3 style="margin-bottom: 6px; font-size: 16px; font-weight: 600;">Fill in the blanks</h3>
+        <p class="ia-af-hint">This set has placeholders. Leave one empty to keep it as written.</p>
+        <div id="ia-autofill-token-inputs" class="ia-af-fields"></div>
+        <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 16px;">
+          <button class="btn btn-ghost" id="ia-autofill-tokens-back">Back</button>
+          <button class="btn btn-primary" id="ia-autofill-tokens-apply">Fill</button>
         </div>
       </div>
       <div id="ia-autofill-save-view" style="display: none; flex-direction: column; min-height: 0;">
         <h3 style="margin-bottom: 6px; font-size: 16px; font-weight: 600;">Save to Autofill</h3>
         <label class="form-label" for="ia-autofill-name">Name</label>
-        <input type="text" id="ia-autofill-name" class="form-input" placeholder="e.g. yawning" autocomplete="off" />
+        <input type="text" id="ia-autofill-name" class="form-input" placeholder="e.g. CaseOh" autocomplete="off" />
         <div id="ia-autofill-name-note" class="ia-af-hint" style="min-height: 18px; margin-top: 4px;"></div>
+        <p class="ia-af-hint" style="margin: 8px 0 0;">Tip: <code>{date}</code>, <code>{title}</code> and <code>{identifier}</code> in a description or tags are filled in when you upload (<code>{date}</code> uses the Date fields, or today if empty). Any other <code>{word}</code>, such as <code>{vod}</code>, asks you for a value each time you use the set.</p>
         <label class="form-label" style="margin-top: 8px;">What to save</label>
         <div id="ia-autofill-fields" class="ia-af-fields"></div>
         <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 16px;">
@@ -3833,6 +4092,7 @@
 
   <script src="lib/site-presets.js"></script>
   <script src="renderer/remote-api.js"></script>
+  <script src="renderer/confirm.js"></script>
   <script src="renderer/theme.js"></script>
   <script src="renderer/history.js"></script>
   <script src="renderer/terminal.js"></script>
@@ -3851,7 +4111,10 @@
   <script src="renderer/tools/m3u8.js"></script>
   <script src="renderer/tools/gallery-dl.js"></script>
   <script src="renderer/paused-save.js"></script>
+  <script src="renderer/dnd.js"></script>
+  <script src="renderer/settings-backup.js"></script>
   <script src="renderer/tools/splitter.js"></script>
+  <script src="renderer/tools/merger.js"></script>
   <script src="renderer/tools/concatenator.js"></script>
   <script src="renderer/tools/encoder.js"></script>
   <script src="renderer/tools/ia.js"></script>

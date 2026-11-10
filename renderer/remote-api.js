@@ -178,6 +178,7 @@ if (typeof window.api === 'undefined') {
     runGalleryDl:  (opts) => sendWs({ type: 'ipc-send', channel: 'run-gallery-dl', data: opts }),
     runSplitter:   (opts) => sendWs({ type: 'ipc-send', channel: 'run-splitter', data: opts }),
     runConcatenator: (opts) => sendWs({ type: 'ipc-send', channel: 'run-concatenator', data: opts }),
+    runMerger: (opts) => sendWs({ type: 'ipc-send', channel: 'run-merger', data: opts }),
     runEncoder:    (opts) => sendWs({ type: 'ipc-send', channel: 'run-encoder', data: opts }),
     runIaUpload:   (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-upload', data: opts }),
     runIaEdit:     (opts) => sendWs({ type: 'ipc-send', channel: 'run-ia-edit', data: opts }),
@@ -202,6 +203,7 @@ if (typeof window.api === 'undefined') {
     onGalleryDlOutput:  function(cb) { this._addListener('gallery-dl-output', cb) },
     onSplitterOutput:   function(cb) { this._addListener('splitter-output', cb) },
     onConcatenatorOutput: function(cb) { this._addListener('concatenator-output', cb) },
+    onMergerOutput: function(cb) { this._addListener('merger-output', cb) },
     onEncoderOutput:    function(cb) { this._addListener('encoder-output', cb) },
     onIaOutput:         function(cb) { this._addListener('ia-output', cb) },
     onSyncUiState:      function(cb) { this._addListener('sync-ui-state', cb) },
@@ -217,6 +219,47 @@ if (typeof window.api === 'undefined') {
        this._listeners[channel] = [];
     },
     
+    // Downloader Tools & Engines Hub (the server replies { error } instead of throwing over the socket)
+    _invokeOrThrow: async (channel, data) => {
+      const r = await window.api.invoke(channel, data);
+      if (r && r.error && typeof r.error === 'string') throw new Error(r.error);
+      return r;
+    },
+    getAllToolsInfo: () => window.api._invokeOrThrow('get-all-tools-info'),
+    getToolInfo: (tool) => window.api._invokeOrThrow('get-tool-info', { tool }),
+    checkToolUpdates: (tool) => window.api._invokeOrThrow('check-tool-updates', { tool }),
+    installToolVersion: (tool, version) => window.api._invokeOrThrow('install-tool-version', { tool, version }),
+    openVendorFolder: () => Promise.resolve(false),
+    onToolHubProgress: function(cb) { this._addListener('tool-hub-progress', cb); },
+    onToolAutoUpdated: function(cb) { this._addListener('tool-auto-updated', cb); },
+    // bgutil PO-token server status
+    getBgutilStatus: () => window.api.invoke('get-bgutil-status'),
+    onBgutilStatus: function(cb) { this._addListener('bgutil-status', cb); },
+    onBgutilStatusLog: function(cb) { this._addListener('bgutil-status-log', cb); },
+    clearGalleryDlCache: () => window.api.invoke('clear-gallerydl-cache'),
+    // Other desktop features, served by the same server channels
+    checkConcatFiles: (opts) => window.api.invoke('check-concat-files', opts),
+    getFileStats: (paths) => window.api.invoke('get-file-stats', paths),
+    runIaConfigure: (email, password, autoIa) => window.api.invoke('run-ia-configure', { email, password, autoIa }),
+    runIaUnlink: () => window.api.invoke('run-ia-unlink'),
+    probeMasterPlaylist: (opts) => window.api.invoke('probe-master-playlist', opts),
+    sniffManifest: (opts) => window.api.invoke('sniff-manifest', opts),
+    // "Save as" in a browser is a download of the content
+    saveTextFile: ({ defaultName, content }) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
+      a.download = defaultName || 'nyx-dlp.txt';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      return Promise.resolve(a.download);
+    },
+    // Desktop-only: nothing to do in the browser
+    setTaskbarProgress: () => {},
+    getPathForFile: () => '',
+    onConfirmExit: () => {},
+    respondExitConfirm: () => {},
+
     // Discord Bot
     startDiscordBot: (opts) => window.api.invoke('start-discord-bot', opts),
     stopDiscordBot: () => window.api.invoke('stop-discord-bot'),

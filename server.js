@@ -227,6 +227,7 @@ function startServer(options, appPath) {
                 if (opts && opts.id) {
                   settingsStore.updateSetting(opts.id, opts);
                   broadcast('sync-ui-state', opts);
+                  if (opts.id === 'dep-use-bgutil' || opts.id === 'dep-use-bgutil-external' || opts.id === 'dep-bgutil-port') scheduleBgutilReconcile();
                 }
                 break;
               case 'request-full-state':
@@ -256,6 +257,10 @@ function startServer(options, appPath) {
                 activeLogBuffers.set('splitter-output', []);
                 runners.runSplitter(opts, outputChan('splitter-output', 'splitter', opts));
                 break;
+              case 'run-merger':
+                activeLogBuffers.set('merger-output', []);
+                runners.runMerger(opts, outputChan('merger-output', 'merger', opts));
+                break;
               case 'run-concatenator':
                 activeLogBuffers.set('concatenator-output', []);
                 runners.runConcatenator(opts, outputChan('concatenator-output', 'concat', opts));
@@ -264,14 +269,38 @@ function startServer(options, appPath) {
                 activeLogBuffers.set('encoder-output', []);
                 runners.runEncoder(opts, outputChan('encoder-output', 'encoder', opts));
                 break;
+              case 'run-ia-upload':
+                runners.runIaUpload(opts, outputChan('ia-output', 'iaupload', opts));
+                break;
+              case 'run-ia-edit':
+                runners.runIaEdit(opts, outputChan('ia-output', 'iaedit', opts));
+                break;
+              case 'run-ia-download':
+                runners.runIaDownload(opts, outputChan('ia-output', 'iadownload', opts));
+                break;
+              // Batch rest/queue control files, same as main.js; runBatch polls them
+              case 'set-batch-rest':
+              case 'skip-batch-rest':
+              case 'update-batch-queue':
+              case 'append-batch-queue':
+                if (opts.outputDir) {
+                  try {
+                    const [file, body] = msg.channel === 'set-batch-rest' ? ['rest_state.txt', String(opts.val)]
+                      : msg.channel === 'skip-batch-rest' ? ['skip_rest.txt', '1']
+                      : msg.channel === 'append-batch-queue' ? ['queue_additions.txt', opts.newUrls.join('\n') + '\n']
+                      : ['queue_update.json', JSON.stringify({ remainingUrls: opts.remainingUrls })];
+                    (msg.channel === 'append-batch-queue' ? fs.appendFileSync : fs.writeFileSync)(path.join(opts.outputDir, file), body, 'utf-8');
+                  } catch (_) {}
+                }
+                break;
               case 'stop-script':
-                if (opts.pid) runners.stopScript(opts.pid);
+                if (opts.pid) runners.stopProc(opts.pid);
                 break;
               case 'pause-script':
-                if (opts.pid) runners.pauseScript(opts.pid);
+                if (opts.pid) runners.pauseProc(opts.pid);
                 break;
               case 'resume-script':
-                if (opts.pid) runners.resumeScript(opts.pid);
+                if (opts.pid) runners.resumeProc(opts.pid);
                 break;
             }
           }
@@ -280,7 +309,19 @@ function startServer(options, appPath) {
           let result = null;
           const historyFile = path.join(settingsStore.getConfigDir(), 'history.json');
 
-          if (msg.channel === 'get-disk-space') {
+          if (msg.channel === 'fetch-m3u8-twitch-meta') {
+            try {
+              const { isKickVodUrl, isKickM3u8Url, resolveKickM3u8Metadata } = require('./lib/kick-meta');
+              const o = msg.data || {};
+              if (isKickVodUrl(o.url) || isKickM3u8Url(o.url)) result = await resolveKickM3u8Metadata(o);
+              if (!result) result = await require('./lib/twitch-meta').resolveTwitchVodMetadata(o);
+            } catch (err) { result = { error: err.message }; }
+          } else if (msg.channel === 'save-kick-ivs-mapping') {
+            try {
+              require('./lib/kick-meta').saveIvsMapping(msg.data.ivsId, msg.data.channel);
+              result = { success: true };
+            } catch (err) { result = { success: false, error: err.message }; }
+          } else if (msg.channel === 'get-disk-space') {
              try {
                 const stats = await fs.promises.statfs(msg.data);
                 result = { free: stats.bfree * stats.bsize, total: stats.blocks * stats.bsize };
@@ -430,9 +471,8 @@ function startServer(options, appPath) {
                 settingsStore.updateSetting('discordEnabled', true);
                 settingsStore.updateSetting('discordToken', opts.token ? String(opts.token).trim() : '');
                 settingsStore.updateSetting('discordClientId', opts.clientId ? String(opts.clientId).trim() : '');
-                settingsStore.updateSetting('discordDownloadDir', dlDir);
-                settingsStore.updateSetting('discord-download-dir', { id: 'discord-download-dir', type: 'text', value: dlDir });
-                await discordBot.start({ ...opts, downloadDir: dlDir });
+                settingsStore.rememberDiscordDownloadDir(dlDir);
+                await discordBot.start({ ...opts, downloadDir: settingsStore.getDiscordDownloadDir() });
                 result = discordBot.getStatus();
               } catch (err) {
                 result = { status: 'error', error: err.message };
@@ -446,7 +486,7 @@ function startServer(options, appPath) {
               const discordBot = require('./lib/discord-bot.js');
               discordBot.onStatusChange((statusObj) => broadcast('discord-bot-status', statusObj));
               const status = discordBot.getStatus();
-              let savedDir = settingsStore.getSettingValue('discordDownloadDir') || settingsStore.getSettingValue('discord-download-dir') || '';
+              let savedDir = settingsStore.getDiscordDownloadDir();
               if (savedDir === 'undefined' || savedDir === 'null') savedDir = '';
               result = {
                 ...status,
@@ -463,6 +503,70 @@ function startServer(options, appPath) {
               } catch (err) {
                 result = { success: false, error: err.message };
               }
+          } else if (msg.channel === 'check-concat-files') {
+              try {
+                const s = require('./lib/settings-store.js');
+                result = await runners.checkConcatFiles({
+                  ...(msg.data || {}),
+                  installFfmpeg: s.getSettingValue('dep-install-ffmpeg', true),
+                  ffmpegVersion: s.getSettingValue('dep-ffmpeg-version', 'auto')
+                });
+              } catch (err) {
+                result = { success: false, error: err.message };
+              }
+          } else if (msg.channel === 'get-file-stats') {
+              const statOne = (fp) => {
+                try {
+                  if (typeof fp !== 'string' || !fs.existsSync(fp)) return null;
+                  const st = fs.statSync(fp);
+                  return { size: st.size, isFile: st.isFile(), isDirectory: st.isDirectory() };
+                } catch (_) { return null; }
+              };
+              if (Array.isArray(msg.data)) {
+                result = {};
+                for (const fp of msg.data) { const st = statOne(fp); if (st) result[fp] = st; }
+              } else {
+                result = statOne(msg.data);
+              }
+          } else if (msg.channel === 'run-ia-configure') {
+              try { result = await runners.runIaConfigure(msg.data?.email, msg.data?.password, msg.data?.autoIa); }
+              catch (err) { result = { success: false, error: err.message }; }
+          } else if (msg.channel === 'run-ia-unlink') {
+              try { runners.unlinkIa(); result = true; } catch (_) { result = false; }
+          } else if (msg.channel === 'probe-master-playlist') {
+              try { result = await require('./lib/m3u8-resolver').probeMasterPlaylist(msg.data?.url); }
+              catch (err) { result = { success: false, message: err.message }; }
+          } else if (msg.channel === 'sniff-manifest') {
+              // The sniffer drives a hidden Chromium window, which only exists inside the desktop app.
+              try {
+                const { sniffManifestFromPage } = require('./lib/manifest-sniffer');
+                result = { success: true, candidates: await sniffManifestFromPage(msg.data?.pageUrl, { cookiesPath: msg.data?.cookiesPath, timeoutMs: msg.data?.timeoutMs || 12000 }) };
+              } catch (err) {
+                result = { success: false, error: 'Manifest sniffing needs the desktop app (it uses a built-in browser window).', candidates: [] };
+              }
+          } else if (msg.channel === 'get-all-tools-info') {
+              try { result = await require('./lib/tool-hub.js').getAllToolsInfo(); } catch (err) { result = { error: err.message }; }
+          } else if (msg.channel === 'get-tool-info') {
+              try { result = await require('./lib/tool-hub.js').getToolInfo(msg.data?.tool); } catch (err) { result = { error: err.message }; }
+          } else if (msg.channel === 'check-tool-updates') {
+              try { result = await require('./lib/tool-hub.js').checkToolUpdates(msg.data?.tool); } catch (err) { result = { error: err.message }; }
+          } else if (msg.channel === 'install-tool-version') {
+              try {
+                result = await require('./lib/tool-hub.js').installToolVersion(msg.data?.tool, msg.data?.version, (p) => broadcast('tool-hub-progress', p));
+              } catch (err) {
+                // the Hub UI treats a thrown error as failure, so reply with an error flag it can read
+                result = { error: err.message };
+              }
+          } else if (msg.channel === 'open-vendor-folder') {
+              result = false; // no desktop to open a folder on
+          } else if (msg.channel === 'get-bgutil-status') {
+              result = require('./lib/ensure-bgutil-server.js').getStatus();
+          } else if (msg.channel === 'clear-gallerydl-cache') {
+              result = await new Promise((resolve) => {
+                require('child_process').execFile(require('./lib/ensure-gallerydl').getGallerydlPath(), ['--cache-clear', 'ALL'], { timeout: 30000 }, (err, stdout, stderr) => {
+                  resolve({ ok: !err, message: (stderr || stdout || (err && err.message) || '').toString().trim() });
+                });
+              });
           } else if (msg.channel.startsWith('pick-')) {
               result = null;
           }
@@ -489,16 +593,24 @@ function startServer(options, appPath) {
 
   server.listen(port, '0.0.0.0', () => {
     console.log(`Remote server listening on port ${port}`);
+    // Start the bundled PO-token server too, so signed-in YouTube downloads get full quality.
+    try {
+      const bgutil = require('./lib/ensure-bgutil-server.js');
+      bgutil.onStatusChange((s) => broadcast('bgutil-status', s));
+      if (process.env.NYX_TEST !== '1') { bgutil.expectStart(); setTimeout(reconcileBgutil, 2000); }
+    } catch (_) {}
+    // Keep yt-dlp, gallery-dl and friends current while the server runs.
+    if (process.env.NYX_TEST !== '1') require('./lib/auto-update-tools.js').startAutoUpdateTools(broadcast, (tool, version) => broadcast('tool-auto-updated', { tool, version }));
     // Auto-start Discord bot if previously enabled
     try {
       const isDiscordEnabled = settingsStore.getSettingValue('discordEnabled', false);
       const token = settingsStore.getSettingValue('discordToken', '');
       const clientId = settingsStore.getSettingValue('discordClientId', '');
-      const downloadDir = settingsStore.getSettingValue('discordDownloadDir', '') || settingsStore.getSettingValue('discord-download-dir', '');
+      const downloadDir = settingsStore.getDiscordDownloadDir();
       if (isDiscordEnabled && token) {
         const discordBot = require('./lib/discord-bot.js');
         discordBot.onStatusChange((statusObj) => broadcast('discord-bot-status', statusObj));
-        discordBot.start({ token, clientId, downloadDir }).then(() => {
+        discordBot.startWithRetry({ token, clientId, downloadDir }).then(() => {
           console.log('[Discord Bot] Background bot auto-started on server boot.');
         }).catch(err => {
           console.error('[Discord Bot] Auto-start on server boot failed:', err.message);
@@ -642,6 +754,26 @@ function stopServer() {
     server = null;
     wss = null;
   }
+}
+
+// Bundled bgutil PO-token server, same rules as the desktop app (main.js): runs unless the user
+// brings their own, and follows the dep-use-bgutil / dep-bgutil-port settings live.
+function reconcileBgutil() {
+  const settingsStore = require('./lib/settings-store.js');
+  const bgutil = require('./lib/ensure-bgutil-server.js');
+  const useOwn = settingsStore.getSettingValue('dep-use-bgutil-external', false);
+  if (!useOwn && settingsStore.getSettingValue('dep-use-bgutil', true)) {
+    const port = parseInt(settingsStore.getSettingValue('dep-bgutil-port', ''), 10);
+    bgutil.startBgutilServer((m) => { console.log(m); broadcast('bgutil-status-log', m); },
+      (Number.isFinite(port) && port > 0 && port < 65536) ? port : bgutil.DEFAULT_PORT).catch(() => {});
+  } else {
+    bgutil.stopBgutilServer();
+  }
+}
+let bgutilReconcileTimer = null;
+function scheduleBgutilReconcile() {
+  clearTimeout(bgutilReconcileTimer);
+  bgutilReconcileTimer = setTimeout(reconcileBgutil, 1200);
 }
 
 function broadcast(channel, data) {

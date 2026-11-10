@@ -62,6 +62,8 @@ const TARGETS = {
       const clijs = path.join(context.appOutDir, 'cli.js');
       const alias = path.join(context.appOutDir, 'nyx-dlp-cli');
       if (fs.existsSync(clijs)) {
+        // A Windows checkout has CRLF endings, which turns the shebang into "node\r" on Linux.
+        fs.writeFileSync(clijs, fs.readFileSync(clijs, 'utf8').replace(/\r\n/g, '\n'));
         fs.chmodSync(clijs, 0o755);
         fs.copyFileSync(clijs, alias);
         fs.chmodSync(alias, 0o755);
@@ -117,7 +119,8 @@ async function createCliTarball() {
   const tarballPath = path.join(distDir, tarballName);
 
   console.log(`Creating ${tarballName}...`);
-  execSync(`tar -czf "${tarballPath}" -C "${distDir}" linux-unpacked`, { stdio: 'inherit' });
+  // Relative paths + cwd: GNU tar reads "C:\..." as a remote host, which broke local Windows builds.
+  execSync(`tar -czf "${tarballName}" linux-unpacked`, { stdio: 'inherit', cwd: distDir });
   console.log(`CLI tarball created: ${tarballPath}`);
 }
 

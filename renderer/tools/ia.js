@@ -8,6 +8,7 @@
   const downloadForm = document.getElementById('ia-download-form');
 
   let currentPid = null;
+  let stopPending = false; // Stop pressed before the pid arrived: stop this tool's process once it does (never stopScript() with no pid — that kills every tool's jobs).
   let currentMode = 'upload';
 
   // ── Concurrent upload tabs (browser-tab style) ────────────────────────────
@@ -298,6 +299,62 @@
     });
   }
 
+  // ── Copy Info / Paste Info: every field as JSON on the clipboard, so a draft survives an outage or restart ──
+  const INFO_TAG = 'nyx-dlp-ia-info';
+  function flashBtn(btn, text) {
+    // icon-only buttons: show the result as the tooltip and a check/cross in place of the icon for a moment
+    if (!btn.dataset.icon) { btn.dataset.icon = btn.innerHTML; btn.dataset.tip = btn.title; }
+    const ok = /ed!$/.test(text);
+    btn.title = text;
+    btn.innerHTML = ok
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    clearTimeout(btn._flash);
+    btn._flash = setTimeout(() => { btn.innerHTML = btn.dataset.icon; btn.title = btn.dataset.tip; }, 1800);
+  }
+  document.getElementById('ia-copy-info')?.addEventListener('click', async (e) => {
+    const snap = captureFieldSnapshot();
+    snap.noDerive = !!document.getElementById('ia-noderive')?.checked;
+    snap.resumable = document.getElementById('ia-resumable')?.checked !== false;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify({ tag: INFO_TAG, version: 1, fields: snap }, null, 2));
+      flashBtn(e.currentTarget, 'Copied!');
+    } catch (err) {
+      flashBtn(e.currentTarget, 'Copy failed');
+    }
+  });
+  // Paste Info opens a box the user pastes into on purpose, rather than silently reading the clipboard
+  const pasteModal = document.getElementById('ia-paste-modal');
+  const pasteText = document.getElementById('ia-paste-text');
+  const pasteErr = document.getElementById('ia-paste-error');
+  const closePaste = () => { pasteModal.style.display = 'none'; };
+  document.getElementById('ia-paste-info')?.addEventListener('click', () => {
+    pasteText.value = '';
+    pasteErr.style.display = 'none';
+    pasteModal.style.display = 'flex';
+    pasteText.focus();
+  });
+  document.getElementById('ia-paste-cancel')?.addEventListener('click', closePaste);
+  pasteModal?.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePaste(); });
+  document.getElementById('ia-paste-submit')?.addEventListener('click', () => {
+    let data = null;
+    try { data = JSON.parse(pasteText.value); } catch (err) { }
+    if (!data || data.tag !== INFO_TAG || !data.fields) {
+      pasteErr.textContent = 'That is not info copied with the Copy Info button. Copy it again and paste it here.';
+      pasteErr.style.display = 'block';
+      return;
+    }
+    const f = data.fields;
+    applyFieldSnapshot({ ...f, idModifiedByUser: !!f.identifier, titleModifiedByUser: !!f.title, collectionModifiedByUser: !!f.collection });
+    const nd = document.getElementById('ia-noderive');
+    if (nd && typeof f.noDerive === 'boolean') { nd.checked = f.noDerive; nd.dispatchEvent(new Event('change', { bubbles: true })); }
+    const rs = document.getElementById('ia-resumable');
+    if (rs && typeof f.resumable === 'boolean') { rs.checked = f.resumable; rs.dispatchEvent(new Event('change', { bubbles: true })); }
+    document.getElementById('ia-upload-fields')?.dispatchEvent(new Event('input', { bubbles: true }));
+    closePaste();
+    flashBtn(document.getElementById('ia-paste-info'), 'Pasted!');
+  });
+
   // Date Auto-Focus Logic
   const dateY = document.getElementById('ia-date-y');
   const dateM = document.getElementById('ia-date-m');
@@ -417,7 +474,7 @@
 
   const stopHandler = () => {
     if (currentPid) window.api.stopScript(currentPid);
-    else if (window.api && window.api.stopScript) window.api.stopScript();
+    else stopPending = true;
   };
   downloadStop?.addEventListener('click', stopHandler);
   uploadStop?.addEventListener('click', () => {
@@ -538,7 +595,33 @@
     }
   });
 
-  function setupRun(runBtn, stopBtn, handlerName, apiCall, buildOpts) {
+  // Pause / Resume for the downloader (the process is suspended, aria2c picks up where it left off).
+  const dlPauseBtn = document.getElementById('ia-download-pause');
+  const dlPauseIcon = dlPauseBtn ? dlPauseBtn.innerHTML : '';
+  const dlResumeIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> Resume';
+  let dlPaused = false;
+  function resetDownloadPause() {
+    dlPaused = false;
+    if (!dlPauseBtn) return;
+    dlPauseBtn.innerHTML = dlPauseIcon;
+    dlPauseBtn.classList.remove('paused');
+  }
+  dlPauseBtn?.addEventListener('click', () => {
+    if (!currentPid) return;
+    if (!dlPaused) {
+      dlPaused = true;
+      window.api.pauseScript(currentPid);
+      dlPauseBtn.innerHTML = dlResumeIcon;
+      dlPauseBtn.classList.add('paused');
+      appendLog(log, '⏸ Paused.', 'info');
+    } else {
+      resetDownloadPause();
+      window.api.resumeScript(currentPid);
+      appendLog(log, '▶ Resumed.', 'info');
+    }
+  });
+
+  function setupRun(runBtn, stopBtn, handlerName, apiCall, buildOpts, pauseBtn) {
     runBtn.addEventListener('click', async () => {
       const opts = await buildOpts();
       if (!opts) return; // Validation failed
@@ -548,9 +631,10 @@
       appendLog(log, '', 'stdout');
       markBodyStart(log);
 
-      currentPid = null;
+      currentPid = null; stopPending = false;
       runBtn.classList.add('hidden');
       stopBtn.classList.remove('hidden');
+      if (pauseBtn) { resetDownloadPause(); pauseBtn.classList.remove('hidden'); }
       incRunning('Internet Archive');
 
       apiCall(opts);
@@ -575,12 +659,15 @@
       }
       if (data.type === 'pid') {
         currentPid = data.pid;
+        if (stopPending) { stopPending = false; window.api.stopScript(data.pid); }
         return;
       }
       handleOutput(log, data, () => {
         document.querySelectorAll('#ia-edit-run, #ia-download-run').forEach(b => b.classList.remove('hidden'));
         document.querySelectorAll('#ia-edit-stop, #ia-download-stop').forEach(b => b.classList.add('hidden'));
-        currentPid = null;
+        dlPauseBtn?.classList.add('hidden');
+        resetDownloadPause();
+        currentPid = null; stopPending = false;
         decRunning('Internet Archive');
       });
     });
@@ -1029,6 +1116,7 @@
     const license = document.getElementById('ia-license')?.value?.trim() || '';
     const mediatype = document.getElementById('ia-mediatype')?.value || '';
     const noDerive = document.getElementById('ia-noderive')?.checked || false;
+    const resumable = document.getElementById('ia-resumable')?.checked !== false;
 
     const errEl = document.getElementById('ia-upload-form-error');
     const showError = (msg) => {
@@ -1054,7 +1142,10 @@
     }
 
     const autoIa = getSetting('dep-auto-ia');
-    return { files, identifier, title, description, subject, collection, creator, date, language, license, mediatype, noDerive, autoIa };
+    // {date} / {title} / {identifier} placeholders (from Autofill sets) are filled in now, from the form as it stands.
+    const todayStr = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; })();
+    const resolveTokens = (s) => s.replace(/\{(date|title|identifier)\}/gi, (m, k) => ({ date: date || todayStr, title, identifier }[k.toLowerCase()]));
+    return { files, identifier, title, description: resolveTokens(description), subject: resolveTokens(subject), collection, creator, date, language, license, mediatype, noDerive, resumable, autoIa };
   }
 
   function warnIfIdentifierAlreadyExists(identifier, targetTabId) {
@@ -1146,9 +1237,114 @@
     };
   }
 
+  const afTokensView = document.getElementById('ia-autofill-tokens-view');
+  const afStatus = document.getElementById('ia-autofill-status');
   function showAutofillView(view) {
     afListView.style.display = view === 'list' ? 'flex' : 'none';
     afSaveView.style.display = view === 'save' ? 'flex' : 'none';
+    if (afTokensView) afTokensView.style.display = view === 'tokens' ? 'flex' : 'none';
+    if (view === 'list' && afStatus) afStatus.textContent = '';
+  }
+
+  // {word} placeholders other than the three filled in at upload time are asked for when a set is used.
+  const AF_LIVE_TOKENS = ['date', 'title', 'identifier'];
+  const afTokenRe = () => /\{([A-Za-z0-9_ -]{1,30})\}/g;
+  const afStrings = (fields) => Object.values(fields).filter(v => typeof v === 'string');
+  function afCustomTokens(fields) {
+    const found = [];
+    afStrings(fields).forEach((s) => {
+      for (const m of s.matchAll(afTokenRe())) {
+        if (!AF_LIVE_TOKENS.includes(m[1].toLowerCase()) && !found.includes(m[1])) found.push(m[1]);
+      }
+    });
+    return found;
+  }
+  function afSubstitute(fields, values) {
+    const out = {};
+    Object.entries(fields).forEach(([k, v]) => {
+      out[k] = typeof v === 'string' ? v.replace(afTokenRe(), (m, name) => (values[name] ? values[name] : m)) : v;
+    });
+    return out;
+  }
+  let afPendingSet = null;
+  function useAutofillSet(preset) {
+    const tokens = afCustomTokens(preset.fields);
+    if (tokens.length === 0) { applyAutofill(preset.fields); closeAutofill(); return; }
+    afPendingSet = preset;
+    const box = document.getElementById('ia-autofill-token-inputs');
+    box.textContent = '';
+    tokens.forEach((name) => {
+      const row = document.createElement('label');
+      row.className = 'ia-af-field';
+      row.style.cursor = 'default';
+      const body = document.createElement('div');
+      body.className = 'ia-af-field-body';
+      const lab = document.createElement('div');
+      lab.className = 'ia-af-field-label';
+      lab.textContent = '{' + name + '}';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'form-input';
+      input.dataset.token = name;
+      input.style.marginTop = '6px';
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyAutofillTokens(); } });
+      body.append(lab, input);
+      row.appendChild(body);
+      box.appendChild(row);
+    });
+    showAutofillView('tokens');
+    box.querySelector('input')?.focus();
+  }
+  function applyAutofillTokens() {
+    if (!afPendingSet) return;
+    const values = {};
+    document.querySelectorAll('#ia-autofill-token-inputs input').forEach((i) => { values[i.dataset.token] = i.value; });
+    const fields = afSubstitute(afPendingSet.fields, values);
+    afPendingSet = null;
+    applyAutofill(fields);
+    closeAutofill();
+  }
+
+  // ── Export / import of saved sets ──
+  function afSanitizePreset(raw) {
+    if (!raw || typeof raw !== 'object' || typeof raw.name !== 'string' || !raw.name.trim() || !raw.fields || typeof raw.fields !== 'object') return null;
+    const fields = {};
+    AF_FIELDS.forEach((f) => {
+      const v = raw.fields[f.key];
+      if (v === undefined || v === null) return;
+      if (f.key === 'date') {
+        if (typeof v === 'object') fields.date = { y: String(v.y || ''), m: String(v.m || ''), d: String(v.d || '') };
+      } else if (typeof v === 'string') {
+        fields[f.key] = v.slice(0, 50000);
+      }
+    });
+    if (Object.keys(fields).length === 0) return null;
+    return { name: raw.name.trim().slice(0, 80), fields };
+  }
+  async function exportAutofill() {
+    const presets = loadAutofill();
+    if (presets.length === 0) { afStatus.textContent = 'Nothing to export yet.'; return; }
+    const content = JSON.stringify({ nyxAutofill: 1, exportedAt: new Date().toISOString(), presets }, null, 2);
+    const where = window.api && window.api.saveTextFile
+      ? await window.api.saveTextFile({ defaultName: 'nyx-autofill.json', content, filters: [{ name: 'JSON', extensions: ['json'] }] })
+      : null;
+    afStatus.textContent = where ? `Exported ${presets.length} set${presets.length === 1 ? '' : 's'}.` : '';
+  }
+  function importAutofillText(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (_) { afStatus.textContent = 'That file is not valid JSON.'; return; }
+    const incoming = (Array.isArray(data) ? data : (data && Array.isArray(data.presets) ? data.presets : [])).map(afSanitizePreset).filter(Boolean);
+    if (incoming.length === 0) { afStatus.textContent = 'No autofill sets found in that file.'; return; }
+    const list = loadAutofill();
+    let replaced = 0;
+    incoming.forEach((p) => {
+      const existing = list.find(x => x.name.toLowerCase() === p.name.toLowerCase());
+      if (existing) { existing.name = p.name; existing.fields = p.fields; existing.savedAt = new Date().toISOString(); replaced++; }
+      else list.unshift({ id: 'af-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7), name: p.name, fields: p.fields, savedAt: new Date().toISOString() });
+    });
+    storeAutofill(list);
+    renderAutofillList();
+    afStatus.textContent = `Imported ${incoming.length} set${incoming.length === 1 ? '' : 's'}${replaced ? ` (${replaced} replaced)` : ''}.`;
   }
 
   function renderAutofillList() {
@@ -1208,7 +1404,7 @@
         pre.textContent = afValueText(previewKey, p.fields[previewKey]);
         item.appendChild(pre);
       }
-      const use = () => { applyAutofill(p.fields); closeAutofill(); };
+      const use = () => useAutofillSet(p);
       item.addEventListener('click', use);
       item.addEventListener('keydown', (e) => { if (e.key === 'Enter') use(); });
       afList.appendChild(item);
@@ -1335,12 +1531,26 @@
   document.getElementById('ia-autofill-save-new')?.addEventListener('click', openAutofillSave);
   document.getElementById('ia-autofill-back')?.addEventListener('click', () => showAutofillView('list'));
   document.getElementById('ia-autofill-save-confirm')?.addEventListener('click', saveAutofill);
+  document.getElementById('ia-autofill-export')?.addEventListener('click', exportAutofill);
+  const afImportFile = document.getElementById('ia-autofill-import-file');
+  document.getElementById('ia-autofill-import')?.addEventListener('click', () => afImportFile && afImportFile.click());
+  afImportFile?.addEventListener('change', () => {
+    const file = afImportFile.files && afImportFile.files[0];
+    afImportFile.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => importAutofillText(String(reader.result || ''));
+    reader.onerror = () => { afStatus.textContent = 'Could not read that file.'; };
+    reader.readAsText(file);
+  });
+  document.getElementById('ia-autofill-tokens-back')?.addEventListener('click', () => { afPendingSet = null; showAutofillView('list'); });
+  document.getElementById('ia-autofill-tokens-apply')?.addEventListener('click', applyAutofillTokens);
   afName?.addEventListener('input', updateAutofillSaveState);
   afName?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveAutofill(); } });
   afModal?.addEventListener('click', (e) => { if (e.target === afModal) closeAutofill(); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && afModal && afModal.style.display !== 'none') {
-      if (afSaveView.style.display !== 'none') showAutofillView('list'); else closeAutofill();
+      if (afSaveView.style.display !== 'none' || (afTokensView && afTokensView.style.display !== 'none')) showAutofillView('list'); else closeAutofill();
     }
   });
 
@@ -1654,6 +1864,17 @@
   window.parseIaLink = parseIaLink;
   window.getIaQueuedCount = () => queueOrder.length; // read by main.js for the exit confirmation
 
+  // Files/folders dropped on the Internet Archive tool (see renderer/dnd.js).
+  window.nyxIaDropFiles = (paths) => {
+    if (currentMode !== 'upload' || !paths.length) return false;
+    let tab = selectedTabId ? uploadTabs.get(selectedTabId) : null;
+    // A tab that is uploading (or queued) is locked to what it was started with — use a fresh tab.
+    if (!tab || tab.status === 'running' || tab.status === 'waiting') { tab = createTab(tab && tab.kind); selectTab(tab.id); }
+    const list = document.getElementById('ia-files');
+    paths.forEach(p => window.addSortableItem(list, p));
+    return true;
+  };
+
   // Download Logic
   setupRun(
     document.getElementById('ia-download-run'),
@@ -1691,7 +1912,8 @@
       const target = files[0] || glob;
       if (target) appendLog(log, `Downloading ${files.length ? 'file' : 'folder'}: ${target}`, 'info');
       return { identifier, files, glob, outputDir, autoIa, useAria2: getSetting('ia-use-aria2c'), autoAria2: getSetting('dep-auto-aria2c') };
-    }
+    },
+    dlPauseBtn
   );
 
   const iaDownInput = document.getElementById('ia-identifier-down');

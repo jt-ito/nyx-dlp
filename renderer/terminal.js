@@ -163,9 +163,11 @@ function appendLog(logEl, text, cls) {
   // 2. Check for Progress line (yt-dlp, ffmpeg, or Internet Archive)
   const dlMatch = text.match(/^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:(\d+):\s*)?\[download\]\s+(?:\d+(?:\.\d+)?%|\d+(?:\.\d+)?(?:KiB|MiB|GiB|TiB|B))/i);
   const isFfmpegProgress = /^\s*frame=\s*\d+/i.test(text) || /^\s*size=\s*\d+/i.test(text);
-  const isIaProgress = /^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:uploading|downloading)\s+(.*?):\s*(\d+(?:\.\d+)?%)/i.exec(text);
+  const isIaProgress = /^\s*(?:\[\d+:\d+:\d+\]\s*)?(?:uploading|downloading|encoding)\s+(.*?):\s*(\d+(?:\.\d+)?%)/i.exec(text);
   
   if (dlMatch || isFfmpegProgress || isIaProgress) {
+      const pctMatch = /(\d{1,3}(?:\.\d+)?)%/.exec(text);
+      if (pctMatch && window._reportProgress) window._reportProgress(logEl.id, Math.min(100, parseFloat(pctMatch[1])));
       const iaFileName = isIaProgress ? isIaProgress[1].trim().replace(/\\/g, '/').split('/').pop() : null;
       if (logEl._downloadCompleted && (dlMatch || isIaProgress)) {
           if (isIaProgress && logEl._threadDestinations && logEl._threadDestinations.get('ia') !== iaFileName) {
@@ -220,6 +222,11 @@ function appendLog(logEl, text, cls) {
           }
           let prefix = dispName ? `✔ Completed ${dispName} — 100% ` : `✔ Completed — 100% `;
           
+          // The last fragment often lands instantly, so the final progress line shown was still
+          // "frag 1999/2000" and yt-dlp's closing summary carries no count: finish it off here.
+          const lastProg = logEl._liveProgresses.get(threadId);
+          const lastFrag = lastProg && lastProg.text && lastProg.text.match(/frag\s+(\d+)\s*\/\s*(\d+)/i);
+          if (lastFrag && !/frag\s/i.test(cleanText)) cleanText += ` (frag ${lastFrag[2]}/${lastFrag[2]})`;
           logEl._pendingLines.push({ text: prefix + cleanText, cls: 'success', count: 1 });
           logEl._liveProgresses.delete(threadId);
           logEl._downloadCompleted = true;
@@ -869,6 +876,7 @@ function handleOutput(logEl, data, onExit) {
     case 'exit': {
       if (logEl._isExited) break;
       logEl._isExited = true;
+      if (window._clearProgress) window._clearProgress(logEl.id);
 
       if (logEl._fragTicker) {
         clearInterval(logEl._fragTicker);
@@ -904,7 +912,7 @@ function handleOutput(logEl, data, onExit) {
         } else if (logEl.dataset.iaTool === '1') {
           // Internet Archive upload/edit/download only emits exit code 0 when all operations succeeded
           actuallyCompleted = data.code === 0;
-        } else if (logEl.id === 'concat-log' || logEl.id === 'sp-log' || logEl.id === 'enc-log') {
+        } else if (logEl.id === 'concat-log' || logEl.id === 'mg-log' || logEl.id === 'sp-log' || logEl.id === 'enc-log') {
           actuallyCompleted = data.code === 0;
         } else if (data.code === 0 || (data.code === 1 && (logEl._hasMerged || logEl._hasCompletedFile))) {
           if (logEl._hasMerged || logEl._hasCompletedFile) {
@@ -1031,6 +1039,14 @@ function handleOutput(logEl, data, onExit) {
             source = `${items} File(s)`;
             output = document.getElementById('concat-output-dir')?.value.trim();
             const customOut = document.getElementById('concat-output-name')?.value.trim();
+            if (customOut) downloadName = customOut;
+          } else if (logEl.id === 'mg-log') {
+            toolName = 'Video Merger';
+            const list = document.getElementById('mg-file-list');
+            const items = list ? Array.from(list.querySelectorAll('.sortable-item')).length : 0;
+            source = `${items} File(s)`;
+            output = document.getElementById('mg-output-dir')?.value.trim();
+            const customOut = document.getElementById('mg-output-name')?.value.trim();
             if (customOut) downloadName = customOut;
           } else if (logEl.id === 'enc-log') {
             toolName = 'Video Encoder';

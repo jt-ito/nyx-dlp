@@ -4938,3 +4938,9 @@ input[type="checkbox"]:not(.toggle-switch input):checked::after {
 /* IA upload buttons: keep them on one line. When the row gets too narrow for every label, the two extra buttons collapse to icon-only (their tooltips still say what they do). */
 .ia-action-row { container-type: inline-size; }
 @container (max-width: 830px) { .ia-action-row .ia-btn-label { display: none; } }
+
+/* Drag & drop target highlight (renderer/dnd.js) */
+.tab-panel.nyx-drop-active { outline: 2px dashed var(--accent); outline-offset: -8px; position: relative; }
+.tab-panel.nyx-drop-active::after { content: attr(data-drop-label); position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 600; pointer-events: none; z-index: 60; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+
+.dup-hidden { display: none !important; }

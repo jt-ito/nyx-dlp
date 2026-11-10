@@ -13,6 +13,7 @@
  *   gallery-dl   Download image sets and galleries
  *   splitter     Losslessly split video into N parts
  *   concat       Concatenate multiple videos into a single file
+ *   merge        Rejoin split video parts, removing repeated overlap
  *   encoder      Hardware GPU-accelerated video converter & compressor
  *   ia           Internet Archive tools (upload, download, edit metadata, configure)
  *   server       Host the Remote Web Access server headlessly (alias: remote)
@@ -45,7 +46,7 @@ const settingsStore = resolveModule('lib/settings-store.js');
 const BOOLEAN_FLAGS = new Set([
   'help', 'h', 'force-encode', 'mkv', 'check',
   'auto-repair', 'retry-ssl', 'native-hls', 'all-clips',
-  'sub-only', 'keep-temp', 'reset', 'clear', 'enable-all', 'disable-all'
+  'sub-only', 'keep-temp', 'reset', 'clear', 'enable-all', 'disable-all', 'ignore-low-space', 'no-derive', 'no-resumable'
 ]);
 
 // ── Argument parsing ─────────────────────────────────────────────────
@@ -109,6 +110,7 @@ function broadcastTerminal(data) {
   if (data.type === 'stdout' && data.text) process.stdout.write(data.text);
   if (data.type === 'stderr' && data.text) process.stderr.write(data.text);
   if (data.type === 'error' && data.text) console.error(`\x1b[31m${data.text}\x1b[0m`);
+  if (data.type === 'low-space') console.error('\x1b[33mRe-run with --ignore-low-space to split anyway.\x1b[0m');
   if (data.type === 'exit') process.exit(data.code || 0);
 }
 
@@ -141,6 +143,7 @@ Modern high-performance media downloading, clipping, processing, and archiving s
   \x1b[36mgallery-dl\x1b[0m   Download image sets and galleries from hundreds of sites
   \x1b[36msplitter\x1b[0m     Losslessly split video into N parts with schedule generation
   \x1b[36mconcat\x1b[0m       Concatenate multiple video files (stream copy or GPU encode)
+  \x1b[36mmerge\x1b[0m        Rejoin split video parts seamlessly (detects and removes repeated overlap)
   \x1b[36mencoder\x1b[0m      GPU-accelerated video re-encoding and transcoding
   \x1b[36mia\x1b[0m           Internet Archive suite (upload, download, edit metadata, auth)
   \x1b[36mserver\x1b[0m       Host the Remote Web Access server headlessly (alias: remote)
@@ -434,6 +437,7 @@ switch (toolName) {
   --parts-to-save <range>   Specific parts to export (e.g. "1,3,5" or "1-4"; default: all)
   -o, --output <dir>        Output directory (defaults to directory of input file)
   --format, --container     Target container format (mp4, mkv, ts; default: matches input)
+  --ignore-low-space        Split even if the free-space estimate says the output drive is too small
   --ffmpeg-version <ver>    FFmpeg version (auto, latest, 5.1.4)
 
 \x1b[1mExamples:\x1b[0m
@@ -454,6 +458,7 @@ switch (toolName) {
       partsToSave: flags['parts-to-save'] || '',
       containerFormat: flags.format || flags.container || '',
       outputDir: destination,
+      ignoreLowSpace: !!flags['ignore-low-space'],
       ffmpegVersion: flags['ffmpeg-version'] || 'auto'
     }, broadcastTerminal);
     break;
@@ -512,6 +517,54 @@ switch (toolName) {
       quality: flags.quality || 'high',
       mkv: !!flags.mkv,
       codec: flags.codec || '',
+      outputDir: destination,
+      ffmpegVersion: flags['ffmpeg-version'] || 'auto'
+    }, broadcastTerminal);
+    break;
+  }
+
+  // ── 7b. Video Merger ───────────────────────────────────────────────────
+  case 'merge':
+  case 'merger': {
+    if (isHelp) {
+      console.log(`
+\x1b[1mTool: merge\x1b[0m — Rejoin video parts that were split from one video
+
+Detects the seconds some splits repeat at part boundaries and removes them. Parts split with
+stream copy are joined with the video untouched (frame-exact); audio is joined sample-accurately.
+
+\x1b[1mUsage:\x1b[0m
+  nyx-dlp-cli merge -o <dir> --output <filename> [options] <part1> <part2> ...
+
+\x1b[1mOptions:\x1b[0m
+  --output <filename>       Output filename (e.g. "full.mp4"; required)
+  -o, --output-dir <dir>    Output directory (defaults to directory of first part)
+  --overlap <mode>          auto (default), none (join as is) or a number of seconds repeated at each boundary
+  --force-encode            Re-encode the whole output (always seamless, slower)
+  --quality <level>         Re-encode quality (high, medium, low; default: high)
+  --ffmpeg-version <ver>    FFmpeg version (auto, latest, 5.1.4)
+
+\x1b[1mExamples:\x1b[0m
+  nyx-dlp-cli merge -o ./out --output full.mp4 part1.mp4 part2.mp4 part3.mp4
+  nyx-dlp-cli merge -o ./out --output full.mp4 --overlap 3 part*.mp4
+`);
+      process.exit(0);
+    }
+    const files = positional;
+    if (files.length < 2) die('At least 2 parts required. Usage: nyx-dlp-cli merge -o <dir> --output <name> <part1> <part2> ...');
+    const outName = flags.output || flags.name;
+    if (!outName) die('--output <filename> parameter is required');
+    const destination = outDir || path.dirname(path.resolve(files[0]));
+    fs.mkdirSync(destination, { recursive: true });
+    const ov = String(flags.overlap === undefined ? 'auto' : flags.overlap).toLowerCase();
+    const overlapSeconds = parseFloat(ov);
+    runners.runMerger({
+      files: files.map(f => path.resolve(f)),
+      output: outName,
+      overlapMode: ov === 'none' ? 'none' : (overlapSeconds > 0 ? 'manual' : 'auto'),
+      overlapSeconds: overlapSeconds > 0 ? overlapSeconds : 0,
+      forceEncode: !!flags['force-encode'],
+      quality: flags.quality || 'high',
       outputDir: destination,
       ffmpegVersion: flags['ffmpeg-version'] || 'auto'
     }, broadcastTerminal);
@@ -603,6 +656,7 @@ switch (toolName) {
   --language <lang>         Language code (e.g. eng, jpn)
   --license <url>           License URL
   --no-derive               Skip automatic derivative generation
+  --no-resumable            Upload big files with one request instead of resumable parts
 
 \x1b[1mEdit Metadata Options:\x1b[0m
   --id, --identifier <id>   Item identifier (required)
@@ -639,7 +693,8 @@ switch (toolName) {
         mediatype: flags.mediatype || '',
         language: flags.language || '',
         license: flags.license || '',
-        noDerive: !!flags['no-derive']
+        noDerive: !!flags['no-derive'],
+        resumable: !flags['no-resumable']
       }, broadcastTerminal);
     } else if (subAction === 'download') {
       const identifier = iaArgs[0] || flags.id || flags.identifier;

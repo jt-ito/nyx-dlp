@@ -7,11 +7,14 @@ const SETTINGS_MAP = {
   'show-tool-gallery': { navTab: 'gallery' },
   'show-tool-splitter': { navTab: 'splitter' },
   'show-tool-concatenator': { navTab: 'concatenator' },
+  'show-tool-merger': { navTab: 'merger' },
   'show-tool-encoder': { navTab: 'encoder' },
   'show-tool-ia': { navTab: 'ia' },
   'show-ls-quality': { el: 'ls-quality-group' },
   'show-yd-format': { el: 'yd-format-group' },
   'show-yd-client': { el: 'yd-client-group' },
+  'show-yd-concurrent': { el: 'yd-concurrent-group' },
+  'show-batch-concurrent': { el: 'batch-concurrent-group' },
   'show-batch-format': { el: 'batch-format-group' },
   'show-batch-client': { el: 'batch-client-group' },
   'show-batch-rest': { el: 'batch-rest-group' },
@@ -50,6 +53,7 @@ const SETTINGS_MAP = {
   'history-exclude-gallery': {},
   'history-exclude-splitter': {},
   'history-exclude-concatenator': {},
+  'history-exclude-merger': {},
   'history-exclude-encoder': {},
   'history-exclude-ia': {},
 };
@@ -61,11 +65,14 @@ const SETTINGS_DEFAULTS = {
   'show-tool-gallery': true,
   'show-tool-splitter': true,
   'show-tool-concatenator': true,
+  'show-tool-merger': true,
   'show-tool-encoder': true,
   'show-tool-ia': true,
   'show-ls-quality': true,
   'show-yd-format': true,
   'show-yd-client': true,
+  'show-yd-concurrent': true,
+  'show-batch-concurrent': true,
   'show-batch-format': true,
   'show-batch-client': true,
   'show-batch-rest': true,
@@ -89,6 +96,7 @@ const SETTINGS_DEFAULTS = {
   'dep-use-bgutil-external': false,
   'dep-use-deno': true,
   'dep-install-gdl': true,
+  'dep-auto-update-tools': true,
   'show-disk-space': false,
   'minimize-to-tray': false,
   'run-on-startup': false,
@@ -106,6 +114,7 @@ const SETTINGS_DEFAULTS = {
   'history-exclude-gallery': false,
   'history-exclude-splitter': false,
   'history-exclude-concatenator': false,
+  'history-exclude-merger': false,
   'history-exclude-encoder': false,
   'history-exclude-ia': false,
 };
@@ -117,6 +126,12 @@ function getSetting(key) {
 }
 
 // Shared by every tool that passes --extractor-args to yt-dlp for PO Tokens.
+// Concurrent Fragments field -> a whole number 1..32, or null when blank/invalid (then yt-dlp's default / the site preset applies).
+function parseConcurrent(v) {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n >= 1 ? Math.min(n, 32) : null;
+}
+
 // "Use my own bgutil server" always wins when on; otherwise falls back to the
 // bundled server nyx-dlp manages itself (on its configured port) when that's on.
 function getBgutilUrl() {
@@ -273,7 +288,7 @@ if (remotePinToggle && remotePinInput) {
 }
 
 if (remoteSaveBtn) {
-  remoteSaveBtn.addEventListener('click', () => {
+  remoteSaveBtn.addEventListener('click', async () => {
     const port = parseInt(remotePortInput?.value) || (window.location && window.location.port ? parseInt(window.location.port) : 3000);
     const user = remoteUserInput?.value?.trim() || 'admin';
     const pass = remotePassInput?.value?.trim() || 'secret';
@@ -282,7 +297,7 @@ if (remoteSaveBtn) {
     const prevPass = localStorage.getItem('remote-access-pass') || 'secret';
     const prevPin = localStorage.getItem('remote-access-pin') || '';
 
-    if ((pass !== prevPass || pin !== prevPin) && !confirm('Save updated Remote Web Access credentials?\nYou will use these credentials on your next login.')) {
+    if ((pass !== prevPass || pin !== prevPin) && !(await nyxConfirm({ title: 'Save credentials?', message: 'Save updated Remote Web Access credentials?\nYou will use these credentials on your next login.', confirmText: 'Save' }))) {
       return;
     }
 
@@ -310,8 +325,8 @@ if (remoteSaveBtn) {
 }
 
 if (remoteResetBtn) {
-  remoteResetBtn.addEventListener('click', () => {
-    if (!confirm('Reset Remote Web Access credentials to default (admin / secret)?')) {
+  remoteResetBtn.addEventListener('click', async () => {
+    if (!(await nyxConfirm({ title: 'Reset credentials?', message: 'Reset Remote Web Access credentials to default (admin / secret)?', confirmText: 'Reset', danger: true }))) {
       return;
     }
     if (remoteUserInput) remoteUserInput.value = 'admin';

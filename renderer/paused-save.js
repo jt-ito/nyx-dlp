@@ -5,6 +5,8 @@
  * starts the same download again; yt-dlp picks up its partial files and gallery-dl skips what it
  * already has.
  *
+ * Also offered on the Internet Archive downloader.
+ *
  * Not offered for the Live Archiver and the ffmpeg tools (M3U8, Splitter, Concatenator, Encoder):
  * those can't continue a half-finished run.
  */
@@ -13,6 +15,8 @@
     ytdlp:   { tab: 'ytdlp',   panel: 'tab-ytdlp',   name: 'yt-dlp',           prefix: 'yd',    log: 'yd-log',    urlField: 'yd-url',      outField: 'yd-output' },
     batch:   { tab: 'batch',   panel: 'tab-batch',   name: 'Batch Downloader', prefix: 'batch', log: 'batch-log', urlField: 'batch-urls',  outField: 'batch-output' },
     gallery: { tab: 'gallery', panel: 'tab-gallery', name: 'Gallery-DL',       prefix: 'gdl',   log: 'gdl-log',   urlField: 'gdl-url',     outField: 'gdl-output' },
+    // Internet Archive downloader (aria2c resumes its own partial files). It lives in the IA tab's Download mode.
+    iadl:    { tab: 'ia',      panel: 'ia-download-form', name: 'Internet Archive', prefix: 'ia-download', log: 'ia-log', urlField: 'ia-identifier-down', outField: 'ia-output', mode: 'download' },
   };
   const $ = (id) => document.getElementById(id);
 
@@ -83,6 +87,7 @@
     }
 
     document.querySelector(`.nav-item[data-tab="${t.tab}"]`)?.click();
+    if (t.mode) document.querySelector(`#ia-mode-toggle .segment[data-mode="${t.mode}"]`)?.click(); // show the tool's own mode
     for (const [id, val] of Object.entries(data.form || {})) {
       const el = $(id);
       if (!el) continue;

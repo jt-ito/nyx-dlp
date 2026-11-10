@@ -321,9 +321,19 @@ function updateOptsForTab(tabName) {
     container.scrollTop = scrollPos;
   }
 
+  // The built-in Concurrent Fragments field and the pinned "--concurrent-fragments" option are the same setting:
+  // when the user has pinned the option themselves, hide the built-in field so there is only one.
+  function syncConcurrentDup() {
+    [['yd-concurrent-group', 'ytdlp-opt:'], ['batch-concurrent-group', 'batch-opt:']].forEach(([id, prefix]) => {
+      document.getElementById(id)?.classList.toggle('dup-hidden', localStorage.getItem('pin:' + prefix + 'concurrent-fragments') === 'true');
+    });
+  }
+  window.concurrentPinned = (prefix) => localStorage.getItem('pin:' + prefix + 'concurrent-fragments') === 'true';
+
   function renderModifiedOpts(containerId, prefix) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    syncConcurrentDup();
     container.innerHTML = '';
       let hasModified = false;
     
