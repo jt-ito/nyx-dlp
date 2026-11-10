@@ -41,6 +41,7 @@ const bgutilServer = require('./lib/ensure-bgutil-server.js');
 //    exclusive in the UI (see settings.js), but guard defensively here too.
 // Set by the end-to-end tests (and CI): no background downloads or update checks while testing.
 const NYX_TEST = process.env.NYX_TEST === '1';
+if (NYX_TEST) app.disableHardwareAcceleration();   // headless CI runners have no usable GPU process
 
 function shouldRunBundledBgutilServer() {
   if (NYX_TEST) return false;
