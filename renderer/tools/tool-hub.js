@@ -30,6 +30,7 @@
   // Cached state restored from localStorage for instant, zero-delay rendering
   let toolsData = {};
   let updateData = {};
+  const userPick = {};   // a version the user picked in a dropdown but has not installed yet; survives card re-renders
 
   try {
     const rawTools = localStorage.getItem(CACHE_TOOLS_KEY);
@@ -428,7 +429,7 @@
     const iconHtml = TOOL_ICONS[t.key] || '';
     const isVendoredBadge = t.isVendored
       ? `<span class="tool-badge tool-badge-vendored" title="Bundled in nyx-dlp vendor folder">Vendored</span>`
-      : `<span class="tool-badge tool-badge-system" title="Installed on system PATH">System PATH</span>`;
+      : `<span class="tool-badge tool-badge-system" title="Found on your system PATH, not installed by nyx-dlp. It is not updated automatically and may be out of date. Use Install Latest to get nyx-dlp's own copy.">System PATH</span>`;
 
     const uData = updateData[t.key];
     let initialBadgeState = 'missing';
@@ -476,9 +477,15 @@
         selectedValue = t.recommendedPreset;
       }
     } else {
-      // All other tools default to 'latest'
-      selectedValue = 'latest';
+      // Other tools show the build/version the user last installed (the installed binary can't tell nightly from stable)
+      let remembered = null;
+      try { remembered = localStorage.getItem('nyx-hub-version:' + t.key); } catch (_) {}
+      if (t.channel === 'nightly' || t.channel === 'latest') remembered = t.channel;   // saved by the app, shared with auto-update
+      const known = (t.presets || []).some(p => p.value === remembered) || ((uData && uData.releases) || []).some(r => r.tag === remembered);
+      selectedValue = remembered && known ? remembered : 'latest';
     }
+
+    if (userPick[t.key]) selectedValue = userPick[t.key];   // a background refresh must not reset what the user just chose
 
     // Build version dropdown options
     let versionOptions = '';
@@ -643,6 +650,7 @@
 
     if (selectVer && customRow) {
       selectVer.addEventListener('change', () => {
+        userPick[t.key] = selectVer.value;
         if (selectVer.value === '__custom__') {
           customRow.style.display = 'block';
           if (customInput) customInput.focus();
@@ -834,8 +842,10 @@
     try {
       const updatedInfo = await window.api.installToolVersion(toolKey, targetVersion);
       toolsData[toolKey] = updatedInfo;
+      delete userPick[toolKey];   // installed: the dropdown follows the real state again
       try {
         localStorage.setItem(CACHE_TOOLS_KEY, JSON.stringify(toolsData));
+        localStorage.setItem('nyx-hub-version:' + toolKey, targetVersion);   // so the dropdown still shows it next time
       } catch (_) {}
 
       if (progressBar) progressBar.style.width = '100%';

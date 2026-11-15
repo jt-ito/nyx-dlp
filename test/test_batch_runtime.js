@@ -34,6 +34,7 @@ const stub = (rel, exports) => {
 };
 stub('../lib/ensure-ytdlp', { getYtdlpPath: () => 'yt-dlp', ensureYtdlp: async () => {} });
 stub('../lib/ensure-treespend', { ensureTreespend: () => {} });
+stub('../lib/auto-update-tools', { updateYtdlpNow: async () => '2026.11.04.232659', autoUpdateTools: async () => {}, startAutoUpdateTools: () => {}, isNewerVersion: () => false });
 // Count Twitch restricted-VOD handoffs without touching the network.
 const realTwitchMeta = require('../lib/twitch-meta');
 let restrictedVodHandoffs = 0;
@@ -105,6 +106,46 @@ async function runCase(name, extra) {
   restrictedVodHandoffs = 0;
   const ytEvents = await runCase('Same crash text on another site', () => ({}));
   assert('is not mistaken for a restricted Twitch VOD', restrictedVodHandoffs === 0 && !ytEvents.some(e => e.type === 'stdout' && /playback token/.test(e.text)));
+
+  // YouTube answering 403 means an out-of-date yt-dlp: update it and try once more (single and batch).
+  {
+    const blocked = 'ERROR: unable to download video data: HTTP Error 403: Forbidden\n';
+    nextBehavior = { stderr: blocked, code: 1 };
+    const batchEvents = await runCase('YouTube 403 during a batch', () => ({}));
+    assert('yt-dlp is updated and the item retried once', spawned.length === 2, `spawns=${spawned.length}`);
+    assert('the log says what happened', batchEvents.some(e => e.type === 'stdout' && /Updated yt-dlp to .*Trying again/.test(e.text)));
+
+    nextBehavior = { stderr: blocked, code: 1 };
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyx-yt403-'));
+    spawned.length = 0;
+    const evs = [];
+    await new Promise((resolve) => {
+      const done = setTimeout(resolve, 5000);
+      runYtdlp({ url: 'https://www.youtube.com/watch?v=Xb7TgR2mKp4', outputDir: dir, format: 'bestvideo+bestaudio/best', container: 'mp4' },
+        (m) => { evs.push(m); if (m.type === 'exit') { clearTimeout(done); resolve(); } }).catch(() => resolve());
+    });
+    fs.rmSync(dir, { recursive: true, force: true });
+    console.log('\nYouTube 403 (single download)');
+    assert('yt-dlp is updated and the download retried once', spawned.length === 2, `spawns=${spawned.length}`);
+    assert('the retry run ends with a single exit', evs.filter(e => e.type === 'exit').length >= 1);
+
+    // A chosen player client that gets refused is dropped for the retry (the default client works).
+    nextBehavior = { stderr: blocked, code: 1 };
+    const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'nyx-yt403c-'));
+    spawned.length = 0;
+    const evs2 = [];
+    await new Promise((resolve) => {
+      const done = setTimeout(resolve, 5000);
+      runYtdlp({ url: 'https://www.youtube.com/watch?v=Xb7TgR2mKp4', outputDir: dir2, format: 'bestvideo+bestaudio/best', container: 'mp4',
+        extraArgs: ['--retries', '10', '--extractor-args', 'youtube:player_client=web_creator,default'] },
+      (m) => { evs2.push(m); if (m.type === 'exit') { clearTimeout(done); resolve(); } }).catch(() => resolve());
+    });
+    fs.rmSync(dir2, { recursive: true, force: true });
+    console.log('\nYouTube 403 with a chosen player client');
+    assert('first run used the chosen client', spawned.length === 2 && spawned[0].args.includes('youtube:player_client=web_creator,default'));
+    assert('retry drops it but keeps other options', !spawned[1].args.some(a => /player_client/.test(a)) && spawned[1].args.includes('--retries'));
+    assert('the log explains the switch', evs2.some(e => e.type === 'stdout' && /player client was refused/.test(e.text)));
+  }
 
   // Same thing through the single-download runner (the one the yt-dlp tool uses).
   {

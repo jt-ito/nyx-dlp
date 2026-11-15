@@ -40,6 +40,26 @@ const { autoUpdateTools } = require('../lib/auto-update-tools');
   assert(installed.every(x => x[1] === 'latest'));
   assert.deepStrictEqual(events.filter(e => e[0] === 'tool-auto-updated').map(e => e[1].tool), ['ytdlp', 'deno'], 'tells the UI');
 
+  // channels: nightly follows nightly, a pinned version is left alone, a vanished managed yt-dlp is reinstalled
+  const realChannel = toolHub.getChannel, realManaged = toolHub.wasManaged;
+  installed.length = 0;
+  toolHub.getChannel = (t) => (t === 'ytdlp' ? 'nightly' : (t === 'deno' ? 'pinned' : 'latest'));
+  await autoUpdateTools(broadcast, onUpdated);
+  assert.deepStrictEqual(installed.find(x => x[0] === 'ytdlp'), ['ytdlp', 'nightly'], 'nightly users are updated on the nightly channel');
+  assert(!installed.some(x => x[0] === 'deno'), 'a pinned version is not touched');
+
+  installed.length = 0;
+  info.ytdlp = { installed: true, vendored: false, current: '2026.10.26', latest: '2026.10.26' };   // our copy is gone, a system one is used
+  toolHub.getChannel = () => 'latest';
+  toolHub.wasManaged = (t) => t === 'ytdlp';
+  await autoUpdateTools(broadcast, onUpdated);
+  assert(installed.some(x => x[0] === 'ytdlp' && x[1] === 'latest'), 'a missing managed yt-dlp is reinstalled');
+  installed.length = 0;
+  toolHub.wasManaged = () => false;                                                                  // never managed by us: leave the system copy alone
+  await autoUpdateTools(broadcast, onUpdated);
+  assert(!installed.some(x => x[0] === 'ytdlp'), 'a system yt-dlp that was never ours is left alone');
+
+  toolHub.getChannel = realChannel; toolHub.wasManaged = realManaged;
   store.getSettingValue = realGet; runners.getActiveTaskCount = realCount;
   process.stdout.write(' ✔ ALL AUTO-UPDATE TESTS PASSED\n');
   process.exit(0);

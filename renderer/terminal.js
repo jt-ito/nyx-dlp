@@ -60,7 +60,18 @@ function classifyLine(text, streamType, logEl) {
 // flush them all at once via a DocumentFragment on the next RAF tick.
 // This dramatically reduces layout thrashing when hundreds of lines arrive
 // per second (e.g. during a large batch download).
+// Files that are not the media itself: finishing one of these must never count as the download succeeding.
+const NON_MEDIA_FILE_RE = /\.(vtt|srt|ass|lrc|sub|sbv|ttml|xml|json|description|webp|jpg|jpeg|png|gif|thumb)\b/i;
+
 function appendLog(logEl, text, cls) {
+  // yt-dlp can print its ERROR on the same line as a progress update ("... ETA 00:19ERROR: ..."), which the
+  // progress handling then swallowed. Show them as two lines.
+  const glued = /^([\s\S]*?\[download\][^\r\n]*?(?:ETA\s+\d[\d:]*|\sat\s+[\d.]+\S*\/s))\s*((?:ERROR|WARNING):[\s\S]*)$/.exec(text);
+  if (glued) {
+    appendLog(logEl, glued[1], cls);
+    appendLog(logEl, glued[2], cls);
+    return;
+  }
   let t = text.trimStart();
   if (/^Traceback \(most recent call last\)/i.test(t) || /^\s+File ".*\.py"/.test(text)) {
     if (!logEl._hasLiveEventIgnore) logEl._hasError = true;
@@ -230,7 +241,7 @@ function appendLog(logEl, text, cls) {
           logEl._pendingLines.push({ text: prefix + cleanText, cls: 'success', count: 1 });
           logEl._liveProgresses.delete(threadId);
           logEl._downloadCompleted = true;
-          logEl._hasCompletedFile = true;
+          if (!NON_MEDIA_FILE_RE.test(String(rawName || ''))) logEl._hasCompletedFile = true;   // a finished subtitle or thumbnail is not the video
       } else {
           let progressText = text;
           if (logEl.id === 'ls-log' && logEl._fragTracker) {
@@ -784,7 +795,7 @@ function handleOutput(logEl, data, onExit) {
           }
         }
 
-        if (line.match(/\[download\]\s+([^\n\r]+?)\s+has already been downloaded/i) || line.includes('✔ Completed')) {
+        if ((line.match(/\[download\]\s+([^\n\r]+?)\s+has already been downloaded/i) || line.includes('✔ Completed')) && !NON_MEDIA_FILE_RE.test(line)) {
           logEl._hasCompletedFile = true;
         }
 
@@ -914,7 +925,7 @@ function handleOutput(logEl, data, onExit) {
           actuallyCompleted = data.code === 0;
         } else if (logEl.id === 'concat-log' || logEl.id === 'mg-log' || logEl.id === 'sp-log' || logEl.id === 'enc-log') {
           actuallyCompleted = data.code === 0;
-        } else if (data.code === 0 || (data.code === 1 && (logEl._hasMerged || logEl._hasCompletedFile))) {
+        } else if (data.code === 0 || (data.code === 1 && (logEl._hasMerged || (logEl._hasCompletedFile && (!logEl._hasDownloadError || logEl._batchStats))))) {
           if (logEl._hasMerged || logEl._hasCompletedFile) {
             actuallyCompleted = true;
           } else if (!logEl._hasDownloadError && data.code === 0) {

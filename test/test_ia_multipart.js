@@ -7,7 +7,7 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
-const { uploadFile, createControl, itemHeaders, pickPartSize } = require('../lib/ia-multipart');
+const { pace, uploadFile, createControl, itemHeaders, pickPartSize } = require('../lib/ia-multipart');
 
 const MIB = 1024 * 1024;
 const md5 = (b) => crypto.createHash('md5').update(b).digest('hex');
@@ -105,7 +105,10 @@ function startServer() {
     srv.puts.length = 0; srv.files.clear();
     srv.faults = { 2: 'reset', 3: 'slowdown', 4: 'redirect' };
     const logs = [];
-    r = await uploadFile(base(srv, { log: (t) => logs.push(t) }));
+    const paceSeen = [];
+    r = await uploadFile(base(srv, { log: (t) => logs.push(t), onProgress: () => paceSeen.push(pace.delay) }));
+    assert(Math.max(...paceSeen) >= 3000, 'after SlowDown the next parts are spaced out: ' + paceSeen.join(','));
+    assert.strictEqual(pace.delay, 0, 'the spacing fades once parts succeed again');
     assert.strictEqual(md5(srv.files.get('/item1/big.bin')), md5(data), 'identical after faults');
     assert.deepStrictEqual([...new Set(srv.puts)].sort(), [1, 2, 3, 4, 5, 6]);
     assert(logs.some(l => /Part 2\/6/.test(l)), 'the reset part was retried: ' + logs.join('|'));

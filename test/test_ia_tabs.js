@@ -393,6 +393,38 @@ app.whenReady().then(async () => {
   })()`);
   assert('audio progress line is pinned after the video stream completes', shown === 1, `pinned=${shown}`);
 
+  console.log('\n10b. A finished subtitle file is not a finished download...');
+  const exitText = await run(`(() => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const feed = (t) => handleOutput(el, { type: 'stdout', text: t + '\\n' });
+    feed('[download] Destination: Some Video [abc123].en.vtt');
+    feed('[download] 100% of  243.77KiB in 00:00:02 at 104.07KiB/s');
+    feed('[download] Destination: Some Video [abc123].f399.mp4');
+    handleOutput(el, { type: 'stderr', text: '[download]   0.9% of    1.14GiB at   34.33MiB/s ETA 00:19ERROR: unable to download video data: HTTP Error 403: Forbidden\\n' });
+    handleOutput(el, { type: 'exit', code: 1 });
+    flushPendingLogsSync(el);
+    const t = el.textContent;
+    el.remove();
+    return t;
+  })()`);
+  assert('the error glued to a progress line is shown on its own line', /ERROR: unable to download video data: HTTP Error 403/.test(exitText), exitText.slice(-300));
+  assert('exit code 1 with only a subtitle finished is a failure, not "completed successfully"', !/completed successfully/i.test(exitText) && !/finished successfully/i.test(exitText), exitText.slice(-300));
+  const okText = await run(`(() => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    const feed = (t) => handleOutput(el, { type: 'stdout', text: t + '\\n' });
+    feed('[download] Destination: Some Video [abc123].f399.mp4');
+    feed('[download] 100% of  1.14GiB in 00:00:40 at 29.00MiB/s');
+    feed('[Merger] Merging formats into "Some Video [abc123].mp4"');
+    handleOutput(el, { type: 'exit', code: 0 });
+    flushPendingLogsSync(el);
+    const t = el.textContent;
+    el.remove();
+    return t;
+  })()`);
+  assert('a normal finished download still reports success', /finished successfully|completed successfully/i.test(okText), okText.slice(-200));
+
   console.log('\n11. No renderer errors...');
   assert('no console errors / uncaught exceptions', errors.length === 0, errors.join(' | '));
 
